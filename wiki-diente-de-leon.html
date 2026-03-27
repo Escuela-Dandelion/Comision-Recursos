@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diente de León — Wiki del Proyecto</title>
+<style>
+  :root {
+    --green:       #3a7d44;
+    --green-light: #e8f5e9;
+    --green-mid:   #c8e6c9;
+    --earth:       #6d4c41;
+    --earth-light: #efebe9;
+    --amber:       #f59e0b;
+    --amber-light: #fef3c7;
+    --blue:        #1976d2;
+    --blue-light:  #e3f2fd;
+    --red-light:   #fdecea;
+    --red:         #c62828;
+    --text:        #1a1a2e;
+    --muted:       #6b7280;
+    --border:      #e0e0e0;
+    --bg:          #f7f8fa;
+    --card:        #ffffff;
+    --sidebar-w:   260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); line-height: 1.6; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w);
+    height: 100vh; background: var(--card); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 20px 16px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-logo .logo-icon { font-size: 28px; }
+  .sidebar-logo .logo-text { font-size: 13px; font-weight: 700; color: var(--green); line-height: 1.3; }
+  .sidebar-logo .logo-sub  { font-size: 10px; color: var(--muted); font-style: italic; }
+  .sidebar-section { padding: 10px 16px 4px; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .sidebar a {
+    display: block; padding: 6px 16px; font-size: 13px; color: var(--text);
+    text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar a:hover  { background: var(--green-light); color: var(--green); border-left-color: var(--green); }
+  .sidebar a.active { background: var(--green-light); color: var(--green); border-left-color: var(--green); font-weight: 600; }
+  .sidebar a.sub    { padding-left: 28px; font-size: 12px; color: var(--muted); }
+  .sidebar a.sub:hover { color: var(--green); }
+
+  /* ── MOBILE TOGGLE ── */
+  .menu-toggle {
+    display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+    background: var(--green); color: #fff; border: none; border-radius: 6px;
+    width: 26px; height: 26px; font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90;
+  }
+  .sidebar-overlay.visible { display: block; }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 32px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar a { color: var(--muted); text-decoration: none; }
+  .topbar a:hover { color: var(--green); }
+  .topbar .sep { color: #ccc; }
+
+  /* ── CONTENT ── */
+  .content { max-width: 900px; padding: 32px 40px 80px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .page-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .badge-draft   { background: var(--amber-light); color: #92400e; }
+  .badge-active  { background: var(--green-light);  color: var(--green); }
+  .badge-pilot   { background: var(--blue-light);   color: var(--blue); }
+  .page-title { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 6px; }
+  .page-tagline { font-size: 15px; color: var(--green); font-style: italic; margin-bottom: 12px; }
+  .page-attrs { display: flex; gap: 24px; flex-wrap: wrap; }
+  .attr { font-size: 12px; color: var(--muted); }
+  .attr strong { color: var(--text); }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 40px; scroll-margin-top: 60px; }
+  h2 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--green-mid); display: flex; align-items: center; gap: 8px; }
+  h2 .icon { font-size: 18px; }
+  h3 { font-size: 15px; font-weight: 600; color: var(--earth); margin: 20px 0 8px; }
+  p  { margin-bottom: 10px; color: #374151; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; color: #374151; }
+
+  /* ── CALLOUTS ── */
+  .callout { border-radius: 8px; padding: 14px 16px; margin: 16px 0; display: flex; gap: 12px; }
+  .callout .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-info    { background: var(--blue-light);  border-left: 4px solid var(--blue); }
+  .callout-warn    { background: var(--amber-light); border-left: 4px solid var(--amber); }
+  .callout-tip     { background: var(--green-light); border-left: 4px solid var(--green); }
+  .callout-danger  { background: var(--red-light);   border-left: 4px solid var(--red); }
+  .callout-title   { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+
+  /* ── ROLE CARDS ── */
+  .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 16px 0; }
+  .role-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; border-top: 4px solid var(--green); }
+  .role-card.earth { border-top-color: var(--earth); }
+  .role-card.blue  { border-top-color: var(--blue); }
+  .role-card.amber { border-top-color: var(--amber); }
+  .role-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .role-abbr { display: inline-block; background: var(--green-light); color: var(--green); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .role-abbr.earth { background: var(--earth-light); color: var(--earth); }
+  .role-abbr.blue  { background: var(--blue-light);  color: var(--blue); }
+  .role-abbr.amber { background: var(--amber-light);  color: #92400e; }
+  .role-card ul { margin-left: 14px; }
+  .role-card li  { font-size: 12px; margin-bottom: 3px; color: var(--muted); }
+
+  /* ── PROCESS STEPS ── */
+  .steps { margin: 16px 0; }
+  .step { display: flex; gap: 16px; margin-bottom: 6px; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--green); color: white; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-body { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .step-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .step-desc  { font-size: 12px; color: var(--muted); margin: 0; }
+  .step-connector { width: 30px; display: flex; justify-content: center; margin: -2px 0; flex-shrink: 0; }
+  .step-connector::before { content: ''; width: 2px; height: 16px; background: var(--green-mid); display: block; }
+
+  /* ── TABLES ── */
+  .wiki-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .wiki-table th { background: var(--green-light); color: var(--green); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--green-mid); }
+  .wiki-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .wiki-table tr:last-child td { border-bottom: none; }
+  .wiki-table tr:hover td { background: #fafafa; }
+
+  /* ── CHECKLIST ── */
+  .checklist { list-style: none; margin: 8px 0 12px; padding: 0; }
+  .checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
+
+  /* ── TOOL CARDS ── */
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 12px 0; }
+  .tool-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; }
+  .tool-icon { font-size: 24px; flex-shrink: 0; }
+  .tool-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .tool-desc { font-size: 11px; color: var(--muted); }
+
+  /* ── ACCESS TABLE ── */
+  .access-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .access-full  { background: var(--green-light);  color: var(--green); }
+  .access-read  { background: var(--blue-light);   color: var(--blue); }
+  .access-edit  { background: var(--amber-light);  color: #92400e; }
+  .access-none  { background: #f3f4f6; color: var(--muted); }
+
+  /* ── TIENDANUBE CTA BUTTON ── */
+  .cta-tienda {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--green); color: #fff; font-size: 15px; font-weight: 700;
+    padding: 14px 28px; border-radius: 10px; text-decoration: none;
+    margin: 20px 0 8px; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(58,125,68,.35); transition: background .15s, transform .1s;
+    width: 100%;
+  }
+  .cta-tienda:hover { background: #2d6435; transform: translateY(-1px); }
+  .cta-tienda .cta-icon { font-size: 22px; }
+
+  /* ── SIDEBAR TIENDA BUTTON ── */
+  .sidebar-cta {
+    margin: 12px 16px 4px;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    background: var(--green); color: #fff; font-size: 13px; font-weight: 700;
+    padding: 10px 14px; border-radius: 8px; text-decoration: none;
+    box-shadow: 0 2px 8px rgba(58,125,68,.3); transition: background .15s;
+  }
+  .sidebar-cta:hover { background: #2d6435; color: #fff !important; border-left-color: transparent !important; }
+
+  /* ── FAQ ── */
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .faq-q {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; font-weight: 600; font-size: 13px; cursor: pointer;
+    background: var(--card); user-select: none;
+  }
+  .faq-q:hover { background: var(--green-light); }
+  .faq-q .arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
+  .faq-body { padding: 12px 16px; font-size: 13px; color: #374151; background: #fafafa; border-top: 1px solid var(--border); display: none; }
+  .faq-item.open .faq-body { display: block; }
+  .faq-item.open .arrow { transform: rotate(90deg); }
+
+  /* ── CALENDAR EMBED ── */
+  .calendar-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); margin: 12px 0; }
+  .calendar-wrap iframe { display: block; width: 100%; border: none; }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .menu-toggle  { display: flex; align-items: center; justify-content: center; }
+    .sidebar      { transform: translateX(-100%); transition: transform .25s ease; z-index: 100; }
+    .sidebar.open { transform: translateX(0); }
+    .main         { margin-left: 0 !important; width: 100%; }
+    .topbar       { padding-left: 44px; flex-wrap: wrap; }
+    .content      { padding: 16px 16px 60px; max-width: 100%; }
+    .wiki-table   { display: block; overflow-x: auto; font-size: 12px; }
+    .role-grid, .tool-grid { grid-template-columns: 1fr; }
+    .page-attrs   { flex-direction: column; gap: 4px; }
+    .page-title   { font-size: 22px; }
+    h2            { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌱</div>
+    <div>
+      <div class="logo-text">Diente de León</div>
+      <div class="logo-sub">Cultivando juntos un futuro consciente</div>
+    </div>
+  </div>
+
+  <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" class="sidebar-cta">🛍️ Ir a la Tienda</a>
+
+  <div class="sidebar-section">Navegación</div>
+  <a href="#resumen" class="active">Resumen Ejecutivo</a>
+  <a href="#referentes">Para Referentes</a>
+  <a href="#faq">Preguntas Frecuentes</a>
+  <a href="#roles">Roles y Responsabilidades</a>
+  <a href="#roles" class="sub">→ Familia Gestora (FGP)</a>
+  <a href="#roles" class="sub">→ Pool Logístico</a>
+  <a href="#roles" class="sub">→ Gestoría de Tienda</a>
+  <a href="#flujo">Flujo del Proceso</a>
+  <a href="#flujo" class="sub">→ Reposición</a>
+  <a href="#flujo" class="sub">→ Retiro y Entrega</a>
+  <a href="#flujo" class="sub">→ Armado de Pedidos</a>
+  <a href="#herramientas">Herramientas Digitales</a>
+  <a href="#checklists">Checklists Operativos</a>
+  <a href="#accesos">Accesos y Permisos</a>
+  <a href="#piloto">Prueba Piloto</a>
+
+  <div class="sidebar-section" style="margin-top:auto">Proyecto</div>
+  <a href="gestion-proveedores.html">📦 Gestión con Proveedores</a>
+  <a href="https://ine-robertson.github.io/dandelion-tienda-dashboard/" target="_blank">📊 Dashboard de Ventas</a>
+  <a href="#">📋 Formulario de Pedidos</a>
+  <a href="#">📅 Calendario de Turnos</a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <a href="#">Wiki</a><span class="sep">›</span>
+    <a href="#">Proyectos</a><span class="sep">›</span>
+    <a href="#">Tienda Dandelion</a><span class="sep">›</span>
+    <span>Diente de León</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-meta">
+        <span class="badge badge-draft">Draft</span>
+        <span class="badge badge-pilot">Prueba Piloto</span>
+      </div>
+      <div class="page-title">🌱 Diente de León</div>
+      <div class="page-tagline">"Cultivando juntos un futuro consciente"</div>
+      <div class="page-attrs">
+        <div class="attr"><strong>Proyecto:</strong> Tienda Dandelion — Escuela Waldorf</div>
+        <div class="attr"><strong>Estado:</strong> Draft v0.1</div>
+        <div class="attr"><strong>Última actualización:</strong> Marzo 2026</div>
+        <div class="attr"><strong>Subcélula Tienda:</strong> Yuliana Longhi · Maria Martini · Ines Robertson</div>
+        <div class="attr"><strong>Comisión de Recursos:</strong> Maximiliano Contreras · Lucas Di Stefano · Esteban Próspero</div>
+      </div>
+      <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" class="cta-tienda">
+        <span class="cta-icon">🛍️</span> Visitá la Tienda Diente de León
+      </a>
+    </div>
+
+    <div class="callout callout-warn">
+      <div class="icon">⚠️</div>
+      <div>
+        <div class="callout-title">Este documento es un Draft</div>
+        Los procesos, roles y herramientas descriptos en esta página están en etapa de definición. Los campos marcados con <strong>[TBD]</strong> requieren confirmación del equipo antes de ser implementados.
+      </div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div class="section" id="resumen">
+      <h2><span class="icon">📋</span> Resumen Ejecutivo</h2>
+      <p>
+        <strong>Diente de León</strong> es un proyecto de venta de productos agroecológicos que nace dentro de la comunidad de familias de la Escuela Dandelion. Hoy funciona como una tienda interna mensual ("el pedido de la yerba"), con el objetivo de escalar hacia una <strong>TiendaNube pública</strong> que permita vender a la comunidad en general, ampliar el catálogo de productos y sostener la operación de forma organizada y replicable.
+      </p>
+      <p>
+        El desafío central es <strong>evitar la dependencia de personas "heroicas"</strong> que cargan con toda la operación. Para lograrlo, el proyecto se organiza en tres capas:
+      </p>
+
+      <div class="role-grid">
+        <div class="role-card">
+          <div class="role-name">1. Gestión del Proveedor</div>
+          <div class="role-abbr">FGP</div>
+          <ul>
+            <li>Comunicación con el proveedor</li>
+            <li>Condiciones comerciales</li>
+            <li>Órdenes de pedido estándar</li>
+            <li>Resolución de incidentes</li>
+          </ul>
+        </div>
+        <div class="role-card earth">
+          <div class="role-name">2. Ejecución Logística</div>
+          <div class="role-abbr earth">POOL</div>
+          <ul>
+            <li>Retiro de mercadería</li>
+            <li>Traslado y entrega en escuela</li>
+            <li>Control de calidad y recepción</li>
+            <li>Turnos rotativos calendarizados</li>
+          </ul>
+        </div>
+        <div class="role-card blue">
+          <div class="role-name">3. Soporte Digital</div>
+          <div class="role-abbr blue">DIGITAL</div>
+          <ul>
+            <li>Wiki (esta página)</li>
+            <li>Formularios y planillas</li>
+            <li>Calendario de turnos</li>
+            <li>Automatización de recordatorios</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROLES -->
+    <div class="section" id="roles">
+      <h2><span class="icon">👥</span> Roles y Responsabilidades</h2>
+
+      <h3>🛍️ Subcélula Tienda</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Responsable de la operación y gestión de la Tienda Diente de León.</p>
+      <table class="wiki-table">
+        <thead><tr><th>Persona</th><th>Rol</th><th>Notas</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Yuliana Longhi</strong></td><td><span class="badge badge-active">Coordinación General · Ejecución Logística</span></td><td>Referente principal, coordinación de entregas y referentes</td></tr>
+          <tr><td><strong>Maria Martini</strong></td><td><span class="badge badge-active">Gestión del Proveedor (FGP)</span></td><td></td></tr>
+          <tr><td><strong>Ines Robertson</strong></td><td><span class="badge badge-pilot">Soporte Digital</span></td><td>Tienda Virtual, Formularios, Códigos QR, Procesos, Dashboards de métricas, Flyers</td></tr>
+        </tbody>
+      </table>
+
+      <h3>📦 Comisión de Recursos</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Conjunto de proyectos de abastecimiento: Diente de León, otras ventas comunitarias y SEF.</p>
+      <table class="wiki-table">
+        <thead><tr><th>Persona</th><th>Rol</th><th>Notas</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Maximiliano Contreras</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
+          <tr><td><strong>Lucas Di Stefano</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
+          <tr><td><strong>Esteban Próspero</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Familia Gestora del Proveedor (FGP)</h3>
+      <p>Es el vínculo estable entre el proyecto y cada proveedor. Puede haber una FGP por proveedor o por categoría de producto. <strong>No es responsable de la logística operativa</strong> — su rol es estratégico y comunicacional.</p>
+
+      <table class="wiki-table">
+        <thead><tr><th>Responsabilidad</th><th>Descripción</th><th>Frecuencia</th></tr></thead>
+        <tbody>
+          <tr><td>Monitoreo de stock</td><td>Verifica cuándo activar una reposición según el punto de pedido definido</td><td>Semanal / por evento</td></tr>
+          <tr><td>Solicitud de pedido</td><td>Completa el formulario de "Solicitud de pedido a proveedor"</td><td>Por reposición</td></tr>
+          <tr><td>Orden al proveedor</td><td>Envía el pedido estándar (email/WhatsApp) con SKU, cantidades, precio, fecha y lugar</td><td>Por reposición</td></tr>
+          <tr><td>Coordinación logística</td><td>Informa a la coordinación de pool la fecha y lugar de retiro</td><td>Por reposición</td></tr>
+          <tr><td>Gestión de incidentes</td><td>Resuelve problemas con el proveedor (faltante, retraso, calidad)</td><td>Por evento</td></tr>
+          <tr><td>Actualización de condiciones</td><td>Mantiene actualizados precios y condiciones en la planilla</td><td>Mensual</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Pool de Colaboradores Logísticos</h3>
+      <p>Grupo de familias voluntarias que asumen turnos rotativos para la operación física del proyecto. Los turnos se asignan con anticipación en el calendario compartido.</p>
+
+      <table class="wiki-table">
+        <thead><tr><th>Sub-rol</th><th>Tarea</th><th>Zona</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Retiro en proveedor</strong></td><td>Busca la mercadería en el punto acordado, verifica cantidad y estado, lleva a la escuela</td><td>Córdoba capital y alrededores (Saldán, Villa Allende, Mendiolaza, La Calera, Río Ceballos)</td></tr>
+          <tr><td><strong>Recepción y control</strong></td><td>Recibe en la escuela, controla calidad vs. remito, registra incidencias</td><td>Escuela Dandelion</td></tr>
+          <tr><td><strong>Armado de pedidos comunitarios</strong></td><td>Arma los paquetes por familia/grado para entrega mensual al referente</td><td>Escuela Dandelion</td></tr>
+          <tr><td><strong>Armado y despacho externos</strong></td><td>Arma pedidos de TiendaNube para retiro en punto estratégico o despacho por correo</td><td>Puntos de retiro / correo</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <div class="icon">💡</div>
+        <div>
+          <div class="callout-title">Rotación del pool</div>
+          El objetivo es que ninguna familia repita turno hasta que todos hayan participado al menos una vez. La coordinación logística asigna turnos con al menos <strong>7 días de anticipación</strong> y confirma disponibilidad antes de publicar.
+        </div>
+      </div>
+
+      <h3>Gestoría de Tienda</h3>
+      <p>Rol enfocado en la operación digital y comercial. Puede ser una o dos personas con perfil más técnico/administrativo.</p>
+      <table class="wiki-table">
+        <thead><tr><th>Responsabilidad</th><th>Herramienta</th></tr></thead>
+        <tbody>
+          <tr><td>Actualización de stock en TiendaNube</td><td>TiendaNube</td></tr>
+          <tr><td>Cierre de pedidos en planilla</td><td>Google Sheets</td></tr>
+          <tr><td>Gestión de pedidos externos (correo)</td><td>TiendaNube + Correo Argentino</td></tr>
+          <tr><td>Mantenimiento de formularios y wiki</td><td>Google Forms / esta Wiki</td></tr>
+          <tr><td>Reportes de ventas y métricas</td><td>Dashboard de Ventas</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FLUJO -->
+    <div class="section" id="flujo">
+      <h2><span class="icon">🔄</span> Flujo del Proceso</h2>
+
+      <h3>A. Reposición de Producto (Escuela → Proveedor)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Gatillo de reposición</div>
+            <p class="step-desc">La FGP detecta que el stock llegó al "punto de pedido" definido para ese producto, o se activa por calendario (ej: 1 vez al mes para yerba). Decide iniciar la reposición.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Solicitud de reposición</div>
+            <p class="step-desc">La FGP completa el Formulario Google "Solicitud de pedido a proveedor" (qué, cuánto, cuándo, dónde, quién paga). Queda registrado en la planilla de pedidos. <strong>[TBD: ¿quién autoriza?]</strong></p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Pedido estándar al proveedor</div>
+            <p class="step-desc">La FGP envía el pedido por email/WhatsApp usando la plantilla estándar (SKUs, cantidades, precios acordados, fecha y ventana horaria de retiro).</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Asignación logística del pool</div>
+            <p class="step-desc">La coordinación logística asigna a una familia del pool el turno de retiro. Se registra en el Calendario Google y en la "Hoja de Turnos".</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Retiro y traslado</div>
+            <p class="step-desc">El colaborador asignado retira la mercadería, completa el checklist de retiro y registra evidencia (fotos del remito y los bultos). Completa el formulario "Retiro realizado".</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title">Recepción y control de calidad</div>
+            <p class="step-desc">En la escuela se verifica lo recibido vs. el remito: cantidades, estado, temperatura (si aplica). Si hay incidencia, queda abierta en la planilla hasta resolución — el producto no ingresa a stock hasta entonces.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <div class="step-title">Actualización de stock y cierre</div>
+            <p class="step-desc">La Gestoría actualiza el stock en TiendaNube y cierra el pedido en la planilla como "recibido". Si corresponde: registra el pago y adjunta comprobante.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>B. Armado y Entrega de Pedidos</h3>
+      <p>Existen dos tipos de pedido con dinámicas distintas:</p>
+      <table class="wiki-table">
+        <thead><tr><th>Tipo</th><th>Frecuencia</th><th>Cómo se compra</th><th>Entrega</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Pedidos comunitarios mensuales</strong></td>
+            <td>1 vez al mes</td>
+            <td>A través de la tienda virtual</td>
+            <td>Por grado, en la escuela, coordinado con el referente</td>
+          </tr>
+          <tr>
+            <td><strong>Pedidos en Tienda de Claudio</strong></td>
+            <td>Durante el mes, cuando la familia lo necesite</td>
+            <td>Obligatorio comprar y pagar por la tienda virtual — <strong>no se acepta pago en el lugar</strong></td>
+            <td>La familia presenta el código QR a Claudio. <strong>Claudio no entrega sin QR.</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-danger">
+        <div class="icon">🔒</div>
+        <div>
+          <div class="callout-title">Regla sin excepciones: sin QR no hay entrega</div>
+          Para los pedidos en la Tienda de Claudio, el código QR es el único comprobante válido de pago. No se entrega mercadería por promesa de pago posterior, transferencia no confirmada ni ningún otro medio. El QR llega al mail únicamente cuando el pago fue procesado.
+        </div>
+      </div>
+    </div>
+
+    <!-- HERRAMIENTAS -->
+    <div class="section" id="herramientas">
+      <h2><span class="icon">🛠️</span> Herramientas Digitales</h2>
+
+      <div class="tool-grid">
+        <div class="tool-card">
+          <div class="tool-icon">📋</div>
+          <div>
+            <div class="tool-name">Google Forms</div>
+            <div class="tool-desc">Formulario de pedido a proveedor, retiro realizado y recepción en escuela.</div>
+          </div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">📊</div>
+          <div>
+            <div class="tool-name">Google Sheets</div>
+            <div class="tool-desc">Base de datos operativa: pedidos, hoja de turnos, stock, comprobantes.</div>
+          </div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">📅</div>
+          <div>
+            <div class="tool-name">Google Calendar</div>
+            <div class="tool-desc">Calendario compartido de retiros y turnos del pool. Integrado con Apps Script.</div>
+          </div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">⚙️</div>
+          <div>
+            <div class="tool-name">Google Apps Script</div>
+            <div class="tool-desc">Automatiza recordatorios por email/calendario cuando se asigna un turno.</div>
+          </div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🛍️</div>
+          <div>
+            <div class="tool-name">TiendaNube</div>
+            <div class="tool-desc">Canal de venta público. Gestión de stock, pedidos externos y despachos.</div>
+          </div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🌐</div>
+          <div>
+            <div class="tool-name">Wiki (esta página)</div>
+            <div class="tool-desc">Central de información, procesos, checklists y accesos. Alojada en GitHub Pages.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Automatizaciones planeadas</h3>
+      <table class="wiki-table">
+        <thead><tr><th>Cuándo</th><th>Qué pasa automáticamente</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Se asigna turno de retiro</td><td>Email + evento en calendario al colaborador asignado</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+          <tr><td>48hs antes del turno</td><td>Recordatorio por email con checklist adjunto</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+          <tr><td>Retiro completado</td><td>Notificación a la FGP y a recepción en escuela</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+          <tr><td>Stock bajo el punto de pedido</td><td>Alerta a la FGP correspondiente</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+          <tr><td>Nuevo pedido a proveedor registrado</td><td>Notificación al equipo con detalle del pedido, fecha de retiro y responsable asignado</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+          <tr><td>Pedido a proveedor confirmado por FGP</td><td>Registro automático en la planilla de pedidos y aviso al pool logístico</td><td><span class="badge badge-draft">Pendiente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CHECKLISTS -->
+    <div class="section" id="checklists">
+      <h2><span class="icon">✅</span> Checklists Operativos</h2>
+
+      <h3>Checklist de Retiro en Proveedor</h3>
+      <ul class="checklist">
+        <li><div class="box"></div> Confirmar dirección y horario de retiro con la FGP (con al menos 24hs de anticipación)</li>
+        <li><div class="box"></div> Llevar el pedido impreso o en el celular (SKU, cantidades, precio acordado)</li>
+        <li><div class="box"></div> Contar y verificar los bultos en el momento del retiro</li>
+        <li><div class="box"></div> Fotografiar el remito y los bultos antes de cargar</li>
+        <li><div class="box"></div> Verificar estado general del producto (envases, temperatura si aplica)</li>
+        <li><div class="box"></div> Completar el formulario "Retiro realizado" desde el celular</li>
+        <li><div class="box"></div> Trasladar directamente a la escuela (no dejar en casa intermedia sin aviso)</li>
+      </ul>
+
+      <h3>Checklist de Recepción en Escuela</h3>
+      <ul class="checklist">
+        <li><div class="box"></div> Recibir con el remito en mano y verificar cantidades vs. pedido original</li>
+        <li><div class="box"></div> Revisar estado: envases cerrados, sin roturas, fecha de vencimiento</li>
+        <li><div class="box"></div> Fotografiar lo recibido</li>
+        <li><div class="box"></div> Registrar incidencias si las hay (faltante, producto dañado)</li>
+        <li><div class="box"></div> Completar el formulario "Recepción en escuela"</li>
+        <li><div class="box"></div> Avisar a Gestoría de Tienda para actualizar stock en TiendaNube</li>
+      </ul>
+
+      <h3>Checklist de Armado de Pedidos Comunitarios</h3>
+      <ul class="checklist">
+        <li><div class="box"></div> Descargar el listado de pedidos del mes desde la planilla</li>
+        <li><div class="box"></div> Preparar bolsas/cajas etiquetadas por grado/referente</li>
+        <li><div class="box"></div> Armar cada paquete verificando producto y cantidad</li>
+        <li><div class="box"></div> Registrar cualquier faltante o sustitución</li>
+        <li><div class="box"></div> Marcar pedido como "listo para entrega" en la planilla</li>
+        <li><div class="box"></div> Coordinar con el referente la fecha de retiro en escuela</li>
+      </ul>
+    </div>
+
+    <!-- ACCESOS -->
+    <div class="section" id="accesos">
+      <h2><span class="icon">🔐</span> Accesos y Permisos</h2>
+      <p>Solo requieren gestión de acceso las herramientas internas del equipo. La tienda, la wiki y el dashboard son públicos.</p>
+
+      <table class="wiki-table">
+        <thead>
+          <tr>
+            <th>Rol</th>
+            <th>Qué necesita</th>
+            <th>Herramientas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Referente de Grado</strong></td>
+            <td>Escanear códigos QR en el punto de retiro</td>
+            <td><span class="access-pill access-full">Celular con cámara</span> — no requiere acceso a ningún sistema</td>
+          </tr>
+          <tr>
+            <td><strong>Gestión con Proveedores</strong><br><small style="color:var(--muted)">FGP · Comisión de Recursos · Pool</small></td>
+            <td>Solicitar pedidos, registrar retiros y seguir el calendario</td>
+            <td>
+              <span class="access-pill access-full">Google Form</span> — Solicitud de pedidos<br>
+              <span class="access-pill access-edit">Google Sheets</span> — Planilla operativa<br>
+              <span class="access-pill access-read">Google Calendar</span> — Turnos y fechas
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="icon">📬</div>
+        <div>
+          <div class="callout-title">¿Cómo solicitar acceso?</div>
+          Escribir a <strong>dientedeleon-admin@googlegroups.com</strong> indicando nombre, rol y herramienta. Los accesos se otorgan antes del primer turno asignado.
+        </div>
+      </div>
+
+      <div class="callout callout-tip">
+        <div class="icon">💡</div>
+        <div>
+          <div class="callout-title">Tip para las familias: creá tu cuenta en la primera compra</div>
+          Al comprar por primera vez en la tienda virtual, recomendamos crear una cuenta. Así la próxima vez el proceso es mucho más rápido: los datos ya están guardados y no hace falta completarlos de nuevo. Los referentes pueden compartir este tip a las familias de su grado.
+        </div>
+      </div>
+    </div>
+
+    <!-- PILOTO -->
+    <div class="section" id="piloto">
+      <h2><span class="icon">🚀</span> Prueba Piloto</h2>
+      <p>La etapa inicial busca validar el modelo con un producto y un grupo pequeño de colaboradores antes de escalar.</p>
+
+      <table class="wiki-table">
+        <thead><tr><th>Etapa</th><th>Qué incluye</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Etapa 1</strong> — Definición</td>
+            <td>Confirmar roles, armar formularios, crear calendario compartido, definir puntos de pedido por producto</td>
+            <td><span class="badge badge-active">Completada</span></td>
+          </tr>
+          <tr>
+            <td><strong>Etapa 2</strong> — Reclutamiento</td>
+            <td>Convocar familias al pool, asignar FGPs por proveedor, capacitar brevemente</td>
+            <td><span class="badge badge-active">Completada</span></td>
+          </tr>
+          <tr>
+            <td><strong>Etapa 3</strong> — Primer ciclo</td>
+            <td>Ejecutar una reposición completa con el nuevo sistema: pedido → retiro → recepción → armado → entrega</td>
+            <td><span class="badge badge-draft">Pendiente</span></td>
+          </tr>
+          <tr>
+            <td><strong>Etapa 4</strong> — Evaluación</td>
+            <td>Reunión de retrospectiva, ajuste de procesos, documentación final</td>
+            <td><span class="badge badge-draft">Pendiente</span></td>
+          </tr>
+          <tr>
+            <td><strong>Etapa 5</strong> — TiendaNube pública</td>
+            <td>Lanzamiento de la tienda pública con catálogo inicial y primer despacho externo</td>
+            <td><span class="badge badge-draft">Pendiente</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PARA REFERENTES -->
+    <div class="section" id="referentes">
+      <h2><span class="icon">📣</span> Para Referentes de Grado</h2>
+
+      <div class="callout callout-tip">
+        <div class="icon">🌱</div>
+        <div>
+          <div class="callout-title">Este mensaje fue enviado a los referentes por WhatsApp</div>
+          Compartimos esta información para que puedas consultarla cuando quieras y también acercarla a las familias de tu grado.
+        </div>
+      </div>
+
+      <p>Queremos compartir con ustedes la evolución de este proyecto, que busca seguir fortaleciendo la vida comunitaria de la escuela.</p>
+      <p>En esta nueva etapa, el proyecto cambia su enfoque y alcance: dejamos atrás iniciativas aisladas (como el antiguo Proyecto Yerba u otras ventas puntuales) para dar lugar a una <strong>Tienda Virtual unificada</strong>, donde se integren todos los productos que la escuela ofrece.</p>
+
+      <div class="callout callout-info">
+        <div class="icon">👉</div>
+        <div>
+          <div class="callout-title">La propuesta es crecer progresivamente, incorporando:</div>
+          <ul style="margin: 6px 0 0 16px;">
+            <li>Nuevos productos y proveedores</li>
+            <li>Una mejor organización logística</li>
+            <li>Distribución más equilibrada de tareas</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>🔄 Cambio de rol del referente</h3>
+      <p>En este nuevo modelo, el rol del referente evoluciona:</p>
+      <table class="wiki-table">
+        <thead><tr><th>Antes</th><th>Ahora</th></tr></thead>
+        <tbody>
+          <tr><td>Tomaba pedidos del grado</td><td>Nexo de comunicación y difusión dentro de su grupo</td></tr>
+          <tr><td>Recibía y distribuía paquetes</td><td>Acompaña el proceso de compra desde la comunidad</td></tr>
+          <tr><td>Gestionaba la cobranza</td><td>Participa en la dinámica de entrega directa desde la Tienda</td></tr>
+        </tbody>
+      </table>
+
+      <h3>📦 Organización de las entregas</h3>
+      <p>Para evitar demoras y filas en el punto de retiro, se organizarán <strong>días específicos de entrega por grado</strong>. La coordinación estará a cargo de la administración del proyecto (Referente Yuli) en comunicación con los referentes. Por ejemplo:</p>
+      <table class="wiki-table">
+        <thead><tr><th>Grados</th><th>Día de entrega</th></tr></thead>
+        <tbody>
+          <tr><td>Jardín y 1° grado</td><td>Lunes</td></tr>
+          <tr><td>2° y 3° grado</td><td>Martes</td></tr>
+          <tr><td colspan="2" style="color:var(--muted);font-style:italic">y así sucesivamente… (a definir)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>🔐 Sistema de control con PIN</h3>
+      <p>Cada referente contará con un <strong>PIN personal</strong> con el cual se registrará la entrega de productos. Esto permite:</p>
+      <ul>
+        <li>Tener trazabilidad de la mercadería</li>
+        <li>Controlar el stock entregado</li>
+        <li>Ordenar el proceso de distribución</li>
+      </ul>
+
+      <h3>🤝 Acompañamiento durante el primer mes</h3>
+      <p>Durante el primer mes, se espera que cada referente:</p>
+      <ul>
+        <li>Evacúe dudas a las familias sobre el uso de la tienda virtual y el retiro de mercadería</li>
+        <li>Acompañe presencialmente la instancia de entrega</li>
+        <li>Trabaje junto al equipo de gestión para asegurar que el sistema funcione correctamente</li>
+      </ul>
+
+      <div class="callout callout-tip">
+        <div class="icon">🌱</div>
+        <div>Este cambio busca simplificar procesos, mejorar la organización y potenciar el crecimiento del proyecto, siempre en beneficio de toda la comunidad. Ante cualquier duda, estamos disponibles para acompañarlos en esta transición.</div>
+      </div>
+
+      <h3>📲 Flujo de Entrega con Código QR</h3>
+      <p>El sistema de entrega funciona con un código QR único por pedido. Así es el proceso paso a paso:</p>
+
+      <div class="callout callout-info">
+        <div class="icon">🔒</div>
+        <div><div class="callout-title">Importante: el QR solo se envía cuando el pago fue confirmado</div>
+        Si una familia dice que no recibió el QR, significa que el pago aún no fue procesado. No se entrega mercadería sin QR.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">La familia compra y paga en la tienda</div>
+            <p class="step-desc">Una vez confirmado el pago, la familia recibe automáticamente un <strong>código QR por email</strong>. Ese QR es su comprobante de compra y el que presenta en el punto de retiro.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">La familia presenta el QR en el punto de retiro</div>
+            <p class="step-desc">En el día y horario asignado a su grado, la familia muestra el código QR desde su celular al referente.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">El referente escanea el QR</div>
+            <p class="step-desc">Con la cámara del celular (sin necesidad de ninguna app), el referente escanea el QR. Se abre automáticamente una página web con el detalle del pedido: qué productos debe entregar y en qué cantidades.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Verificación y entrega</div>
+            <p class="step-desc">El referente revisa los productos, los entrega a la familia y <strong>ingresa su PIN personal</strong> en el campo correspondiente de la página.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Confirmar entrega</div>
+            <p class="step-desc">El referente presiona el botón <strong>"Entregar Pedido"</strong>. El sistema registra la entrega y el pedido queda cerrado.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FAQ REFERENTES -->
+    <div class="section" id="faq">
+      <h2><span class="icon">❓</span> Preguntas Frecuentes — Referentes</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Hacé clic en cada pregunta para ver la respuesta.</p>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Qué tengo que hacer yo como referente ahora? <span class="arrow">▶</span></div>
+        <div class="faq-body">Tu rol cambia: ya no tomás pedidos ni manejás la cobranza. Ahora sos el nexo de comunicación entre el equipo de gestión y las familias de tu grado. Acompañás presencialmente la instancia de entrega y ayudás a evacuar dudas sobre cómo usar la tienda virtual.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo hacen las familias para comprar? <span class="arrow">▶</span></div>
+        <div class="faq-body">Las familias ingresan directamente a la tienda virtual en <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" style="color:var(--green);font-weight:600">tiendadientedeleon.mitiendanube.com</a>, eligen los productos, pagan online y coordinan el retiro. No hace falta que el referente tome el pedido ni cobre.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Cuándo y dónde se retira la mercadería? <span class="arrow">▶</span></div>
+        <div class="faq-body">Las entregas se organizan por día según el grado, para evitar filas. El lugar de retiro es la Tienda (Claudio) o Tienda Secu. Los días específicos por grado se coordinan entre Yuli y los referentes antes de cada ciclo de entregas.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Qué es el PIN y cómo lo uso? <span class="arrow">▶</span></div>
+        <div class="faq-body">Cada referente recibe un PIN personal que se usa al momento de registrar la entrega de los productos. Es para tener trazabilidad: saber qué se entregó, a quién y cuándo. Te lo comunica el equipo de gestión antes de tu primer turno.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Una familia no sabe cómo usar la tienda virtual, ¿qué le digo? <span class="arrow">▶</span></div>
+        <div class="faq-body">Podés compartirle el link directo a la tienda: <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" style="color:var(--green);font-weight:600">tiendadientedeleon.mitiendanube.com</a>. El proceso es igual al de cualquier tienda online: eligen el producto, pagan y coordinan retiro. Si la duda persiste, la derivás al equipo de gestión (Yuli).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Qué pasa si una familia no recibió su pedido o hay un error? <span class="arrow">▶</span></div>
+        <div class="faq-body">El referente no resuelve incidentes de stock o pedidos directamente. Lo que podés hacer es registrar el problema y comunicarlo al equipo de gestión para que lo resuelvan con el proveedor o la Gestoría de Tienda.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Con quién me comunico si tengo una duda operativa? <span class="arrow">▶</span></div>
+        <div class="faq-body">El contacto principal es Yuli (Referente de coordinación). Para temas técnicos de la tienda o la wiki, podés escribirle a Ines Robertson.</div>
+      </div>
+
+    </div>
+
+    <hr>
+    <p style="font-size:11px;color:var(--muted);text-align:center">
+      Diente de León — Wiki del Proyecto · Escuela Dandelion Pedagogía Waldorf · Draft v0.1 · Marzo 2026
+    </p>
+
+  </div>
+</div>
+
+<script>
+  // Toggle sidebar mobile
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const toggle   = document.getElementById('menuToggle');
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+  toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+  overlay.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.sidebar a').forEach(a => a.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSidebar();
+  }));
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.closest('.faq-item');
+      item.classList.toggle('open');
+    });
+  });
+
+  // Highlight active sidebar link on scroll
+  const sections = document.querySelectorAll('.section');
+  const links = document.querySelectorAll('.sidebar a[href^="#"]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 80) current = '#' + s.id;
+    });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === current);
+    });
+  });
+</script>
+
+</body>
+</html>

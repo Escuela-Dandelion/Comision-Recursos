@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión con Proveedores — Diente de León</title>
+<style>
+  :root {
+    --green:       #3a7d44;
+    --green-light: #e8f5e9;
+    --green-mid:   #c8e6c9;
+    --earth:       #6d4c41;
+    --earth-light: #efebe9;
+    --amber:       #f59e0b;
+    --amber-light: #fef3c7;
+    --blue:        #1976d2;
+    --blue-light:  #e3f2fd;
+    --red-light:   #fdecea;
+    --red:         #c62828;
+    --text:        #1a1a2e;
+    --muted:       #6b7280;
+    --border:      #e0e0e0;
+    --bg:          #f7f8fa;
+    --card:        #ffffff;
+    --sidebar-w:   260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); line-height: 1.6; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w);
+    height: 100vh; background: var(--card); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 20px 16px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-logo .logo-icon { font-size: 28px; }
+  .sidebar-logo .logo-text { font-size: 13px; font-weight: 700; color: var(--earth); line-height: 1.3; }
+  .sidebar-logo .logo-sub  { font-size: 10px; color: var(--muted); font-style: italic; }
+  .sidebar-section { padding: 10px 16px 4px; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .sidebar a {
+    display: block; padding: 6px 16px; font-size: 13px; color: var(--text);
+    text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar a:hover  { background: var(--earth-light); color: var(--earth); border-left-color: var(--earth); }
+  .sidebar a.active { background: var(--earth-light); color: var(--earth); border-left-color: var(--earth); font-weight: 600; }
+  .sidebar a.sub    { padding-left: 28px; font-size: 12px; color: var(--muted); }
+  .sidebar a.sub:hover { color: var(--earth); }
+
+  /* ── MOBILE TOGGLE ── */
+  .menu-toggle {
+    display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+    background: var(--earth); color: #fff; border: none; border-radius: 6px;
+    width: 26px; height: 26px; font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90;
+  }
+  .sidebar-overlay.visible { display: block; }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 32px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar a { color: var(--muted); text-decoration: none; }
+  .topbar a:hover { color: var(--earth); }
+  .topbar .sep { color: #ccc; }
+
+  /* ── CONTENT ── */
+  .content { max-width: 900px; padding: 32px 40px 80px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .page-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .badge-draft   { background: var(--amber-light); color: #92400e; }
+  .badge-active  { background: var(--green-light);  color: var(--green); }
+  .badge-earth   { background: var(--earth-light);  color: var(--earth); }
+  .page-title { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 6px; }
+  .page-tagline { font-size: 15px; color: var(--earth); font-style: italic; margin-bottom: 12px; }
+  .page-attrs { display: flex; gap: 24px; flex-wrap: wrap; }
+  .attr { font-size: 12px; color: var(--muted); }
+  .attr strong { color: var(--text); }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 40px; scroll-margin-top: 60px; }
+  h2 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #d7ccc8; display: flex; align-items: center; gap: 8px; }
+  h2 .icon { font-size: 18px; }
+  h3 { font-size: 15px; font-weight: 600; color: var(--earth); margin: 20px 0 8px; }
+  p  { margin-bottom: 10px; color: #374151; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; color: #374151; }
+
+  /* ── CALLOUTS ── */
+  .callout { border-radius: 8px; padding: 14px 16px; margin: 16px 0; display: flex; gap: 12px; }
+  .callout .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-info    { background: var(--blue-light);  border-left: 4px solid var(--blue); }
+  .callout-warn    { background: var(--amber-light); border-left: 4px solid var(--amber); }
+  .callout-tip     { background: var(--green-light); border-left: 4px solid var(--green); }
+  .callout-earth   { background: var(--earth-light); border-left: 4px solid var(--earth); }
+  .callout-danger  { background: var(--red-light);   border-left: 4px solid var(--red); }
+  .callout-title   { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+
+  /* ── ROLE CARDS ── */
+  .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 16px 0; }
+  .role-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; border-top: 4px solid var(--earth); }
+  .role-card.green { border-top-color: var(--green); }
+  .role-card.blue  { border-top-color: var(--blue); }
+  .role-card.amber { border-top-color: var(--amber); }
+  .role-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .role-abbr { display: inline-block; background: var(--earth-light); color: var(--earth); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .role-abbr.green { background: var(--green-light); color: var(--green); }
+  .role-card ul { margin-left: 14px; }
+  .role-card li  { font-size: 12px; margin-bottom: 3px; color: var(--muted); }
+
+  /* ── PROCESS STEPS ── */
+  .steps { margin: 16px 0; }
+  .step { display: flex; gap: 16px; margin-bottom: 6px; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--earth); color: white; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-body { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .step-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .step-desc  { font-size: 12px; color: var(--muted); margin: 0; }
+  .step-connector { width: 30px; display: flex; justify-content: center; margin: -2px 0; flex-shrink: 0; }
+  .step-connector::before { content: ''; width: 2px; height: 16px; background: #d7ccc8; display: block; }
+
+  /* ── TABLES ── */
+  .wiki-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .wiki-table th { background: var(--earth-light); color: var(--earth); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #d7ccc8; }
+  .wiki-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .wiki-table tr:last-child td { border-bottom: none; }
+  .wiki-table tr:hover td { background: #fafafa; }
+
+  /* ── CHECKLIST ── */
+  .checklist { list-style: none; margin: 8px 0 12px; padding: 0; }
+  .checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
+
+  /* ── CALENDAR EMBED ── */
+  .calendar-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); margin: 12px 0; }
+  .calendar-wrap iframe { display: block; width: 100%; border: none; }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .menu-toggle  { display: flex; align-items: center; justify-content: center; }
+    .sidebar      { transform: translateX(-100%); transition: transform .25s ease; z-index: 100; }
+    .sidebar.open { transform: translateX(0); }
+    .main         { margin-left: 0 !important; width: 100%; }
+    .topbar       { padding-left: 44px; flex-wrap: wrap; }
+    .content      { padding: 16px 16px 60px; max-width: 100%; }
+    .wiki-table   { display: block; overflow-x: auto; font-size: 12px; }
+    .role-grid    { grid-template-columns: 1fr; }
+    .page-attrs   { flex-direction: column; gap: 4px; }
+    .page-title   { font-size: 22px; }
+    h2            { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">Gestión con Proveedores</div>
+      <div class="logo-sub">Comisión de Recursos · Pool Logístico</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Navegación</div>
+  <a href="#resumen" class="active">Resumen</a>
+  <a href="#equipo">Equipo Interno</a>
+  <a href="#pool">Pool de Colaboradores</a>
+  <a href="#flujo">Flujo de Reposición</a>
+  <a href="#flujo" class="sub">→ Gatillo y solicitud</a>
+  <a href="#flujo" class="sub">→ Pedido al proveedor</a>
+  <a href="#flujo" class="sub">→ Retiro y recepción</a>
+  <a href="#checklists">Checklists Operativos</a>
+  <a href="#checklists" class="sub">→ Retiro en proveedor</a>
+  <a href="#checklists" class="sub">→ Recepción en escuela</a>
+  <a href="#calendario">Calendario de Gestión</a>
+  <a href="#pendientes">Pendientes / TBD</a>
+
+  <div class="sidebar-section" style="margin-top:auto">Proyecto</div>
+  <a href="diente-de-leon.html">🌱 Wiki Principal</a>
+  <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank">🛍️ Tienda</a>
+  <a href="https://ine-robertson.github.io/dandelion-tienda-dashboard/" target="_blank">📊 Dashboard</a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <a href="diente-de-leon.html">Wiki</a><span class="sep">›</span>
+    <a href="diente-de-leon.html">Diente de León</a><span class="sep">›</span>
+    <span>Gestión con Proveedores</span>
+  </div>
+
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-meta">
+        <span class="badge badge-earth">Interno</span>
+        <span class="badge badge-draft">Draft v0.1</span>
+      </div>
+      <div class="page-title">📦 Gestión con Proveedores</div>
+      <div class="page-tagline">Abastecimiento, logística y pool de colaboradores satélites</div>
+      <div class="page-attrs">
+        <div class="attr"><strong>Comisión de Recursos:</strong> Maximiliano Contreras · Lucas Di Stefano · Esteban Próspero</div>
+        <div class="attr"><strong>Ejecución Logística:</strong> Yuliana Longhi · Maria Martini</div>
+        <div class="attr"><strong>Scope:</strong> Diente de León · Otras ventas comunitarias · SEF</div>
+      </div>
+    </div>
+
+    <div class="callout callout-earth">
+      <div class="icon">📌</div>
+      <div>
+        <div class="callout-title">Esta página es de uso interno</div>
+        Está dirigida a la Comisión de Recursos y al Pool de Colaboradores Logísticos. No es necesario compartirla con referentes de grado ni con las familias.
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div class="section" id="resumen">
+      <h2><span class="icon">📋</span> Resumen</h2>
+      <p>Esta página centraliza toda la información operativa del proceso de abastecimiento: cómo se gestiona la relación con los proveedores, cómo funciona el pool de colaboradores satélites y el flujo completo desde que se detecta una necesidad de reposición hasta que el producto llega a la escuela.</p>
+
+      <div class="role-grid">
+        <div class="role-card">
+          <div class="role-name">Comisión de Recursos</div>
+          <div class="role-abbr">RECURSOS</div>
+          <ul>
+            <li>Garantizar que ningún proyecto opere de forma aislada sin proceso definido</li>
+            <li>Asegurar soporte digital para mayor eficiencia en cada iniciativa</li>
+            <li>Gestionar y proveer recursos financieros cuando el proyecto lo requiera</li>
+            <li>Integrar SEF y otros proyectos comunitarios bajo el mismo esquema <span class="badge badge-draft">Pendiente</span></li>
+            <li>Rol de gobernanza y sostenibilidad, no operativo</li>
+          </ul>
+        </div>
+        <div class="role-card blue">
+          <div class="role-name">Ejecución Logística</div>
+          <div class="role-abbr" style="background:var(--blue-light);color:var(--blue)">EL</div>
+          <ul>
+            <li>Armado de pedidos a proveedores</li>
+            <li>Coordinación del pool logístico</li>
+            <li>Asignación de turnos</li>
+            <li>Comunicación con Digitalización para eficientizar procesos</li>
+            <li>Supervisión general de la operación</li>
+          </ul>
+        </div>
+        <div class="role-card green">
+          <div class="role-name">Pool de Colaboradores Logísticos</div>
+          <div class="role-abbr green">POOL</div>
+          <ul>
+            <li>Retiro de mercadería en el proveedor</li>
+            <li>Traslado a la escuela</li>
+            <li>Control de calidad de los productos recibidos</li>
+            <li>Contabilización del stock recibido</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPO INTERNO -->
+    <div class="section" id="equipo">
+      <h2><span class="icon">👥</span> Equipo Interno</h2>
+      <table class="wiki-table">
+        <thead><tr><th>Persona</th><th>Rol</th><th>Responsabilidad principal</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Yuliana Longhi</strong></td><td><span class="badge badge-earth">Coordinación · Ejecución Logística</span></td><td>Armado de pedidos a proveedores, coordinación del pool, comunicación con Digitalización</td></tr>
+          <tr><td><strong>Maria Martini</strong></td><td><span class="badge badge-earth">Gestión del Proveedor (FGP)</span></td><td>Vínculo con proveedores, órdenes de pedido, resolución de incidentes</td></tr>
+          <tr><td><strong>Ines Robertson</strong></td><td><span class="badge badge-pilot">Soporte Digitalización de Procesos</span></td><td>Digitalización y eficientización de procesos de gestión con proveedores</td></tr>
+          <tr><td><strong>Maximiliano Contreras</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td>Gobernanza de proyectos, soporte digital y recursos financieros</td></tr>
+          <tr><td><strong>Lucas Di Stefano</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td>Gobernanza de proyectos, soporte digital y recursos financieros</td></tr>
+          <tr><td><strong>Esteban Próspero</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td>Gobernanza de proyectos, soporte digital y recursos financieros</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- POOL -->
+    <div class="section" id="pool">
+      <h2><span class="icon">🚗</span> Pool de Colaboradores Satélites</h2>
+      <p>Grupo de familias voluntarias que asumen turnos rotativos para la operación física del proyecto. Su participación es clave para que ninguna persona cargue sola con la logística.</p>
+
+      <div class="callout callout-tip">
+        <div class="icon">💡</div>
+        <div>
+          <div class="callout-title">Principio de rotación</div>
+          Ninguna familia repite turno hasta que todas hayan participado al menos una vez. Los turnos se asignan con <strong>al menos 7 días de anticipación</strong> y se confirma disponibilidad antes de publicar en el calendario.
+        </div>
+      </div>
+
+      <h3>Sub-roles del Pool</h3>
+      <table class="wiki-table">
+        <thead><tr><th>Sub-rol</th><th>Tarea</th><th>Zona</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Retiro en proveedor</strong></td><td>Busca la mercadería en el punto acordado, verifica cantidad y estado, traslada a la escuela</td><td>Córdoba capital y alrededores (Saldán, Villa Allende, Mendiolaza, La Calera, Río Ceballos)</td></tr>
+          <tr><td><strong>Recepción y control</strong></td><td>Recibe en la escuela, controla calidad vs. remito, registra incidencias</td><td>Escuela Dandelion</td></tr>
+
+          <tr><td><strong>Armado y despacho externos</strong> <span class="badge badge-draft">A futuro</span></td><td>Despacho por correo de pedidos realizados por compradores fuera de la comunidad Dandelion</td><td>Correo Argentino</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Familias del Pool</h3>
+      <table class="wiki-table">
+        <thead><tr><th>Familia</th><th>Disponibilidad</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ana Weissbein · Jose Carranza</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+          <tr><td><strong>Valeria Pierobon</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+          <tr><td><strong>Anabella Gargiulo</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+          <tr><td><strong>Alejandra Aguirre</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+          <tr><td><strong>Nico Papa Cami</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+          <tr><td><strong>Andrea Truppia</strong></td><td><span class="badge badge-draft">TBD</span></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <div class="icon">🙋</div>
+        <div>
+          <div class="callout-title">¿Querés sumarte al pool?</div>
+          Escribinos a <strong>dientedeleon-admin@googlegroups.com</strong> con tu nombre, zona y disponibilidad general. ¡Toda ayuda es bienvenida!
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FLUJO DE REPOSICIÓN -->
+    <div class="section" id="flujo">
+      <h2><span class="icon">🔄</span> Flujo de Reposición</h2>
+      <p>Proceso completo desde que se detecta la necesidad de reponer stock hasta que el producto está disponible en la escuela.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Gatillo de reposición</div>
+            <p class="step-desc">La FGP (Maria) detecta que el stock llegó al punto de pedido definido para ese producto, o se activa por calendario (ej: 1 vez al mes). Decide iniciar la reposición.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Solicitud de reposición</div>
+            <p class="step-desc">La FGP completa el Formulario Google "Solicitud de pedido a proveedor" (qué, cuánto, cuándo, dónde, quién paga). Queda registrado en la planilla de pedidos. <strong>[TBD: ¿quién autoriza?]</strong></p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Pedido estándar al proveedor</div>
+            <p class="step-desc">La FGP envía el pedido por email/WhatsApp usando la plantilla estándar: SKUs, cantidades, precios acordados, fecha y ventana horaria de retiro.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Asignación logística del pool</div>
+            <p class="step-desc">Yuli asigna a una familia del pool el turno de retiro. Se registra en el Calendario Google y en la Hoja de Turnos. La familia recibe notificación con al menos 7 días de anticipación.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Retiro y traslado</div>
+            <p class="step-desc">El colaborador asignado retira la mercadería, completa el checklist de retiro, registra evidencia (fotos del remito y los bultos) y completa el formulario "Retiro realizado".</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title">Recepción y control de calidad</div>
+            <p class="step-desc">En la escuela se verifica lo recibido vs. el remito: cantidades, estado, temperatura si aplica. Si hay incidencia, queda abierta en la planilla hasta resolución — el producto no ingresa a stock hasta entonces.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <div class="step-title">Actualización de stock y cierre</div>
+            <p class="step-desc">La Gestoría (Ines) actualiza el stock en TiendaNube y cierra el pedido en la planilla como "recibido". Si corresponde: registra el pago y adjunta comprobante.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKLISTS -->
+    <div class="section" id="checklists">
+      <h2><span class="icon">✅</span> Checklists Operativos <span class="badge badge-draft" style="font-size:11px;vertical-align:middle">Pendiente de definir</span></h2>
+
+      <h3>Checklist de Retiro en Proveedor</h3>
+      <ul class="checklist">
+        <li><div class="box"></div> Confirmar dirección y horario de retiro con la FGP (con al menos 24hs de anticipación)</li>
+        <li><div class="box"></div> Llevar el pedido impreso o en el celular (SKU, cantidades, precio acordado)</li>
+        <li><div class="box"></div> Contar y verificar los bultos en el momento del retiro</li>
+        <li><div class="box"></div> Fotografiar el remito y los bultos antes de cargar</li>
+        <li><div class="box"></div> Verificar estado general del producto (envases, temperatura si aplica)</li>
+        <li><div class="box"></div> Completar el formulario "Retiro realizado" desde el celular</li>
+        <li><div class="box"></div> Trasladar directamente a la escuela (no dejar en casa intermedia sin aviso)</li>
+      </ul>
+
+      <h3>Checklist de Recepción en Escuela</h3>
+      <ul class="checklist">
+        <li><div class="box"></div> Recibir con el remito en mano y verificar cantidades vs. pedido original</li>
+        <li><div class="box"></div> Revisar estado: envases cerrados, sin roturas, fecha de vencimiento</li>
+        <li><div class="box"></div> Fotografiar lo recibido</li>
+        <li><div class="box"></div> Registrar incidencias si las hay (faltante, producto dañado)</li>
+        <li><div class="box"></div> Completar el formulario "Recepción en escuela"</li>
+        <li><div class="box"></div> Avisar a Gestoría de Tienda para actualizar stock en TiendaNube</li>
+      </ul>
+    </div>
+
+    <!-- CALENDARIO -->
+    <div class="section" id="calendario">
+      <h2><span class="icon">📅</span> Calendario de Gestión</h2>
+      <p>Agenda interna del proyecto: retiros de mercadería, asignación de turnos del pool, reuniones del equipo y fechas clave.</p>
+      <div class="calendar-wrap">
+        <iframe
+          src="https://calendar.google.com/calendar/embed?src=d464a84a472a8802d4b6cd6641f19b2c71d71f257b5409e975d0cc4ee66bf0ad%40group.calendar.google.com&ctz=America%2FArgentina%2FCordoba&hl=es&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=0&mode=MONTH"
+          height="500"
+          title="Calendario Diente de León">
+        </iframe>
+      </div>
+      <div class="callout callout-info" style="margin-top:12px">
+        <div class="icon">📅</div>
+        <div>
+          <div class="callout-title">¿Cómo agregar este calendario a tu Google Calendar?</div>
+          <ol style="margin: 8px 0 0 16px; font-size: 13px;">
+            <li>Abrí este link desde tu celular o computadora con tu cuenta de Gmail: <br><a href="https://calendar.google.com/calendar/u/0?cid=ZDQ2NGE4NGE0NzJhODgwMmQ0YjZjZDY2NDFmMTliMmM3MWQ3MWYyNTdiNTQwOWU5NzVkMGNjNGVlNjZiZjBhZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t" target="_blank" style="color:var(--blue);font-weight:600;word-break:break-all">Agregar Calendario Diente de León</a></li>
+            <li>Google Calendar te va a mostrar una pantalla con el nombre del calendario</li>
+            <li>Hacé clic en <strong>"Agregar calendario"</strong></li>
+            <li>¡Listo! Los eventos van a aparecer automáticamente en tu calendario</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- PENDIENTES -->
+    <div class="section" id="pendientes">
+      <h2><span class="icon">📌</span> Pendientes / TBD</h2>
+      <ul class="checklist">
+        <li><div class="box"></div> Definir quién autoriza los pedidos a proveedores (¿FGP sola o requiere aprobación?)</li>
+        <li><div class="box"></div> Nombrar coordinador/a del pool logístico (actualmente Yuli)</li>
+        <li><div class="box"></div> Definir zonas de cobertura y responsables por zona para despacho de mercadería fuera de la comunidad Dandelion (vinculado a la funcionalidad de despacho externo a futuro)</li>
+        <li><div class="box"></div> Crear los 3 formularios Google (solicitud, retiro, recepción)</li>
+        <li><div class="box"></div> Establecer puntos de pedido por producto (cuándo activar reposición)</li>
+        <li><div class="box"></div> Definir plantilla estándar de pedido a proveedor (email/WhatsApp)</li>
+      </ul>
+    </div>
+
+    <hr>
+    <p style="font-size:11px;color:var(--muted);text-align:center">
+      Gestión con Proveedores · Diente de León · Escuela Dandelion Pedagogía Waldorf · Draft v0.1 · Marzo 2026
+    </p>
+
+  </div>
+</div>
+
+<script>
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const toggle   = document.getElementById('menuToggle');
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('visible'); }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+  toggle.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+  overlay.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.sidebar a').forEach(a => a.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSidebar();
+  }));
+
+  const sections = document.querySelectorAll('.section');
+  const links = document.querySelectorAll('.sidebar a[href^="#"]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 80) current = '#' + s.id;
+    });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === current);
+    });
+  });
+</script>
+
+</body>
+</html>
