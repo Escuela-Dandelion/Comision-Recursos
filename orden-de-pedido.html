@@ -40,10 +40,11 @@
 
   /* TABLA DE PRODUCTOS */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
-  .prod-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 13px; min-width: 400px; }
-  .prod-table th { background: #e8f5e9; color: #3a7d44; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 10px; text-align: left; border: 1px solid #c8e6c9; }
-  .prod-table td { padding: 0; border: 1px solid #e0e0e0; }
-  .prod-table td input { width: 100%; border: none; background: transparent; padding: 10px 10px; font-size: 14px; font-family: inherit; color: #2d2d2d; }
+  .prod-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 13px; }
+  .prod-table th { background: #e8f5e9; color: #3a7d44; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 6px; text-align: left; border: 1px solid #c8e6c9; white-space: nowrap; }
+  .prod-table td { padding: 0; border: 1px solid #e0e0e0; vertical-align: top; }
+  .prod-table td input { width: 100%; border: none; background: transparent; padding: 8px 6px; font-size: 13px; font-family: inherit; color: #2d2d2d; white-space: normal; word-break: break-word; }
+  .prod-table td.col-producto input { min-height: 38px; height: auto; word-break: break-word; }
   .prod-table td input:focus { outline: none; background: #f0fdf4; }
   .prod-table tr:nth-child(even) td { background: #fafafa; }
 
@@ -114,10 +115,10 @@
     <table class="prod-table">
       <thead>
         <tr>
-          <th style="width:40%">Producto</th>
-          <th style="width:15%">Unidad</th>
-          <th style="width:15%">Cantidad</th>
-          <th style="width:30%">Precio acordado</th>
+          <th style="width:50%">Producto</th>
+          <th style="width:12%">Unid.</th>
+          <th style="width:12%">Cant.</th>
+          <th style="width:26%">Precio</th>
         </tr>
       </thead>
       <tbody id="tbody-productos">
