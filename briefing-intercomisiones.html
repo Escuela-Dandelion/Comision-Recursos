@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Briefing Intercomisiones · Dandelion 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream:   #faf6ef;
+    --gold:    #c8a95a;
+    --sage:    #7a9e7e;
+    --sage-d:  #4e7152;
+    --terra:   #c47a5a;
+    --ink:     #2e2820;
+    --ink-m:   #5a5248;
+    --ink-l:   #8a8278;
+    --wash1:   rgba(200,169,90,.13);
+    --wash2:   rgba(122,158,126,.15);
+    --wash3:   rgba(196,122,90,.12);
+  }
+
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #2e2820; }
+
+  /* ── DECK ── */
+  .deck { width: 100%; height: 100%; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity .6s ease;
+    background: var(--cream);
+    overflow: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+
+  /* ── WATERCOLOR BLOBS ── */
+  .blobs { position: absolute; inset: 0; pointer-events: none; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(60px); opacity: .55;
+  }
+
+  /* ── NAVIGATION ── */
+  .nav {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px; z-index: 100;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(46,40,32,.25); cursor: pointer; transition: all .3s;
+  }
+  .dot.active { background: var(--gold); transform: scale(1.4); }
+
+  .nav-arrow {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(46,40,32,.08); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--ink-m); transition: background .2s; z-index: 100;
+  }
+  .nav-arrow:hover { background: rgba(46,40,32,.16); }
+  .nav-arrow.prev { left: 20px; }
+  .nav-arrow.next { right: 20px; }
+
+  /* ── SLIDE INNER ── */
+  .inner { position: relative; z-index: 2; width: 88%; max-width: 1100px; }
+
+  /* ── TYPOGRAPHY ── */
+  .eyebrow {
+    font-family: 'Lato', sans-serif; font-weight: 700; font-size: 10px;
+    letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif; font-weight: 600;
+    font-size: clamp(36px, 5vw, 60px); color: var(--ink); line-height: 1.1;
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-family: 'Cormorant Garamond', serif; font-weight: 600;
+    font-size: clamp(28px, 3.5vw, 44px); color: var(--ink); line-height: 1.15;
+    margin-bottom: 18px;
+  }
+  .subtitle {
+    font-family: 'Lato', sans-serif; font-weight: 300; font-size: 15px;
+    color: var(--ink-m); line-height: 1.6; max-width: 620px;
+  }
+  .divider {
+    width: 48px; height: 2px; background: var(--gold);
+    margin: 18px 0; border-radius: 2px;
+  }
+
+  /* ── CARDS ── */
+  .cards { display: grid; gap: 14px; margin-top: 10px; }
+  .cards-2 { grid-template-columns: 1fr 1fr; }
+  .cards-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: rgba(255,255,255,.7);
+    border: 1px solid rgba(200,169,90,.25);
+    border-radius: 14px; padding: 18px 20px;
+    backdrop-filter: blur(4px);
+  }
+  .card-icon { font-size: 22px; margin-bottom: 8px; }
+  .card-title {
+    font-family: 'Cormorant Garamond', serif; font-weight: 600;
+    font-size: 17px; color: var(--ink); margin-bottom: 6px;
+  }
+  .card-body {
+    font-family: 'Lato', sans-serif; font-weight: 300;
+    font-size: 12.5px; color: var(--ink-m); line-height: 1.6;
+  }
+
+  /* ── TAGS / PILLS ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .tag {
+    font-family: 'Lato', sans-serif; font-size: 11.5px; font-weight: 400;
+    padding: 5px 13px; border-radius: 20px; color: var(--ink-m);
+    border: 1px solid rgba(46,40,32,.18); background: rgba(255,255,255,.6);
+  }
+  .tag.terra { border-color: var(--terra); color: var(--terra); background: rgba(196,122,90,.08); }
+  .tag.sage  { border-color: var(--sage);  color: var(--sage-d); background: rgba(122,158,126,.1); }
+  .tag.gold  { border-color: var(--gold);  color: #8a6a20; background: rgba(200,169,90,.1); }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight {
+    background: linear-gradient(135deg, rgba(122,158,126,.18), rgba(200,169,90,.12));
+    border: 1px solid rgba(122,158,126,.35);
+    border-radius: 16px; padding: 20px 24px; margin-top: 16px;
+  }
+  .highlight-label {
+    font-family: 'Lato', sans-serif; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--sage-d);
+    margin-bottom: 6px;
+  }
+  .highlight-text {
+    font-family: 'Cormorant Garamond', serif; font-size: 18px;
+    font-style: italic; color: var(--ink); line-height: 1.5;
+  }
+
+  /* ── BULLET LIST ── */
+  .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .bullet-list li {
+    font-family: 'Lato', sans-serif; font-size: 13px; color: var(--ink-m);
+    line-height: 1.5; padding-left: 18px; position: relative;
+  }
+  .bullet-list li::before {
+    content: ''; position: absolute; left: 0; top: 8px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
+  }
+
+  /* ── COMMISSION GRID ── */
+  .comm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .comm-item {
+    background: rgba(255,255,255,.65); border-radius: 12px;
+    padding: 14px 16px; border: 1px solid rgba(46,40,32,.1);
+  }
+  .comm-name {
+    font-family: 'Lato', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--sage-d);
+    margin-bottom: 6px;
+  }
+  .comm-needs {
+    font-family: 'Lato', sans-serif; font-size: 12px; font-weight: 300;
+    color: var(--ink-m); line-height: 1.55;
+  }
+
+  /* ── QUOTE ── */
+  .quote {
+    font-family: 'Cormorant Garamond', serif; font-size: 20px;
+    font-style: italic; color: var(--ink); line-height: 1.6;
+    border-left: 3px solid var(--gold); padding-left: 20px;
+    margin-top: 20px;
+  }
+
+  /* ── LAYOUT HELPERS ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; align-items: start; }
+  .badge {
+    display: inline-block; font-family: 'Lato', sans-serif; font-size: 10px;
+    font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 14px;
+    background: rgba(122,158,126,.2); color: var(--sage-d);
+  }
+
+  /* ── WATERCOLOR DECORATIVES ── */
+  .wc-line {
+    position: absolute; pointer-events: none;
+    border-radius: 50%; filter: blur(40px); opacity: .4;
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 1 — PORTADA + DIAGNÓSTICO
+  ════════════════════════════════════════════════════════ -->
+  <div class="slide active" id="s1">
+
+    <!-- Watercolor blobs -->
+    <div class="blobs">
+      <div class="blob" style="width:500px;height:500px;background:var(--wash2);top:-100px;left:-100px;"></div>
+      <div class="blob" style="width:400px;height:400px;background:var(--wash1);bottom:-80px;right:-60px;"></div>
+      <div class="blob" style="width:300px;height:300px;background:var(--wash3);top:40%;left:55%;"></div>
+    </div>
+
+    <div class="inner">
+      <div class="two-col" style="align-items:center;">
+
+        <div>
+          <div class="eyebrow">Escuela Dandelion Waldorf · 2026</div>
+          <h1>Comisión<br>Gestión de<br>Proyectos</h1>
+          <div class="divider"></div>
+          <p class="subtitle">
+            Briefing para Reunión Intercomisiones. Presentamos el trabajo realizado, nuestra visión para 2026 y —fundamentalmente— abrimos un diálogo: porque los proyectos que tenemos en mente no pueden avanzar solos.
+          </p>
+          <div class="tags" style="margin-top:20px;">
+            <span class="tag gold">Ciclo Lectivo 2026</span>
+            <span class="tag sage">Intercomisiones</span>
+            <span class="tag terra">Consolidación</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="badge">Lo que observamos</div>
+          <div class="cards">
+            <div class="card">
+              <div class="card-icon">⚖️</div>
+              <div class="card-title">Desbalance esfuerzo / resultado</div>
+              <div class="card-body">Muchas horas de trabajo voluntario con impacto económico reducido.</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">🔀</div>
+              <div class="card-title">Atomización y superposición</div>
+              <div class="card-body">Múltiples iniciativas paralelas trabajando sobre los mismos canales sin coordinación.</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">📂</div>
+              <div class="card-title">Información dispersa</div>
+              <div class="card-body">Sin registro centralizado de proyectos activos, estado ni resultados.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 2 — LA PROPUESTA
+  ════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s2">
+
+    <div class="blobs">
+      <div class="blob" style="width:600px;height:400px;background:var(--wash1);top:-80px;right:-100px;"></div>
+      <div class="blob" style="width:350px;height:350px;background:var(--wash2);bottom:-60px;left:-60px;"></div>
+    </div>
+
+    <div class="inner">
+      <div class="eyebrow">Nuestra propuesta para 2026</div>
+      <h2>Consolidar · Modernizar · Escalar</h2>
+
+      <div class="two-col">
+
+        <div>
+          <p class="subtitle" style="margin-bottom:16px;">
+            En lugar de multiplicar proyectos nuevos, consolidar los que ya funcionan. El punto de partida son los proyectos de compraventa con historia en la escuela.
+          </p>
+          <ul class="bullet-list">
+            <li>Unificación bajo una sola plataforma de todos los proyectos existentes</li>
+            <li>Modernización de canales de venta, medios de pago y logística</li>
+            <li>Marco institucional claro para el uso de la identidad Dandelion</li>
+            <li>Aprovechamiento de la figura de <em>miembros de apoyo</em> para tareas puntuales</li>
+            <li>Registro centralizado con estado, responsables y métricas básicas</li>
+          </ul>
+
+          <div class="highlight">
+            <div class="highlight-label">Proyecto ancla</div>
+            <div class="highlight-text">Marketplace Dandelion — un canal unificado de venta de productos alineados con la filosofía Waldorf, abierto a la comunidad y al público general.</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="badge">Proyectos de base</div>
+          <div class="cards">
+            <div class="card">
+              <div class="card-icon">🤝</div>
+              <div class="card-title">SEF — SER Económico Fraterno</div>
+              <div class="card-body">Red de prosumidores con donación por consumo. Primer impulso de recaudación, con historia y base probada.</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">🌼</div>
+              <div class="card-title">Diente de León</div>
+              <div class="card-body">Tienda de productos naturales con proveedores internos y externos. Piloto activo con logística en marcha.</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">🧸</div>
+              <div class="card-title">Juguetes Waldorf</div>
+              <div class="card-body">Próximamente. Cereales, bibliografía, juguetes de madera y artículos naturales alineados con la pedagogía.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 3 — LO QUE NECESITAMOS + CONVERSACIÓN
+  ════════════════════════════════════════════════════════ -->
+  <div class="slide" id="s3">
+
+    <div class="blobs">
+      <div class="blob" style="width:500px;height:500px;background:var(--wash3);top:-120px;left:-80px;"></div>
+      <div class="blob" style="width:450px;height:350px;background:var(--wash2);bottom:-80px;right:-80px;"></div>
+    </div>
+
+    <div class="inner">
+      <div class="eyebrow">Construyamos juntos</div>
+      <h2>Lo que necesitamos de otras comisiones</h2>
+
+      <div class="two-col">
+
+        <div>
+          <div class="comm-grid">
+            <div class="comm-item">
+              <div class="comm-name">⚖️ Económica</div>
+              <div class="comm-needs">Modelo financiero del Marketplace y coordinación del flujo de fondos hacia la institución.</div>
+            </div>
+            <div class="comm-item">
+              <div class="comm-name">📢 Comunicación</div>
+              <div class="comm-needs">Identidad visual coherente con Dandelion y protocolo de uso institucional.</div>
+            </div>
+            <div class="comm-item">
+              <div class="comm-name">📋 Legal-Administrativa</div>
+              <div class="comm-needs">Validación del análisis jurídico-impositivo elaborado y marco para uso de identidad escolar.</div>
+            </div>
+            <div class="comm-item">
+              <div class="comm-name">🌍 Integración Social</div>
+              <div class="comm-needs">Vinculación con otras escuelas Waldorf e identificación de productores afines.</div>
+            </div>
+            <div class="comm-item" style="grid-column:1/-1;">
+              <div class="comm-name">🏠 Horneritos</div>
+              <div class="comm-needs">Evaluación de espacio físico disponible para almacenamiento o despacho de productos.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="badge">Abrimos la conversación</div>
+          <ul class="bullet-list" style="gap:12px;">
+            <li>¿Qué proyectos de compraventa están activos hoy en su comisión? ¿Estarían dispuestos a sumarse a una plataforma unificada?</li>
+            <li>¿Tienen contacto con productores o proveedores alineados con la filosofía de la escuela?</li>
+            <li>¿Qué condiciones necesitarían para colaborar en tareas puntuales del Marketplace?</li>
+            <li>¿Ven riesgos o tensiones en la idea que no estamos considerando?</li>
+          </ul>
+
+          <div class="quote">
+            "La fuerza de este proyecto no está en la comisión que lo impulsa, sino en la red que construyamos juntos."
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<button class="nav-arrow prev" onclick="go(-1)">&#8592;</button>
+<button class="nav-arrow next" onclick="go(1)">&#8594;</button>
+<div class="nav" id="nav">
+  <div class="dot active" onclick="goTo(0)"></div>
+  <div class="dot" onclick="goTo(1)"></div>
+  <div class="dot" onclick="goTo(2)"></div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots   = document.querySelectorAll('.dot');
+  let cur = 0;
+
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('active');
+  }
+
+  function go(dir) { goTo(cur + dir); }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  });
+</script>
+
+</body>
+</html>
