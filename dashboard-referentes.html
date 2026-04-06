@@ -230,6 +230,10 @@
       <select class="filter-select" id="filtro-mes" onchange="aplicarFiltros()">
         <option value="">Todos los meses</option>
       </select>
+      <div class="filter-label">Grado</div>
+      <select class="filter-select" id="filtro-grado" onchange="aplicarFiltros()">
+        <option value="">Todos los grados</option>
+      </select>
     </div>
 
     <!-- MAIN -->
@@ -277,13 +281,35 @@ var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMp
 var PALETTE   = ['#1a1a6e','#3483FA','#00A650','#e63946','#f4a261','#2a9d8f','#e9c46a','#8b5cf6','#f06595','#74c0fc'];
 var ALL_ROWS  = [];
 var ALL_MESES = [];
-var chartInst = null;
+var chartInst   = null;
 var currentVista = 'grado';
 var currentMes   = '';
+var currentGrado = '';
 
 // ── Mes actual por defecto ──
 var _hoy  = new Date();
 var _mesCorriente = _hoy.getFullYear() + '-' + ('0' + (_hoy.getMonth()+1)).slice(-2);
+
+function normalizarGrado(g) {
+  var s = String(g).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (s.indexOf('jard') !== -1) return 'Jardín';
+  return String(g).trim();
+}
+function gradoIdx(g) {
+  var s = String(g).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (s.indexOf('jard') !== -1) return 0;
+  var m = s.match(/^(\d+)/);
+  if (m) return parseInt(m[1]);
+  return 99;
+}
+function sortGrados(arr) {
+  return arr.slice().sort(function(a, b) {
+    var ai = gradoIdx(a), bi = gradoIdx(b);
+    return ai !== bi ? ai - bi : String(a).localeCompare(String(b), 'es');
+  });
+}
 
 function pesos(n) {
   return '$ ' + Math.round(n || 0).toLocaleString('es-AR');
@@ -334,7 +360,7 @@ function initDashboard(d) {
   document.getElementById('loading-dash').style.display = 'none';
   document.getElementById('txt-actualizado').textContent = 'Actualizado: ' + (d.actualizado||'');
 
-  ALL_ROWS  = d.rows || [];
+  ALL_ROWS  = (d.rows || []).map(function(r){ r.grado = normalizarGrado(r.grado); return r; });
   ALL_MESES = d.meses_todos || [];
 
   // Poblar selector de meses
@@ -346,6 +372,16 @@ function initDashboard(d) {
     sel.appendChild(opt);
   });
   currentMes = sel.value;
+
+  // Poblar selector de grados (orden Jardín → 1 → 12)
+  var gradosSet = {};
+  ALL_ROWS.forEach(function(r){ if (r.grado) gradosSet[r.grado] = true; });
+  var selG = document.getElementById('filtro-grado');
+  sortGrados(Object.keys(gradosSet)).forEach(function(g){
+    var opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    selG.appendChild(opt);
+  });
 
   document.getElementById('cards').style.display    = 'grid';
   document.getElementById('chart-card').style.display = 'block';
@@ -364,15 +400,16 @@ function setVista(v) {
 }
 
 function aplicarFiltros() {
-  currentMes = document.getElementById('filtro-mes').value;
+  currentMes   = document.getElementById('filtro-mes').value;
+  currentGrado = document.getElementById('filtro-grado').value;
   render();
 }
 
 // ── RENDER ──
 function render() {
-  var rows = currentMes
-    ? ALL_ROWS.filter(function(r){ return r.mes === currentMes; })
-    : ALL_ROWS;
+  var rows = ALL_ROWS;
+  if (currentMes)   rows = rows.filter(function(r){ return r.mes   === currentMes;   });
+  if (currentGrado) rows = rows.filter(function(r){ return r.grado === currentGrado; });
 
   updateCards(rows);
   updateChart(rows);
@@ -399,34 +436,34 @@ function updateCards(rows) {
 
 // ── CHART ──
 function updateChart(rows) {
-  var meses = currentMes ? [currentMes] : ALL_MESES;
-  var dimFn = currentVista === 'grado'
-    ? function(r){ return r.grado; }
-    : currentVista === 'marca'
-      ? function(r){ return r.marca || '(sin marca)'; }
-      : function(r){ return r.producto; };
+  var titles = { grado:'Recaudación por grado', marca:'Ranking por marca', producto:'Ranking por producto' };
+  document.getElementById('chart-title').innerHTML = titles[currentVista] +
+    (currentVista === 'grado' ? ' <span>$ por mes</span>' : ' <span>$ total, mayor a menor</span>');
 
+  if (currentVista === 'grado') {
+    _chartGrado(rows);
+  } else {
+    _chartHistograma(rows);
+  }
+}
+
+// Grado: multi-serie por mes (orden Jardín→12)
+function _chartGrado(rows) {
+  var meses = currentMes ? [currentMes] : ALL_MESES;
   var serieMap = {}, serieOrder = [];
   rows.forEach(function(r){
-    var dim = dimFn(r);
-    var mes = r.mes;
-    if (!serieMap[dim]) { serieMap[dim] = {}; serieOrder.push(dim); }
-    serieMap[dim][mes] = (serieMap[dim][mes]||0) + r.total_linea;
+    if (!serieMap[r.grado]) { serieMap[r.grado] = {}; serieOrder.push(r.grado); }
+    serieMap[r.grado][r.mes] = (serieMap[r.grado][r.mes]||0) + r.total_linea;
   });
-  serieOrder.sort();
-
-  var datasets = serieOrder.map(function(dim, i){
+  serieOrder = sortGrados(serieOrder);
+  var datasets = serieOrder.map(function(g, i){
     return {
-      label: dim,
-      data:  meses.map(function(m){ return Math.round(serieMap[dim][m]||0); }),
+      label: g,
+      data:  meses.map(function(m){ return Math.round(serieMap[g][m]||0); }),
       backgroundColor: PALETTE[i % PALETTE.length],
-      borderRadius: 5, borderSkipped: false
+      borderRadius: 4, borderSkipped: false
     };
   });
-
-  var titles = { grado:'Recaudación por grado', marca:'Recaudación por marca', producto:'Recaudación por producto' };
-  document.getElementById('chart-title').innerHTML = titles[currentVista] + ' <span>$ por mes</span>';
-
   if (chartInst) chartInst.destroy();
   chartInst = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'bar',
@@ -436,7 +473,44 @@ function updateChart(rows) {
       plugins: { legend: { position:'bottom', labels:{ boxWidth:10, font:{size:11} } } },
       scales: {
         x: { grid:{ display:false } },
-        y: { beginAtZero:true, ticks:{ callback: function(v){ return '$ '+v.toLocaleString('es-AR'); } } }
+        y: { beginAtZero:true, ticks:{ callback: function(v){ return '$'+v.toLocaleString('es-AR'); } } }
+      }
+    }
+  });
+}
+
+// Marca/Producto: histograma ordenado de mayor a menor $
+function _chartHistograma(rows) {
+  var dimFn = currentVista === 'marca'
+    ? function(r){ return r.marca || '(sin marca)'; }
+    : function(r){ return r.producto; };
+
+  var totals = {};
+  rows.forEach(function(r){
+    var d = dimFn(r);
+    totals[d] = (totals[d]||0) + r.total_linea;
+  });
+  var dims = Object.keys(totals).sort(function(a,b){ return totals[b]-totals[a]; });
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: dims,
+      datasets: [{
+        label: 'Recaudación',
+        data:  dims.map(function(d){ return Math.round(totals[d]); }),
+        backgroundColor: dims.map(function(_, i){ return PALETTE[i % PALETTE.length]; }),
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'x',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{ display:false }, ticks:{ maxRotation:30, font:{size:11} } },
+        y: { beginAtZero:true, ticks:{ callback: function(v){ return '$'+v.toLocaleString('es-AR'); } } }
       }
     }
   });
@@ -476,7 +550,7 @@ function pivotGrado(rows) {
     f.total_pesos += r.total_linea; f.total_un += r.cantidad;
     f.prods.push(r);
   });
-  order.sort();
+  order = sortGrados(order);
   var html = '';
   order.forEach(function(g, gi){
     var gd = map[g]; var bid = 'g'+gi;
