@@ -278,7 +278,7 @@
 
 <script>
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
-var PALETTE   = ['#1a1a6e','#3483FA','#00A650','#e63946','#f4a261','#2a9d8f','#e9c46a','#8b5cf6','#f06595','#74c0fc'];
+var PALETTE   = ['#a8c4e0','#b5d5c5','#c9b8d8','#f0c9a0','#aad4e8','#d4b8c7','#b8d4b8','#d4c9a8','#c4b8d8','#a8d4c4'];
 var ALL_ROWS  = [];
 var ALL_MESES = [];
 var chartInst   = null;
@@ -509,7 +509,7 @@ function _chartHistograma(rows) {
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid:{ display:false }, ticks:{ maxRotation:30, font:{size:11} } },
+        x: { grid:{ display:false }, ticks:{ maxRotation:90, minRotation:90, font:{size:11} } },
         y: { beginAtZero:true, ticks:{ callback: function(v){ return '$'+v.toLocaleString('es-AR'); } } }
       }
     }
@@ -529,6 +529,12 @@ function updatePivot(rows) {
   else                                  html = pivotProducto(rows);
 
   document.getElementById('pivot-table').innerHTML = html;
+
+  // Si hay filtro de grado activo, expandir todo por defecto
+  if (currentGrado) {
+    document.querySelectorAll('.l1-body, .l2-body').forEach(function(el){ el.classList.add('open'); });
+    document.querySelectorAll('.arrow').forEach(function(el){ el.classList.add('open'); });
+  }
 
   var subtitles = {
     grado:   'Grado → Familia → Productos',
