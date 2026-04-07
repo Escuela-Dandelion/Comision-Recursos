@@ -290,33 +290,39 @@ var currentGrado = '';
 var _hoy  = new Date();
 var _mesCorriente = _hoy.getFullYear() + '-' + ('0' + (_hoy.getMonth()+1)).slice(-2);
 
+var _GRADE_SUFFIX = {1:'ro',2:'do',3:'er',4:'to',5:'to',6:'to',7:'mo',8:'vo',9:'no',10:'mo',11:'vo',12:'vo'};
+function canonicalGrade(n) { return n + (_GRADE_SUFFIX[n] || 'vo'); }
+
 function normalizarGrado(g) {
-  var s = String(g).trim().toLowerCase()
+  var original = String(g).trim();
+  if (!original) return 'Otros';
+  var s = original.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Jardín
   if (s.indexOf('jard') !== -1) return 'Jardín';
   // Grados escritos en letras
   var GRADOS_TEXTO = {
-    'primer': '1ro', 'primero': '1ro',
-    'segundo': '2do',
-    'tercer': '3er', 'tercero': '3er',
-    'cuarto': '4to',
-    'quinto': '5to',
-    'sexto': '6to',
-    'septimo': '7mo', 'setimo': '7mo',
-    'octavo': '8vo',
-    'noveno': '9no',
-    'decimo': '10mo',
-    'undecimo': '11vo', 'decimoprimero': '11vo',
-    'duodecimo': '12vo', 'decimosegundo': '12vo'
+    'primer':1,'primero':1,'segundo':2,'tercer':3,'tercero':3,
+    'cuarto':4,'quinto':5,'sexto':6,'septimo':7,'setimo':7,
+    'octavo':8,'noveno':9,'decimo':10,'undecimo':11,'decimoprimero':11,
+    'duodecimo':12,'decimosegundo':12
   };
   for (var key in GRADOS_TEXTO) {
-    if (s.indexOf(key) !== -1) return GRADOS_TEXTO[key];
+    if (s.indexOf(key) !== -1) return canonicalGrade(GRADOS_TEXTO[key]);
   }
-  // Si ya tiene número al inicio, devolver tal cual
-  var original = String(g).trim();
-  if (/^\d/.test(original)) return original;
-  // Cualquier otra cosa (Tutor, Profesor, vacío, etc.) → Otros
-  if (!original || original === '(Sin observaciones)') return 'Otros';
+  // Número al inicio: extraer número y verificar que el resto sea solo sufijo ordinal + "grado"
+  var m = s.match(/^(\d+)/);
+  if (m) {
+    var num = parseInt(m[1]);
+    if (num >= 1 && num <= 12) {
+      var rest = s.slice(m[0].length)
+        .replace(/^(ro|do|er|to|vo|mo|no|°)/, '')  // quitar sufijo ordinal
+        .replace(/^\s*(grado|año|de)?\s*$/, '')     // quitar "grado", "año" o espacios
+        .trim();
+      if (!rest) return canonicalGrade(num);  // "5to", "5to grado", "5" → "5to"
+    }
+  }
+  // Cualquier otra cosa: "12.Tutora", "Tutor", "(Sin observaciones)", etc. → Otros
   return 'Otros';
 }
 function gradoIdx(g) {
