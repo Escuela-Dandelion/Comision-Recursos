@@ -257,6 +257,14 @@
           <div class="card-label" id="c-dim-label">Grados</div>
           <div class="card-value" id="c-dim">—</div>
         </div>
+        <div class="card">
+          <div class="card-label">Costo total</div>
+          <div class="card-value" id="c-costo">—</div>
+        </div>
+        <div class="card" style="border-color:#d0f0d8;">
+          <div class="card-label" style="color:#2e7d32;">Ganancia escuela</div>
+          <div class="card-value" id="c-ganancia" style="color:#2e7d32;">—</div>
+        </div>
       </div>
 
       <div class="section-card" id="chart-card" style="display:none">
@@ -452,20 +460,25 @@ function render() {
 
 // ── CARDS ──
 function updateCards(rows) {
-  var totalPesos = 0, pedidosSet = {}, familiasSet = {}, dimSet = {};
+  var totalPesos = 0, totalCosto = 0, pedidosSet = {}, familiasSet = {}, dimSet = {};
   rows.forEach(function(r){
     totalPesos += r.total_linea;
+    totalCosto += (r.costo_linea || 0);
     if (r.pedido) pedidosSet[r.pedido] = true;
     familiasSet[r.familia] = true;
     var dim = currentVista === 'grado' ? r.grado : currentVista === 'marca' ? r.marca : r.producto;
     dimSet[dim] = true;
   });
+  var comisionPagoNube = totalPesos * 0.015;
+  var ganancia = totalPesos - totalCosto - comisionPagoNube;
   var labels = { grado:'Grados', marca:'Marcas', producto:'Productos' };
   document.getElementById('c-pesos').textContent    = pesos(totalPesos);
   document.getElementById('c-pedidos').textContent  = Object.keys(pedidosSet).length;
   document.getElementById('c-familias').textContent = Object.keys(familiasSet).length;
   document.getElementById('c-dim-label').textContent = labels[currentVista];
   document.getElementById('c-dim').textContent      = Object.keys(dimSet).length;
+  document.getElementById('c-costo').textContent    = pesos(totalCosto);
+  document.getElementById('c-ganancia').textContent = pesos(ganancia);
 }
 
 // ── CHART ──
