@@ -101,6 +101,16 @@
         <label>Producto(s)</label>
         <textarea id="producto" name="producto" placeholder="Descripción del/los producto(s) a retirar" rows="3" required></textarea>
       </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Cantidad</label>
+          <input type="number" id="cantidad" name="cantidad" placeholder="Ej: 30" min="1">
+        </div>
+        <div class="field">
+          <label>Unidad</label>
+          <input type="text" id="unidad" name="unidad" placeholder="Ej: unidades, kg, cajas">
+        </div>
+      </div>
     </div>
   </div>
 
@@ -110,17 +120,21 @@
     <div class="grid">
       <div class="field">
         <label>¿Quién retira?</label>
-        <select id="retira" name="retira" required>
+        <select id="retira" name="retira" required onchange="onRetiraChange()">
           <option value="" disabled selected>Seleccioná un colaborador…</option>
           <option>Ines Robertson</option>
           <option>Jose Carranza</option>
-          <option>Maxi Contreras</option>
-          <option>Esteban Prospero</option>
           <option>Yuliana Longhi</option>
-          <option>Lucas Di Stefano</option>
           <option>Maria Martini</option>
-          <option>A coordinar con pool</option>
+          <option>Luli del Castillo</option>
+          <option>Valeria Pierobon</option>
+          <option>Andrea Truppia</option>
+          <option>Otra Persona del Pool</option>
         </select>
+      </div>
+      <div class="field" id="telefonoManualWrap" style="display:none">
+        <label>Teléfono de quien retira</label>
+        <input type="tel" id="telefono_manual" name="telefono_manual" placeholder="Ej: 5493512000000">
       </div>
       <div class="field">
         <label>Lugar de retiro</label>
@@ -167,6 +181,21 @@
 </div>
 
 <script>
+// ── TELÉFONO MANUAL ─────────────────────────────────────────
+function onRetiraChange() {
+  const retira = document.getElementById('retira').value;
+  const wrap   = document.getElementById('telefonoManualWrap');
+  const input  = document.getElementById('telefono_manual');
+  if (retira === 'Otra Persona del Pool') {
+    wrap.style.display = '';
+    input.required = true;
+  } else {
+    wrap.style.display = 'none';
+    input.required = false;
+    input.value = '';
+  }
+}
+
 // ── CONFIG ──────────────────────────────────────────────────
 // Reemplazá con la URL de tu web app de Apps Script desplegada
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
@@ -178,6 +207,8 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4l
 
   set('proveedor',    p.get('proveedor'));
   set('producto',     p.get('producto'));
+  set('cantidad',     p.get('cantidad'));
+  set('unidad',       p.get('unidad'));
   set('norden',       p.get('norden'));
   set('lugar',        p.get('lugar'));
   set('fecha_retiro', p.get('fecha_retiro'));
@@ -210,9 +241,12 @@ document.getElementById('formRetiro').addEventListener('submit', async function(
     lugar:         document.getElementById('lugar').value.trim(),
     fecha_retiro:  document.getElementById('fecha_retiro').value,
     fecha_escuela: document.getElementById('fecha_escuela').value,
-    norden:        document.getElementById('norden').value.trim(),
-    notas:         document.getElementById('notas').value.trim(),
-    fgp:           document.getElementById('fgp').value.trim()
+    cantidad:        document.getElementById('cantidad').value.trim(),
+    unidad:          document.getElementById('unidad').value.trim(),
+    norden:          document.getElementById('norden').value.trim(),
+    notas:           document.getElementById('notas').value.trim(),
+    fgp:             document.getElementById('fgp').value.trim(),
+    telefono_manual: document.getElementById('telefono_manual').value.trim()
   };
 
   try {

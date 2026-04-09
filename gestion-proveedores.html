@@ -354,7 +354,7 @@
         <div class="step">
           <div class="step-num">1</div>
           <div class="step-body">
-            <div class="step-title">Alerta automática de stock bajo <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span></div>
+            <div class="step-title">Alerta automática de stock bajo <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f5f5f5;color:#616161">⚙ Sistema</span></div>
             <p class="step-desc">Cuando cualquier producto baja de 10 unidades en TiendaNube, el sistema lo detecta automáticamente y envía un <strong>WhatsApp a la FGP (Maria)</strong> con la lista de productos críticos y un link directo a la Orden de Pedido con los faltantes pre-completados.</p>
             <p class="step-desc" style="margin-top:6px;color:#888"><em>Implementado vía Apps Script con trigger sobre novedades de venta de TiendaNube.</em></p>
           </div>
@@ -375,7 +375,7 @@
               <div class="step" style="margin-bottom:4px">
                 <div class="step-num" style="background:var(--earth)">2A</div>
                 <div class="step-body">
-                  <div class="step-title">FGP revisa y confirma la Orden de Pedido <span class="badge" style="font-size:10px;vertical-align:middle;margin-left:6px;background:#FFF3E0;color:#E65100">⚠ A verificar</span></div>
+                  <div class="step-title">FGP revisa y confirma la Orden de Pedido <span class="badge" style="font-size:10px;vertical-align:middle;margin-left:6px;background:#FFF3E0;color:#E65100">⚠ A verificar</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
                   <p class="step-desc">La FGP abre el link del WhatsApp. La <a href="orden-de-pedido.html" style="color:var(--earth)">Orden de Pedido</a> aparece pre-completada con los productos faltantes y cantidades sugeridas. La FGP ajusta si es necesario y confirma. Al confirmar, el pedido <strong>queda registrado en la planilla de Google Sheets</strong> (fecha, productos, cantidades, responsable).</p>
                   <p class="step-desc" style="margin-top:6px;color:#888"><em>Implementado. Pendiente de verificar que los parámetros URL se leen correctamente y que el registro llega bien al Sheet con todos los campos.</em></p>
                 </div>
@@ -386,7 +386,7 @@
               <div class="step">
                 <div class="step-num" style="background:var(--earth)">3A</div>
                 <div class="step-body">
-                  <div class="step-title">Envío del pedido al proveedor <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span></div>
+                  <div class="step-title">Envío del pedido al proveedor <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
                   <p class="step-desc">Desde la Orden de Pedido, la FGP hace clic en <strong>"Enviar WhatsApp al proveedor"</strong>. El proveedor recibe el mensaje con productos, cantidades, precios y ventana horaria de retiro.</p>
                   <p class="step-desc" style="margin-top:6px;color:#888"><em>WhatsApp al proveedor funcionando. Pendiente: actualizar el estado del pedido en el Sheet a "Solicitado" al momento del envío.</em></p>
                 </div>
@@ -400,7 +400,7 @@
               <div class="step" style="margin-bottom:4px">
                 <div class="step-num" style="background:#5d7a4a">2B</div>
                 <div class="step-body">
-                  <div class="step-title">FGP asigna colaborador del pool <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span></div>
+                  <div class="step-title">FGP asigna colaborador del pool <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
                   <p class="step-desc">La FGP selecciona directamente a una persona del pool para coordinar el retiro en la fecha pactada con el proveedor. La asignación considera disponibilidad y criterio de rotación. Se puede hacer en paralelo al pedido al proveedor.</p>
                   <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: definir desde dónde hace la asignación la FGP — ¿desde pedidos.html o desde retiro-proveedor.html?</em></p>
                 </div>
@@ -411,7 +411,7 @@
               <div class="step">
                 <div class="step-num" style="background:#5d7a4a">3B</div>
                 <div class="step-body">
-                  <div class="step-title">WhatsApp al colaborador cuando el pedido está listo <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span></div>
+                  <div class="step-title">WhatsApp al colaborador cuando el pedido está listo <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f5f5f5;color:#616161">⚙ Sistema</span></div>
                   <p class="step-desc">Cuando el estado pasa a <strong>"Listo para retirar"</strong>, el colaborador asignado recibe un WhatsApp automático con: proveedor, producto, dirección y ventana horaria.</p>
                   <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: implementar disparo automático al cambiar estado en pedidos.html.</em></p>
                 </div>
@@ -422,7 +422,7 @@
               <div class="step">
                 <div class="step-num" style="background:#5d7a4a">4B</div>
                 <div class="step-body">
-                  <div class="step-title">Colaborador entrega en la escuela y actualiza el estado <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span></div>
+                  <div class="step-title">Colaborador entrega en la escuela y actualiza el estado <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e3f2fd;color:#1565c0">Pool</span></div>
                   <p class="step-desc">Una vez que retira y entrega la mercadería en la escuela, el colaborador actualiza el estado del pedido a <strong>"Recibido"</strong> desde <code>pedidos.html</code>. Sin checklists complejos — solo confirmar la entrega.</p>
                   <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: el colaborador necesita acceso a pedidos.html. Definir si entra con PIN o con link directo al pedido.</em></p>
                 </div>
@@ -438,8 +438,8 @@
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-body">
-            <div class="step-title">Retiro y traslado</div>
-            <p class="step-desc">El colaborador asignado retira la mercadería en el proveedor, completa el checklist de retiro, registra evidencia (fotos del remito y los bultos) y traslada directamente a la escuela.</p>
+            <div class="step-title">Recepción y control de calidad <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
+            <p class="step-desc">En la escuela se verifica lo recibido vs. el remito: cantidades, estado, temperatura si aplica. Si hay incidencia, queda abierta en la planilla hasta resolución — el producto no ingresa a stock hasta entonces.</p>
           </div>
         </div>
 
@@ -448,8 +448,8 @@
         <div class="step">
           <div class="step-num">5</div>
           <div class="step-body">
-            <div class="step-title">Recepción y control de calidad</div>
-            <p class="step-desc">En la escuela se verifica lo recibido vs. el remito: cantidades, estado, temperatura si aplica. Si hay incidencia, queda abierta en la planilla hasta resolución — el producto no ingresa a stock hasta entonces.</p>
+            <div class="step-title">Actualización de stock <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f3e5f5;color:#6a1b9a">Yuli</span></div>
+            <p class="step-desc">Yuli actualiza el stock en TiendaNube y marca el pedido como "Recibido" en la planilla.</p>
           </div>
         </div>
 
@@ -458,8 +458,8 @@
         <div class="step">
           <div class="step-num">6</div>
           <div class="step-body">
-            <div class="step-title">Actualización de stock y cierre</div>
-            <p class="step-desc">La Gestoría (Ines) actualiza el stock en TiendaNube y cierra el pedido en la planilla como "recibido". Si corresponde: registra el pago y adjunta comprobante.</p>
+            <div class="step-title">Pago al proveedor <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f3e5f5;color:#6a1b9a">Yuli</span></div>
+            <p class="step-desc">Yuli gestiona el pago al proveedor según el acuerdo (transferencia, efectivo, etc.), adjunta el comprobante en la planilla y actualiza el estado del pedido a <strong>"Pagado"</strong>.</p>
           </div>
         </div>
 
