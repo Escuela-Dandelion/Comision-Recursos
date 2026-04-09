@@ -281,8 +281,12 @@ function mostrar(id) {
     document.getElementById('pinView').style.display = 'none';
     origenDetalle = 'directo';
     cargarPedidoDirecto(idParam);
+  } else if (sessionStorage.getItem('ddl_auth') === '1') {
+    // Sesión activa — saltar PIN y ir directo a la lista
+    mostrar('listaView');
+    cargarLista();
   }
-  // Sin ?id: pinView ya está visible en el HTML por defecto
+  // Sin sesión ni ?id: pinView visible por defecto
 })();
 
 // ── PIN ───────────────────────────────────────────────────────
@@ -294,6 +298,7 @@ function validarPin() {
   const input = document.getElementById('pinInput');
   const pin   = input.value.trim().toUpperCase();
   if (PINS_ADMIN.includes(pin)) {
+    sessionStorage.setItem('ddl_auth', '1');
     mostrar('listaView');
     cargarLista();
   } else {
