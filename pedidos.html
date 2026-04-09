@@ -278,9 +278,10 @@ let pendingAction  = null;
   }
 })();
 
+const DISPLAY_TYPE = { pinView: 'flex', listaView: 'block', detalleView: 'block' };
 function mostrar(id) {
   ['pinView','listaView','detalleView'].forEach(v => {
-    document.getElementById(v).style.display = v === id ? 'block' : 'none';
+    document.getElementById(v).style.display = v === id ? DISPLAY_TYPE[v] : 'none';
   });
 }
 
