@@ -151,6 +151,15 @@
   /* ── DIVIDER ── */
   hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
 
+  /* ── WHATSAPP MOCKUP ── */
+  .wa-phone { background: #111b21; border-radius: 14px; padding: 16px; margin: 12px 0 20px; max-width: 360px; }
+  .wa-phone-header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #2a3942; margin-bottom: 10px; }
+  .wa-phone-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .wa-phone-name { color: #e9edef; font-size: 13px; font-weight: 600; }
+  .wa-phone-sub  { color: #8696a0; font-size: 11px; }
+  .wa-bubble { background: #005c4b; color: #e9edef; border-radius: 10px 10px 0 10px; padding: 10px 12px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .wa-time { text-align: right; font-size: 10px; color: #8696a0; margin-top: 4px; }
+
   /* ── MOBILE ── */
   @media (max-width: 768px) {
     .menu-toggle  { display: flex; align-items: center; justify-content: center; }
@@ -194,6 +203,7 @@
   <a href="#estados">Estados del Pedido</a>
   <a href="#estados" class="sub">→ Máquina de estados</a>
   <a href="#estados" class="sub">→ Planilla y herramientas</a>
+  <a href="#mensajes">💬 Mensajes automáticos</a>
   <a href="#checklists">Checklists Operativos</a>
   <a href="#checklists" class="sub">→ Retiro en proveedor</a>
   <a href="#checklists" class="sub">→ Recepción en escuela</a>
@@ -400,9 +410,8 @@
               <div class="step" style="margin-bottom:4px">
                 <div class="step-num" style="background:#5d7a4a">2B</div>
                 <div class="step-body">
-                  <div class="step-title">FGP asigna colaborador del pool <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
-                  <p class="step-desc">La FGP selecciona directamente a una persona del pool para coordinar el retiro en la fecha pactada con el proveedor. La asignación considera disponibilidad y criterio de rotación. Se puede hacer en paralelo al pedido al proveedor.</p>
-                  <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: definir desde dónde hace la asignación la FGP — ¿desde pedidos.html o desde retiro-proveedor.html?</em></p>
+                  <div class="step-title">FGP asigna colaborador del pool <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e8f5e9;color:#2e7d32">FGP</span></div>
+                  <p class="step-desc">Desde el detalle del pedido en <a href="pedidos.html" style="color:var(--earth)">pedidos.html</a>, la FGP hace clic en <strong>"Agendar Retiro con el Pool"</strong>. Se abre <a href="retiro-proveedor.html" style="color:var(--earth)">retiro-proveedor.html</a> con los datos del pedido pre-completados. La FGP elige el colaborador, la fecha y el lugar.</p>
                 </div>
               </div>
 
@@ -411,9 +420,8 @@
               <div class="step">
                 <div class="step-num" style="background:#5d7a4a">3B</div>
                 <div class="step-body">
-                  <div class="step-title">WhatsApp al colaborador cuando el pedido está listo <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f5f5f5;color:#616161">⚙ Sistema</span></div>
-                  <p class="step-desc">Cuando el estado pasa a <strong>"Listo para retirar"</strong>, el colaborador asignado recibe un WhatsApp automático con: proveedor, producto, dirección y ventana horaria.</p>
-                  <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: implementar disparo automático al cambiar estado en pedidos.html.</em></p>
+                  <div class="step-title">WhatsApp automático al colaborador <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#f5f5f5;color:#616161">⚙ Sistema</span></div>
+                  <p class="step-desc">Al confirmar el agendamiento en retiro-proveedor.html, el sistema envía automáticamente un WhatsApp al colaborador vía Green API con: proveedor, producto, cantidad, lugar, fecha de retiro y fecha de entrega en escuela. También crea el evento en Google Calendar.</p>
                 </div>
               </div>
 
@@ -422,9 +430,8 @@
               <div class="step">
                 <div class="step-num" style="background:#5d7a4a">4B</div>
                 <div class="step-body">
-                  <div class="step-title">Colaborador entrega en la escuela y actualiza el estado <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:6px">Pendiente</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e3f2fd;color:#1565c0">Pool</span></div>
-                  <p class="step-desc">Una vez que retira y entrega la mercadería en la escuela, el colaborador actualiza el estado del pedido a <strong>"Recibido"</strong> desde <code>pedidos.html</code>. Sin checklists complejos — solo confirmar la entrega.</p>
-                  <p class="step-desc" style="margin-top:6px;color:#888"><em>Pendiente: el colaborador necesita acceso a pedidos.html. Definir si entra con PIN o con link directo al pedido.</em></p>
+                  <div class="step-title">Colaborador entrega en la escuela y actualiza el estado <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:6px">✓ Activo</span> <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:4px;background:#e3f2fd;color:#1565c0">Pool</span></div>
+                  <p class="step-desc">El colaborador entra a <code>pedidos.html</code> con el link directo al pedido que llegó en el WhatsApp (no necesita PIN). Desde el detalle puede marcar el pedido como <strong>"Recibido"</strong> con un toque.</p>
                 </div>
               </div>
             </div>
@@ -623,13 +630,13 @@
 
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Planilla de Pedidos a Proveedor</div>
-          <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Fuente de verdad central. Columnas: <code>N° Orden · Fecha · Marca/Proveedor · FGP · Producto(s) · Cantidad · Unid · Monto · Total · Estado · Fecha Estado · Quien lo busca · Comprobante Pago · Notas</code></p>
-          <p style="font-size:11px;color:var(--muted);margin:0 0 10px;font-style:italic">⚠️ Columnas Cantidad, Unid, Monto y Total todavía no están en el Sheet — agregar antes de construir pedidos.html.</p>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Fuente de verdad central. Columnas: <code>N° Orden · Fecha · Proveedor · FGP · Producto(s) · Cantidad · Unidad · Precio Unitario · Total · Estado · Fecha Estado · Quien lo busca · Comprobante Pago · Notas</code></p>
+          <p style="font-size:11px;color:var(--muted);margin:0 0 10px">La columna <strong>Total</strong> usa fórmula <code>=Cantidad×Precio</code> cuando hay un único producto. Se completa automáticamente al enviar la Orden de Pedido.</p>
           <a href="https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/edit?gid=857535467" target="_blank" style="font-size:12px;color:var(--earth);font-weight:600">Abrir planilla →</a>
         </div>
 
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📱 pedidos.html <span class="badge badge-draft" style="font-size:10px;vertical-align:middle;margin-left:4px">Pendiente</span></div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📱 pedidos.html <span class="badge badge-active" style="font-size:10px;vertical-align:middle;margin-left:4px">✓ Activo</span></div>
           <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Frontend mobile-first con acceso por PIN. Muestra todos los pedidos en curso como cards y permite avanzar el estado con un toque. Diseñado para usar desde el celular, desde el link del WhatsApp.</p>
           <p style="font-size:12px;color:var(--muted);margin:0"><strong>Acceso:</strong> FGP (Maria, Ines) para estados Confirmado → Recibido. Yuli para estado Pagado.</p>
         </div>
@@ -638,6 +645,76 @@
 
       <div class="callout" style="border-left:3px solid var(--earth);background:#fdf6ee">
         <strong>Todo se gestiona desde las pantallas que llegan por WhatsApp.</strong> Cada pedido tiene su propio link que circula por mensaje — desde ahí se confirma, se avanza el estado y se coordina el retiro. No desde la planilla.
+      </div>
+    </div>
+
+    <!-- MENSAJES AUTOMÁTICOS -->
+    <div class="section" id="mensajes">
+      <h2><span class="icon">💬</span> Mensajes automáticos del sistema</h2>
+      <p>El sistema envía WhatsApp en dos momentos del flujo. Estos son los mensajes exactos que recibe cada persona.</p>
+
+      <h3>Mensaje A — Al proveedor (Paso 3A)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">La FGP hace clic en <strong>"Enviar pedido al proveedor"</strong> desde <a href="orden-de-pedido.html" style="color:var(--earth)">orden-de-pedido.html</a>. El mensaje se abre en WhatsApp listo para enviar.</p>
+
+      <div class="wa-phone">
+        <div class="wa-phone-header">
+          <div class="wa-phone-avatar">🏪</div>
+          <div>
+            <div class="wa-phone-name">La Yaya</div>
+            <div class="wa-phone-sub">Proveedor</div>
+          </div>
+        </div>
+        <div class="wa-bubble">🌼 <strong>Orden de Pedido — Diente de León</strong>
+━━━━━━━━━━━━━━━━━━━
+🔢 N° ORD-2026-042
+📅 Fecha: 09/04/2026
+🏪 Proveedor: La Yaya
+
+📦 <strong>Productos solicitados:</strong>
+• <strong>Crema hidratante x 50ml</strong>
+   📦 Cant: 30  ·  💲 $1.500
+💰 <strong>Total: $ 45.000</strong>
+
+💳 Forma de pago: Transferencia
+━━━━━━━━━━━━━━━━━━━
+✍️ Responsable: Maria Martini
+🌻 Escuela Dandelion · Waldorf · Córdoba</div>
+        <div class="wa-time">✓✓</div>
+      </div>
+
+      <h3>Mensaje B — Al colaborador del Pool (Paso 3B)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">La FGP agenda el retiro desde <a href="retiro-proveedor.html" style="color:var(--earth)">retiro-proveedor.html</a>. El sistema lo envía automáticamente vía Green API al teléfono del colaborador elegido.</p>
+
+      <div class="wa-phone">
+        <div class="wa-phone-header">
+          <div class="wa-phone-avatar">🚗</div>
+          <div>
+            <div class="wa-phone-name">Luli del Castillo</div>
+            <div class="wa-phone-sub">Pool de colaboradores</div>
+          </div>
+        </div>
+        <div class="wa-bubble">🌼 <strong>Diente de León — Retiro de Mercadería</strong>
+
+Hola Luli! Este es un mensaje automático por ser parte del pool de apoyo. Tenés un retiro asignado:
+
+━━━━━━━━━━━━━━━━
+📦 <strong>Proveedor:</strong> La Yaya
+🛍️ <strong>Producto:</strong> Crema hidratante x 50ml
+📏 <strong>Cantidad:</strong> 30 unidades
+📍 <strong>Lugar de retiro:</strong> Av. Colón 1234, Córdoba
+📅 <strong>Fecha de retiro:</strong> 10/04/2026
+🏫 <strong>Entregar en escuela:</strong> 11/04/2026
+📋 <strong>N° Orden:</strong> ORD-2026-042
+━━━━━━━━━━━━━━━━
+
+¡Gracias por tu ayuda! 🙏
+Cualquier cosa podés coordinar con <strong>Maria Martini</strong> al 5493516865078.</div>
+        <div class="wa-time">✓✓</div>
+      </div>
+
+      <div class="callout callout-info" style="margin-top:4px">
+        <div class="icon">📅</div>
+        <div>El sistema también crea automáticamente un evento en el <strong>Google Calendar del equipo</strong> con el rango de fechas retiro → entrega en escuela.</div>
       </div>
     </div>
 
@@ -707,15 +784,15 @@
         <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Lectura de parámetros URL en orden-de-pedido.html</span> — implementado, <strong>verificar que funcione correctamente end-to-end</strong>.</li>
         <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Registro en Google Sheets al confirmar la orden</span> — implementado, <strong>verificar que todos los campos llegan bien al Sheet</strong>.</li>
         <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Botón "Enviar WhatsApp al proveedor"</span> — funcionando.</li>
-        <li><div class="box"></div> Al enviar el WhatsApp al proveedor, actualizar el estado del pedido en el Sheet a "Solicitado".</li>
+        <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Al enviar el WhatsApp al proveedor, actualizar el estado en el Sheet a "Solicitado"</span> — se registra automáticamente al enviar la Orden de Pedido.</li>
         <li><div class="box"></div> Definir qué número de WhatsApp recibe el pedido por proveedor (si hay más de uno).</li>
       </ul>
 
       <h3 style="font-size:13px;margin:0 0 8px">🔧 Pista B — Pool de colaboradores</h3>
       <ul class="checklist" style="margin-bottom:20px">
-        <li><div class="box"></div> Implementar asignación de colaborador desde pedidos.html (FGP elige quién retira al crear/editar el pedido).</li>
-        <li><div class="box"></div> Implementar WhatsApp automático al colaborador cuando el estado cambia a "Listo para retirar" (proveedor, producto, dirección, horario).</li>
-        <li><div class="box"></div> Definir acceso del colaborador a pedidos.html para setear estado "Recibido": ¿PIN propio o link directo al pedido?</li>
+        <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Asignación de colaborador desde pedidos.html</span> — FGP va al detalle del pedido → "Agendar Retiro con el Pool" → retiro-proveedor.html pre-completado.</li>
+        <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">WhatsApp automático al colaborador</span> — enviado por el sistema al confirmar el agendamiento en retiro-proveedor.html (Green API).</li>
+        <li><div class="box" style="background:var(--earth);border-color:var(--earth)"></div> <span style="text-decoration:line-through;color:var(--muted)">Acceso del colaborador a pedidos.html para marcar "Recibido"</span> — accede por link directo en el WhatsApp, sin PIN.</li>
       </ul>
 
       <h3 style="font-size:13px;margin:0 0 8px">📋 Operativo general</h3>
@@ -728,7 +805,7 @@
 
     <hr>
     <p style="font-size:11px;color:var(--muted);text-align:center">
-      Gestión con Proveedores · Diente de León · Escuela Dandelion Pedagogía Waldorf · Draft v0.1 · Marzo 2026
+      Gestión con Proveedores · Diente de León · Escuela Dandelion Pedagogía Waldorf · v0.2 · Abril 2026
     </p>
 
   </div>
