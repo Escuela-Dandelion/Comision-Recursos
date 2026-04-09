@@ -247,6 +247,27 @@
     const numFinal = tel.startsWith('549') ? tel : '549' + tel;
     window.open('https://wa.me/' + numFinal + '?text=' + encodeURIComponent(partes), '_blank');
   }
+// ── CORRELATIVO AUTOMÁTICO ──────────────────────────────────
+  (async function generarCorrelativo() {
+    const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/export?format=csv&gid=857535467';
+    const input = document.getElementById('f-norden');
+    try {
+      const resp = await fetch(SHEET_CSV + '&t=' + Date.now());
+      const text = await resp.text();
+      const lineas = text.trim().split('\n').slice(1);
+      const anio = new Date().getFullYear();
+      let max = 0;
+      lineas.forEach(function(l) {
+        const col = l.split(',')[0].replace(/"/g, '').trim();
+        const m = col.match(/^ORD-(\d{4})-(\d+)$/);
+        if (m && parseInt(m[1]) === anio) max = Math.max(max, parseInt(m[2]));
+      });
+      input.value = 'ORD-' + anio + '-' + String(max + 1).padStart(3, '0');
+    } catch(e) {
+      input.value = 'ORD-' + new Date().getFullYear() + '-???';
+      input.placeholder = 'Error al leer el Sheet';
+    }
+  })();
 </script>
 
 </body>

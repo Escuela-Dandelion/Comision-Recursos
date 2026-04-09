@@ -135,17 +135,16 @@
   <div class="flash" id="flash"></div>
 
   <!-- Acciones rápidas -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+  <div style="margin-bottom:16px">
     <a href="orden-de-pedido.html" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#fff;border:1.5px solid #86efac;border-radius:10px;color:#3a7d44;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      📋 Nueva Orden
-    </a>
-    <a href="retiro-proveedor.html" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#fff;border:1.5px solid #93c5fd;border-radius:10px;color:#1d4ed8;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      🚗 Agendar Retiro
+      📋 Nueva Orden de Pedido
     </a>
   </div>
 
   <div id="loadingSpinner">Cargando pedidos…</div>
   <div id="listaContent" style="display:none">
+
+    <!-- Filtro por estado -->
     <div class="filtros" id="filtros">
       <button class="filtro-btn active" data-estado="Todos" onclick="filtrar(this)">Todos</button>
       <button class="filtro-btn" data-estado="Solicitado" onclick="filtrar(this)">Solicitado</button>
@@ -154,6 +153,35 @@
       <button class="filtro-btn" data-estado="Recibido" onclick="filtrar(this)">Recibido</button>
       <button class="filtro-btn" data-estado="Pagado" onclick="filtrar(this)">Pagado</button>
     </div>
+
+    <!-- Filtro por fecha -->
+    <div style="background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3a7d44;margin-bottom:10px">📅 Filtrar por fecha</div>
+
+      <!-- Accesos rápidos por mes -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="mesesRapidos"></div>
+
+      <!-- Rango manual -->
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+        <div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:4px">Desde</div>
+          <input type="date" id="fechaDesde" onchange="aplicarFiltros()"
+            style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:4px">Hasta</div>
+          <input type="date" id="fechaHasta" onchange="aplicarFiltros()"
+            style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+        </div>
+        <button onclick="limpiarFechas()"
+          style="padding:8px 12px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;color:#6b7280;cursor:pointer;font-weight:600">
+          ✕ Limpiar
+        </button>
+      </div>
+
+      <div id="contadorFiltro" style="font-size:12px;color:#9ca3af;margin-top:8px"></div>
+    </div>
+
     <div id="pedidosList"></div>
   </div>
 </div>
@@ -204,6 +232,14 @@
   <div class="section acciones" id="accionesSection">
     <div class="acciones-title">Avanzar estado</div>
     <div id="botonesAccion"></div>
+  </div>
+
+  <div class="section" id="agendarRetiroSection" style="display:none">
+    <div class="acciones-title">Logística</div>
+    <a id="btnAgendarRetiro" href="#"
+      style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#fff;border:1.5px solid #93c5fd;border-radius:10px;color:#1d4ed8;font-size:15px;font-weight:700;text-decoration:none">
+      🚗 Agendar Retiro con el Pool
+    </a>
   </div>
 </div>
 
@@ -314,6 +350,7 @@ async function cargarLista() {
     todosLosPedidos = csvAObjetos(text);
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('listaContent').style.display = '';
+    generarMesesRapidos();
     renderLista(todosLosPedidos);
   } catch (err) {
     document.getElementById('loadingSpinner').textContent = 'Error al cargar. Recargá la página.';
@@ -413,12 +450,100 @@ function claseEstado(estado) {
   return '';
 }
 
+// Estado activo del filtro
+let estadoFiltro = 'Todos';
+
 function filtrar(btn) {
   document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const est = btn.dataset.estado;
-  const filtrado = est === 'Todos' ? todosLosPedidos : todosLosPedidos.filter(p => p.estado === est);
-  renderLista(filtrado);
+  estadoFiltro = btn.dataset.estado;
+  aplicarFiltros();
+}
+
+function parseFechaSheet(str) {
+  // Formato del sheet: DD/MM/YYYY
+  if (!str) return null;
+  const p = str.split('/');
+  if (p.length !== 3) return null;
+  return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+}
+
+function aplicarFiltros() {
+  let resultado = todosLosPedidos;
+
+  // Filtro estado
+  if (estadoFiltro !== 'Todos') {
+    resultado = resultado.filter(p => p.estado === estadoFiltro);
+  }
+
+  // Filtro fechas
+  const desde = document.getElementById('fechaDesde').value;
+  const hasta = document.getElementById('fechaHasta').value;
+
+  if (desde) {
+    const d = new Date(desde);
+    resultado = resultado.filter(p => {
+      const f = parseFechaSheet(p.fecha);
+      return f && f >= d;
+    });
+  }
+  if (hasta) {
+    const h = new Date(hasta);
+    h.setHours(23,59,59);
+    resultado = resultado.filter(p => {
+      const f = parseFechaSheet(p.fecha);
+      return f && f <= h;
+    });
+  }
+
+  // Contador
+  const total = todosLosPedidos.length;
+  const cont  = document.getElementById('contadorFiltro');
+  cont.textContent = resultado.length < total
+    ? resultado.length + ' de ' + total + ' pedidos'
+    : '';
+
+  renderLista(resultado);
+}
+
+function limpiarFechas() {
+  document.getElementById('fechaDesde').value = '';
+  document.getElementById('fechaHasta').value = '';
+  // Limpiar mes activo
+  document.querySelectorAll('.mes-btn').forEach(b => b.classList.remove('active'));
+  aplicarFiltros();
+}
+
+function generarMesesRapidos() {
+  const container = document.getElementById('mesesRapidos');
+  const meses = {};
+  todosLosPedidos.forEach(p => {
+    const f = parseFechaSheet(p.fecha);
+    if (!f) return;
+    const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2,'0');
+    meses[key] = true;
+  });
+
+  const NOMBRES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const sorted = Object.keys(meses).sort().reverse();
+
+  container.innerHTML = sorted.map(key => {
+    const [y, m] = key.split('-');
+    const label = NOMBRES[parseInt(m) - 1] + ' ' + y;
+    return `<button class="filtro-btn mes-btn" data-mes="${key}" onclick="filtrarMes(this, '${key}')">${label}</button>`;
+  }).join('');
+}
+
+function filtrarMes(btn, mesKey) {
+  document.querySelectorAll('.mes-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const [y, m] = mesKey.split('-');
+  const desde = y + '-' + m + '-01';
+  const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+  const hasta  = y + '-' + m + '-' + String(lastDay).padStart(2,'0');
+  document.getElementById('fechaDesde').value = desde;
+  document.getElementById('fechaHasta').value = hasta;
+  aplicarFiltros();
 }
 
 // ── RENDER DETALLE ────────────────────────────────────────────
@@ -463,6 +588,19 @@ function renderDetalle(p) {
   document.getElementById('d-estadoBadge').innerHTML =
     `<span class="badge-estado ${claseEstado(p.estado)}" style="font-size:15px;padding:6px 14px">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>`;
   document.getElementById('d-fechaEstado').textContent = p.fechaEstado ? 'Actualizado: ' + p.fechaEstado : '';
+
+  // Botón Agendar Retiro — solo si el pedido no está Cancelado ni Pagado
+  const mostrarRetiro = !['Cancelado','Pagado'].includes(p.estado);
+  document.getElementById('agendarRetiroSection').style.display = mostrarRetiro ? '' : 'none';
+  if (mostrarRetiro) {
+    const params = new URLSearchParams({
+      norden:    p.norden,
+      proveedor: p.proveedor,
+      producto:  p.productos,
+      fgp:       p.fgp || ''
+    });
+    document.getElementById('btnAgendarRetiro').href = 'retiro-proveedor.html?' + params.toString();
+  }
 
   // Botones de acción
   const sig = SIGUIENTE_ESTADO[p.estado] || [];
