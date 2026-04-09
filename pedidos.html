@@ -71,10 +71,12 @@
   .acciones-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #3a7d44; margin-bottom: 10px; }
   .btn-accion { width: 100%; padding: 14px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
   .btn-accion:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-confirmar { background: #dbeafe; color: #1d4ed8; }
-  .btn-listo     { background: #fef3c7; color: #92400e; }
-  .btn-recibido  { background: #dcfce7; color: #166534; }
-  .btn-pagado    { background: #3a7d44; color: #fff; }
+  .btn-confirmar  { background: #dbeafe; color: #1d4ed8; }
+  .btn-enproceso  { background: #ede9fe; color: #5b21b6; }
+  .btn-listo      { background: #fef3c7; color: #92400e; }
+  .btn-recibido   { background: #dcfce7; color: #166534; }
+  .btn-pagado     { background: #3a7d44; color: #fff; }
+  .btn-cancelado  { background: #fee2e2; color: #991b1b; }
 
   /* CONFIRM MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-end; justify-content: center; }
@@ -131,6 +133,17 @@
 <!-- ── LISTA VIEW ───────────────────────────────────────── -->
 <div id="listaView" style="display:none">
   <div class="flash" id="flash"></div>
+
+  <!-- Acciones rápidas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <a href="orden-de-pedido.html" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#fff;border:1.5px solid #86efac;border-radius:10px;color:#3a7d44;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      📋 Nueva Orden
+    </a>
+    <a href="retiro-proveedor.html" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:#fff;border:1.5px solid #93c5fd;border-radius:10px;color:#1d4ed8;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      🚗 Agendar Retiro
+    </a>
+  </div>
+
   <div id="loadingSpinner">Cargando pedidos…</div>
   <div id="listaContent" style="display:none">
     <div class="filtros" id="filtros">
@@ -216,22 +229,32 @@ const PINS_ADMIN = ['PIR26', 'PYL26', 'PMM26'];
 
 // Próximos estados posibles por estado actual
 const SIGUIENTE_ESTADO = {
-  'Solicitado':        ['Confirmado'],
-  'Confirmado':        ['Listo para retirar'],
-  'Listo para retirar':['Recibido'],
+  'Solicitado':        ['Confirmado',        'Cancelado'],
+  'Confirmado':        ['En Proceso',        'Cancelado'],
+  'En Proceso':        ['Listo para retirar','Cancelado'],
+  'Listo para retirar':['Recibido',          'Cancelado'],
   'Recibido':          ['Pagado'],
-  'Pagado':            []
+  'Pagado':            [],
+  'Cancelado':         []
 };
 
 const CLASE_BTN = {
   'Confirmado':        'btn-confirmar',
+  'En Proceso':        'btn-enproceso',
   'Listo para retirar':'btn-listo',
   'Recibido':          'btn-recibido',
-  'Pagado':            'btn-pagado'
+  'Pagado':            'btn-pagado',
+  'Cancelado':         'btn-cancelado'
 };
 
 const EMOJI_ESTADO = {
-  'Solicitado':'📋','Confirmado':'✅','Listo para retirar':'📦','Recibido':'🏫','Pagado':'💰'
+  'Solicitado':        '📋',
+  'Confirmado':        '✅',
+  'En Proceso':        '🔄',
+  'Listo para retirar':'📦',
+  'Recibido':          '🏫',
+  'Pagado':            '💰',
+  'Cancelado':         '❌'
 };
 
 // ── ESTADO GLOBAL ─────────────────────────────────────────────
@@ -257,7 +280,7 @@ let pendingAction  = null;
 
 function mostrar(id) {
   ['pinView','listaView','detalleView'].forEach(v => {
-    document.getElementById(v).style.display = v === id ? '' : 'none';
+    document.getElementById(v).style.display = v === id ? 'block' : 'none';
   });
 }
 
@@ -378,9 +401,11 @@ function renderLista(pedidos) {
 function claseEstado(estado) {
   if (estado === 'Solicitado')        return 'est-Solicitado';
   if (estado === 'Confirmado')        return 'est-Confirmado';
+  if (estado === 'En Proceso')        return 'est-EnProceso';
   if (estado === 'Listo para retirar')return 'est-Listo';
   if (estado === 'Recibido')          return 'est-Recibido';
   if (estado === 'Pagado')            return 'est-Pagado';
+  if (estado === 'Cancelado')         return 'est-Cancelado';
   return '';
 }
 
@@ -395,10 +420,19 @@ function filtrar(btn) {
 // ── RENDER DETALLE ────────────────────────────────────────────
 function abrirDetalle(norden) {
   pedidoActual = todosLosPedidos.find(p => p.norden === norden);
-  if (!pedidoActual) return;
+  if (!pedidoActual) {
+    alert('No se encontró el pedido: ' + norden);
+    return;
+  }
   mostrar('detalleView');
-  document.getElementById('backBtn').style.display = '';
-  renderDetalle(pedidoActual);
+  document.getElementById('backBtn').style.display = 'block';
+  try {
+    renderDetalle(pedidoActual);
+  } catch(err) {
+    document.getElementById('flashDetalle').textContent = '❌ Error al cargar el detalle: ' + err.message;
+    document.getElementById('flashDetalle').className = 'flash error';
+    document.getElementById('flashDetalle').style.display = 'block';
+  }
 }
 
 function renderDetalle(p) {
