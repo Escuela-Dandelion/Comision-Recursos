@@ -100,13 +100,13 @@
     /* Cards */
     .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
     .card {
-      background:#fff; border-radius:12px; padding:18px 20px;
-      border:1px solid #e8eaed; border-left:4px solid #c0c4cc;
-      box-shadow:0 1px 4px rgba(0,0,0,.05);
+      background:#fff; border-radius:10px; padding:12px 14px;
+      border:1px solid #e8eaed; border-left:3px solid #c0c4cc;
+      box-shadow:0 1px 3px rgba(0,0,0,.04);
     }
-    .card-label { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-    .card-value { font-size:26px; font-weight:700; color:#333; line-height:1; }
-    .card-sub   { font-size:11px; color:#aaa; margin-top:6px; }
+    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+    .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
+    .card-sub   { font-size:10px; color:#aaa; margin-top:4px; }
 
     .card.purple { border-left-color:#7c3aed; background:#faf5ff; }
     .card.purple .card-label { color:#7c3aed; }
@@ -319,9 +319,9 @@
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var ALL_ROWS  = [];
 var ALL_MESES = [];
-var currentMes   = '';
-var currentGrado = '';
-var currentVista = 'familia'; // 'familia' | 'producto'
+var currentMes    = '';
+var selectedGrados = []; // [] = todos
+var currentVista  = 'familia'; // 'familia' | 'producto'
 
 var _hoy = new Date();
 var _mesCorriente = _hoy.getFullYear() + '-' + ('0' + (_hoy.getMonth()+1)).slice(-2);
@@ -352,6 +352,7 @@ function sortGrados(arr){
   return arr.slice().sort(function(a,b){ var ai=gradoIdx(a),bi=gradoIdx(b); return ai!==bi?ai-bi:String(a).localeCompare(String(b),'es'); });
 }
 function pesos(n)    { return '$ '+Math.round(n||0).toLocaleString('es-AR'); }
+function pesosCard(n){ var v=Math.round(n||0); if(v>=1000000) return '$ '+(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})+'M'; if(v>=1000) return '$ '+(v/1000).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:1})+'K'; return '$ '+v.toLocaleString('es-AR'); }
 function mesLabel(m) { var p=m.split('-'),n=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; return n[parseInt(p[1])]+' '+p[0].slice(2); }
 function esc(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function hoy()       { return _hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
@@ -419,10 +420,10 @@ function initDashboard(d){
 
   // "Todos los grados" primero
   var divTodos=document.createElement('div');
+  divTodos.id='nav-todos';
   divTodos.className='grado-item active';
-  divTodos.dataset.grado='';
   divTodos.innerHTML='<span>Todos los grados</span><span class="grado-badge">'+ALL_ROWS.length+'</span>';
-  divTodos.onclick=function(){ setGrado(''); };
+  divTodos.onclick=function(){ toggleGrado(null); };
   nav.appendChild(divTodos);
 
   grados.forEach(function(g){
@@ -430,17 +431,29 @@ function initDashboard(d){
     div.className='grado-item';
     div.dataset.grado=g;
     div.innerHTML='<span>'+esc(g)+'</span><span class="grado-badge">'+gradosMap[g]+'</span>';
-    div.onclick=function(){ setGrado(g); };
+    div.onclick=function(){ toggleGrado(g); };
     nav.appendChild(div);
   });
-  currentGrado='';
+  selectedGrados=[];
   document.getElementById('contenido').style.display='block';
   render();
 }
 
-function setGrado(g){
-  currentGrado=g;
-  document.querySelectorAll('.grado-item').forEach(function(el){ el.classList.toggle('active',el.dataset.grado===g); });
+function toggleGrado(g){
+  if(g===null){
+    // Todos los grados
+    selectedGrados=[];
+  } else {
+    var idx=selectedGrados.indexOf(g);
+    if(idx===-1) selectedGrados.push(g);
+    else         selectedGrados.splice(idx,1);
+  }
+  // Actualizar clases activas
+  var todos=document.getElementById('nav-todos');
+  if(todos) todos.classList.toggle('active', selectedGrados.length===0);
+  document.querySelectorAll('.grado-item[data-grado]').forEach(function(el){
+    el.classList.toggle('active', selectedGrados.indexOf(el.dataset.grado)!==-1);
+  });
   render();
 }
 function aplicarFiltros(){ currentMes=document.getElementById('filtro-mes').value; render(); }
@@ -449,8 +462,8 @@ function setVista(v){ currentVista=v; render(); }
 // ── DATOS FILTRADOS ──
 function getRows(){
   var rows=ALL_ROWS;
-  if(currentMes)   rows=rows.filter(function(r){ return r.mes===currentMes; });
-  if(currentGrado) rows=rows.filter(function(r){ return r.grado===currentGrado; });
+  if(currentMes) rows=rows.filter(function(r){ return r.mes===currentMes; });
+  if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   return rows;
 }
 
@@ -471,7 +484,7 @@ function render(){
   });
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
-  var gradoTexto=currentGrado||'Todos los grados';
+  var gradoTexto=selectedGrados.length===0?'Todos los grados':selectedGrados.join(' · ');
   var nFam=Object.keys(familiasSet).length;
   var nPed=Object.keys(pedidosSet).length;
 
@@ -488,7 +501,7 @@ function render(){
 
   // Cards KPI
   html+='<div class="cards">'+
-    '<div class="card green"><div class="card-label">Total recaudado</div><div class="card-value">'+pesos(totalPesos)+'</div></div>'+
+    '<div class="card green"><div class="card-label">Total recaudado</div><div class="card-value">'+pesosCard(totalPesos)+'</div></div>'+
     '<div class="card purple"><div class="card-label">Pedidos</div><div class="card-value">'+nPed+'</div></div>'+
     '<div class="card teal"><div class="card-label">Familias</div><div class="card-value">'+nFam+'</div></div>'+
     '<div class="card orange"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
@@ -642,7 +655,7 @@ function exportarPDF(){
   if(!rows.length){ alert('Sin datos para exportar.'); return; }
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
-  var gradoTexto=currentGrado||'Todos los grados';
+  var gradoTexto=selectedGrados.length===0?'Todos los grados':selectedGrados.join(' · ');
 
   // Armar productos
   var productos={};

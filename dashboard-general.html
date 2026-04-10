@@ -74,13 +74,13 @@
     /* Cards */
     .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
     .card {
-      background:#fff; border-radius:12px; padding:18px 20px;
-      border:1px solid #e8eaed; border-left:4px solid #c0c4cc;
-      box-shadow:0 1px 4px rgba(0,0,0,.05);
+      background:#fff; border-radius:10px; padding:12px 14px;
+      border:1px solid #e8eaed; border-left:3px solid #c0c4cc;
+      box-shadow:0 1px 3px rgba(0,0,0,.04);
     }
-    .card-label { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-    .card-value { font-size:26px; font-weight:700; color:#333; line-height:1; }
-    .card-sub   { font-size:11px; color:#aaa; margin-top:6px; }
+    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+    .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
+    .card-sub   { font-size:10px; color:#aaa; margin-top:4px; }
 
     .card.purple { border-left-color:#7c3aed; background:#faf5ff; }
     .card.purple .card-label { color:#7c3aed; }
@@ -358,6 +358,12 @@ function sortGrados(arr) {
   });
 }
 function pesos(n) { return '$ ' + Math.round(n||0).toLocaleString('es-AR'); }
+function pesosCard(n) {
+  var v = Math.round(n||0);
+  if (v >= 1000000) return '$ ' + (v/1000000).toLocaleString('es-AR', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'M';
+  if (v >= 1000)    return '$ ' + (v/1000).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:1}) + 'K';
+  return '$ ' + v.toLocaleString('es-AR');
+}
 function mesLabel(m) {
   var p = m.split('-');
   var n = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -489,9 +495,9 @@ function updateCards(rows) {
   });
   var ganancia = totalPesos - totalCosto - comision(totalPesos);
   var pctMargen = totalPesos > 0 ? (ganancia/totalPesos*100).toFixed(1) + '%' : '—';
-  document.getElementById('c-pesos').textContent      = pesos(totalPesos);
-  document.getElementById('c-costo').textContent      = pesos(totalCosto);
-  document.getElementById('c-ganancia').textContent   = pesos(ganancia);
+  document.getElementById('c-pesos').textContent      = pesosCard(totalPesos);
+  document.getElementById('c-costo').textContent      = pesosCard(totalCosto);
+  document.getElementById('c-ganancia').textContent   = pesosCard(ganancia);
   document.getElementById('c-ganancia-pct').textContent = 'ingresos – costo';
   document.getElementById('c-margen-pct').textContent = pctMargen;
   document.getElementById('c-pedidos').textContent    = Object.keys(pedidosSet).length;
