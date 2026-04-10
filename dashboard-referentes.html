@@ -99,12 +99,30 @@
 
     /* Cards */
     .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
-    .card  { background:#fff; border-radius:12px; padding:18px 16px; border:1px solid #eee; }
-    .card-label { font-size:10px; color:#999; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
-    .card-value { font-size:22px; font-weight:700; color:#1a1a6e; line-height:1.1; }
-    .card.green { border-color:#d0f0d8; }
-    .card.green .card-label { color:#2e7d32; }
-    .card.green .card-value { color:#2e7d32; }
+    .card {
+      background:#fff; border-radius:12px; padding:18px 20px;
+      border:1px solid #e8eaed; border-left:4px solid #c0c4cc;
+      box-shadow:0 1px 4px rgba(0,0,0,.05);
+    }
+    .card-label { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+    .card-value { font-size:26px; font-weight:700; color:#333; line-height:1; }
+    .card-sub   { font-size:11px; color:#aaa; margin-top:6px; }
+
+    .card.purple { border-left-color:#7c3aed; background:#faf5ff; }
+    .card.purple .card-label { color:#7c3aed; }
+    .card.purple .card-value { color:#7c3aed; }
+
+    .card.teal { border-left-color:#0891b2; background:#f0f9ff; }
+    .card.teal .card-label { color:#0891b2; }
+    .card.teal .card-value { color:#0891b2; }
+
+    .card.green { border-left-color:#059669; background:#f0fdf4; }
+    .card.green .card-label { color:#059669; }
+    .card.green .card-value { color:#059669; }
+
+    .card.orange { border-left-color:#d97706; background:#fffbeb; }
+    .card.orange .card-label { color:#d97706; }
+    .card.orange .card-value { color:#d97706; }
 
     /* View toggle */
     .view-toggle { display:flex; gap:0; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; margin-bottom:20px; width:fit-content; }
@@ -398,15 +416,24 @@ function initDashboard(d){
   ALL_ROWS.forEach(function(r){ gradosMap[r.grado]=(gradosMap[r.grado]||0)+1; });
   var grados=sortGrados(Object.keys(gradosMap));
   var nav=document.getElementById('grados-nav');
-  grados.forEach(function(g,i){
+
+  // "Todos los grados" primero
+  var divTodos=document.createElement('div');
+  divTodos.className='grado-item active';
+  divTodos.dataset.grado='';
+  divTodos.innerHTML='<span>Todos los grados</span><span class="grado-badge">'+ALL_ROWS.length+'</span>';
+  divTodos.onclick=function(){ setGrado(''); };
+  nav.appendChild(divTodos);
+
+  grados.forEach(function(g){
     var div=document.createElement('div');
-    div.className='grado-item'+(i===0?' active':'');
+    div.className='grado-item';
     div.dataset.grado=g;
     div.innerHTML='<span>'+esc(g)+'</span><span class="grado-badge">'+gradosMap[g]+'</span>';
     div.onclick=function(){ setGrado(g); };
     nav.appendChild(div);
   });
-  currentGrado=grados[0]||'';
+  currentGrado='';
   document.getElementById('contenido').style.display='block';
   render();
 }
@@ -433,11 +460,6 @@ function render(){
   var cont=document.getElementById('contenido');
   var btnPdf=document.getElementById('btn-pdf');
 
-  if(!currentGrado){
-    cont.innerHTML='<div class="empty-state"><div class="icon">🎓</div><p>Seleccioná un grado para ver sus compras</p></div>';
-    btnPdf.style.display='none';
-    return;
-  }
   btnPdf.style.display='inline-flex';
 
   // KPIs
@@ -448,7 +470,8 @@ function render(){
     if(r.familia) familiasSet[r.familia]=true;
   });
 
-  var mesTexto=currentMes?mesLabel(currentMes):'todos los meses';
+  var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
+  var gradoTexto=currentGrado||'Todos los grados';
   var nFam=Object.keys(familiasSet).length;
   var nPed=Object.keys(pedidosSet).length;
 
@@ -457,7 +480,7 @@ function render(){
   // Header grado
   html+='<div class="grado-header">'+
     '<div>'+
-      '<div class="grado-titulo">'+esc(currentGrado)+'</div>'+
+      '<div class="grado-titulo">'+esc(gradoTexto)+'</div>'+
       '<div class="grado-subtitulo">'+mesTexto+' · '+nFam+' '+(nFam===1?'familia':'familias')+' · '+nPed+' pedido'+(nPed!==1?'s':'')+'</div>'+
     '</div>'+
     '<div class="grado-total">'+pesos(totalPesos)+'</div>'+
@@ -466,9 +489,9 @@ function render(){
   // Cards KPI
   html+='<div class="cards">'+
     '<div class="card green"><div class="card-label">Total recaudado</div><div class="card-value">'+pesos(totalPesos)+'</div></div>'+
-    '<div class="card"><div class="card-label">Pedidos</div><div class="card-value">'+nPed+'</div></div>'+
-    '<div class="card"><div class="card-label">Familias</div><div class="card-value">'+nFam+'</div></div>'+
-    '<div class="card"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
+    '<div class="card purple"><div class="card-label">Pedidos</div><div class="card-value">'+nPed+'</div></div>'+
+    '<div class="card teal"><div class="card-label">Familias</div><div class="card-value">'+nFam+'</div></div>'+
+    '<div class="card orange"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
 
   // Toggle de vista
@@ -619,6 +642,7 @@ function exportarPDF(){
   if(!rows.length){ alert('Sin datos para exportar.'); return; }
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
+  var gradoTexto=currentGrado||'Todos los grados';
 
   // Armar productos
   var productos={};
@@ -654,8 +678,8 @@ function exportarPDF(){
   html+='<div class="print-header">'+
     '<img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León">'+
     '<div class="print-header-info">'+
-      '<h1>Lista de Retiro — '+esc(currentGrado)+'</h1>'+
-      '<p>'+mesTexto+' · '+famArr.length+' familias · '+Math.round(totalUnidades)+' unidades · '+pesos(totalPesos)+'</p>'+
+      '<h1>Lista de Retiro — '+esc(gradoTexto)+'</h1>'+
+      '<p>Mes: '+mesTexto+' · '+famArr.length+' familias · '+Math.round(totalUnidades)+' unidades · '+pesos(totalPesos)+'</p>'+
     '</div>'+
     '<div class="print-header-date">Generado el '+hoy()+'</div>'+
   '</div>';

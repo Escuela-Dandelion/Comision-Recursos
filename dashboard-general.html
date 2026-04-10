@@ -73,13 +73,34 @@
 
     /* Cards */
     .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:24px; }
-    .card  { background:#fff; border-radius:12px; padding:18px 16px; border:1px solid #eee; }
-    .card-label { font-size:10px; color:#999; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
-    .card-value { font-size:22px; font-weight:700; color:#1a1a6e; line-height:1.1; }
-    .card-sub   { font-size:11px; color:#aaa; margin-top:5px; }
-    .card.green { border-color:#d0f0d8; }
-    .card.green .card-label { color:#2e7d32; }
-    .card.green .card-value { color:#2e7d32; }
+    .card {
+      background:#fff; border-radius:12px; padding:18px 20px;
+      border:1px solid #e8eaed; border-left:4px solid #c0c4cc;
+      box-shadow:0 1px 4px rgba(0,0,0,.05);
+    }
+    .card-label { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+    .card-value { font-size:26px; font-weight:700; color:#333; line-height:1; }
+    .card-sub   { font-size:11px; color:#aaa; margin-top:6px; }
+
+    .card.purple { border-left-color:#7c3aed; background:#faf5ff; }
+    .card.purple .card-label { color:#7c3aed; }
+    .card.purple .card-value { color:#7c3aed; }
+
+    .card.teal { border-left-color:#0891b2; background:#f0f9ff; }
+    .card.teal .card-label { color:#0891b2; }
+    .card.teal .card-value { color:#0891b2; }
+
+    .card.green { border-left-color:#059669; background:#f0fdf4; }
+    .card.green .card-label { color:#059669; }
+    .card.green .card-value { color:#059669; }
+
+    .card.orange { border-left-color:#d97706; background:#fffbeb; }
+    .card.orange .card-label { color:#d97706; }
+    .card.orange .card-value { color:#d97706; }
+
+    .card.gray { border-left-color:#6b7585; background:#f8f9fa; }
+    .card.gray .card-label { color:#6b7585; }
+    .card.gray .card-value { color:#6b7585; }
 
     /* Section card */
     .section-card { background:#fff; border-radius:12px; border:1px solid #eee; padding:20px; margin-bottom:20px; }
@@ -209,11 +230,11 @@
 
         <!-- KPIs -->
         <div class="cards">
-          <div class="card">
+          <div class="card teal">
             <div class="card-label">Total recaudado</div>
             <div class="card-value" id="c-pesos">—</div>
           </div>
-          <div class="card">
+          <div class="card gray">
             <div class="card-label">Costo total</div>
             <div class="card-value" id="c-costo">—</div>
           </div>
@@ -222,15 +243,20 @@
             <div class="card-value" id="c-ganancia">—</div>
             <div class="card-sub" id="c-ganancia-pct">—</div>
           </div>
-          <div class="card">
+          <div class="card orange">
+            <div class="card-label">Margen %</div>
+            <div class="card-value" id="c-margen-pct">—</div>
+            <div class="card-sub">sobre precio de venta</div>
+          </div>
+          <div class="card purple">
             <div class="card-label">Pedidos</div>
             <div class="card-value" id="c-pedidos">—</div>
           </div>
-          <div class="card">
+          <div class="card teal">
             <div class="card-label">Familias</div>
             <div class="card-value" id="c-familias">—</div>
           </div>
-          <div class="card">
+          <div class="card purple">
             <div class="card-label">Unidades vendidas</div>
             <div class="card-value" id="c-unidades">—</div>
           </div>
@@ -462,14 +488,15 @@ function updateCards(rows) {
     if (r.familia) familiasSet[r.familia] = true;
   });
   var ganancia = totalPesos - totalCosto - comision(totalPesos);
-  var pctGanancia = totalPesos > 0 ? (ganancia/totalPesos*100).toFixed(1) + '% de margen' : '—';
-  document.getElementById('c-pesos').textContent     = pesos(totalPesos);
-  document.getElementById('c-costo').textContent     = pesos(totalCosto);
-  document.getElementById('c-ganancia').textContent  = pesos(ganancia);
-  document.getElementById('c-ganancia-pct').textContent = pctGanancia;
-  document.getElementById('c-pedidos').textContent   = Object.keys(pedidosSet).length;
-  document.getElementById('c-familias').textContent  = Object.keys(familiasSet).length;
-  document.getElementById('c-unidades').textContent  = Math.round(totalUnidades).toLocaleString('es-AR');
+  var pctMargen = totalPesos > 0 ? (ganancia/totalPesos*100).toFixed(1) + '%' : '—';
+  document.getElementById('c-pesos').textContent      = pesos(totalPesos);
+  document.getElementById('c-costo').textContent      = pesos(totalCosto);
+  document.getElementById('c-ganancia').textContent   = pesos(ganancia);
+  document.getElementById('c-ganancia-pct').textContent = 'ingresos – costo';
+  document.getElementById('c-margen-pct').textContent = pctMargen;
+  document.getElementById('c-pedidos').textContent    = Object.keys(pedidosSet).length;
+  document.getElementById('c-familias').textContent   = Object.keys(familiasSet).length;
+  document.getElementById('c-unidades').textContent   = Math.round(totalUnidades).toLocaleString('es-AR');
 }
 
 // ── EVOLUCIÓN ──
