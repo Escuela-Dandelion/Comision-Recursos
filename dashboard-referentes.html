@@ -194,77 +194,78 @@
 
     /* ── MOBILE ── */
     @media (max-width:700px) {
-      /* Topbar compacto */
-      .topbar { padding:10px 14px; gap:8px; }
-      .topbar img { height:28px; }
-      .topbar-info h1 { font-size:13px; }
-      .topbar-info p  { display:none; }
-      .topbar-btn { padding:5px 10px; font-size:12px; }
+      /* Topbar: logo + botones compactos, título oculto */
+      .topbar { padding:8px 12px; flex-wrap:nowrap; gap:6px; }
+      .topbar img { height:30px; flex-shrink:0; }
+      .topbar-info { display:none; }
+      .topbar-actions { gap:6px; }
+      .topbar-btn { padding:6px 10px; font-size:12px; gap:3px; }
 
-      /* Sidebar → barra de filtros fija arriba */
+      /* Sidebar → columna compacta */
       .body-layout { flex-direction:column; }
       .sidebar {
         width:100%; border-right:none; border-bottom:1px solid #eee;
-        padding:0; overflow:visible; flex-shrink:0;
-        display:flex; flex-direction:column;
+        padding:10px 0 0; overflow:hidden; flex-shrink:0;
       }
-      .sidebar-logo   { display:none; }
+      .sidebar-logo    { display:none; }
       .sidebar-divider { display:none; }
+      .sidebar-section { padding:0 14px 4px; }
+      .sidebar-label   { font-size:9px; }
 
-      /* Fila de mes */
-      .mobile-mes-row {
-        display:flex; align-items:center; gap:8px;
-        padding:8px 14px; border-bottom:1px solid #f0f0f0;
-      }
-      .sidebar-section { display:none; }
-      .filter-label { display:none; }
-      .filter-select {
-        width:auto; margin:0; flex:1;
-        padding:7px 10px; font-size:13px; border-radius:8px;
-      }
+      /* Filtro mes: ancho completo */
+      .filter-label  { padding:0 14px; font-size:11px; }
+      .filter-select { width:calc(100% - 28px); margin:0 14px 10px; }
 
-      /* Chips de grados */
+      /* Grados → chips horizontales scrolleables */
       #grados-nav {
-        display:flex; flex-direction:row; gap:6px;
-        padding:8px 14px; overflow-x:auto; overflow-y:hidden;
+        display:flex !important;
+        flex-direction:row !important;
+        flex-wrap:nowrap;
+        gap:6px;
+        padding:6px 14px 12px;
+        overflow-x:auto;
+        overflow-y:hidden;
         -webkit-overflow-scrolling:touch;
         scrollbar-width:none;
       }
       #grados-nav::-webkit-scrollbar { display:none; }
       .grado-item {
-        flex-shrink:0; white-space:nowrap;
-        padding:6px 12px; margin:0; border-radius:20px;
-        border:1.5px solid #e0e0e0; background:#fff;
-        font-size:12px; font-weight:500;
-        display:flex; align-items:center; gap:6px;
+        flex-shrink:0 !important;
+        white-space:nowrap;
+        padding:6px 12px !important;
+        margin:0 !important;
+        border-radius:20px !important;
+        border:1.5px solid #ddd;
+        background:#fff;
+        font-size:12px;
+        width:auto !important;
+        justify-content:center;
       }
-      .grado-item.active {
-        background:#1a1a6e; border-color:#1a1a6e; color:#fff;
-      }
-      .grado-item.active .grado-badge { background:rgba(255,255,255,.25); color:#fff; }
-      .grado-badge { padding:1px 5px; font-size:10px; }
+      .grado-item.active { background:#1a1a6e; border-color:#1a1a6e; color:#fff; }
+      .grado-item.active .grado-badge { background:rgba(255,255,255,.2); color:#fff; }
+      .grado-badge { font-size:10px; padding:1px 5px; }
 
-      /* Main */
+      /* Main y cards */
       .main { padding:12px; }
+      .cards { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+      .card  { padding:10px 12px; }
+      .card-value { font-size:18px; }
+      .card-label { font-size:9px; }
 
-      /* Cards 2 columnas */
-      .cards { grid-template-columns:1fr 1fr; gap:8px; }
-      .card { padding:10px 12px; }
-      .card-value { font-size:17px; }
+      /* Vista toggle */
+      .view-toggle { width:100%; margin-bottom:14px; }
+      .view-btn { flex:1; justify-content:center; }
 
-      /* Toggle de vista */
-      .view-toggle { width:100%; }
-      .view-btn { flex:1; text-align:center; }
-
-      /* Tablas internas: reducir padding */
-      table.tbl-inner th,
-      table.tbl-inner td { padding-left:14px; }
-      table.tbl-inner th { font-size:9px; }
-
-      /* Header de grado */
-      .grado-header { padding:12px 14px; }
+      /* Header grado */
+      .grado-header { padding:12px 14px; gap:8px; }
       .grado-titulo { font-size:16px; }
       .grado-total  { font-size:18px; }
+
+      /* Tablas */
+      table.tbl-inner th, table.tbl-inner td { padding-left:14px; }
+      table.tbl-inner th { font-size:9px; }
+      .fam-row, .prod-row { padding:11px 14px; }
+      .fam-name, .prod-name { font-size:13px; }
     }
 
     /* ── PRINT / PDF ── */
