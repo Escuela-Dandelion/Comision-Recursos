@@ -194,15 +194,77 @@
 
     /* ── MOBILE ── */
     @media (max-width:700px) {
+      /* Topbar compacto */
+      .topbar { padding:10px 14px; gap:8px; }
+      .topbar img { height:28px; }
+      .topbar-info h1 { font-size:13px; }
+      .topbar-info p  { display:none; }
+      .topbar-btn { padding:5px 10px; font-size:12px; }
+
+      /* Sidebar → barra de filtros fija arriba */
       .body-layout { flex-direction:column; }
-      .sidebar { width:100%; border-right:none; border-bottom:1px solid #eee; padding:8px 0; overflow-x:auto; overflow-y:hidden; display:flex; flex-direction:column; }
-      .sidebar-logo { display:none; }
-      .sidebar-section { display:flex; gap:4px; padding:0 12px; }
-      .sidebar-label { display:none; }
-      .filter-label  { white-space:nowrap; }
-      .filter-select { width:auto; min-width:120px; margin:0 8px; }
-      .grado-item    { white-space:nowrap; }
-      .main { padding:14px; }
+      .sidebar {
+        width:100%; border-right:none; border-bottom:1px solid #eee;
+        padding:0; overflow:visible; flex-shrink:0;
+        display:flex; flex-direction:column;
+      }
+      .sidebar-logo   { display:none; }
+      .sidebar-divider { display:none; }
+
+      /* Fila de mes */
+      .mobile-mes-row {
+        display:flex; align-items:center; gap:8px;
+        padding:8px 14px; border-bottom:1px solid #f0f0f0;
+      }
+      .sidebar-section { display:none; }
+      .filter-label { display:none; }
+      .filter-select {
+        width:auto; margin:0; flex:1;
+        padding:7px 10px; font-size:13px; border-radius:8px;
+      }
+
+      /* Chips de grados */
+      #grados-nav {
+        display:flex; flex-direction:row; gap:6px;
+        padding:8px 14px; overflow-x:auto; overflow-y:hidden;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+      }
+      #grados-nav::-webkit-scrollbar { display:none; }
+      .grado-item {
+        flex-shrink:0; white-space:nowrap;
+        padding:6px 12px; margin:0; border-radius:20px;
+        border:1.5px solid #e0e0e0; background:#fff;
+        font-size:12px; font-weight:500;
+        display:flex; align-items:center; gap:6px;
+      }
+      .grado-item.active {
+        background:#1a1a6e; border-color:#1a1a6e; color:#fff;
+      }
+      .grado-item.active .grado-badge { background:rgba(255,255,255,.25); color:#fff; }
+      .grado-badge { padding:1px 5px; font-size:10px; }
+
+      /* Main */
+      .main { padding:12px; }
+
+      /* Cards 2 columnas */
+      .cards { grid-template-columns:1fr 1fr; gap:8px; }
+      .card { padding:10px 12px; }
+      .card-value { font-size:17px; }
+
+      /* Toggle de vista */
+      .view-toggle { width:100%; }
+      .view-btn { flex:1; text-align:center; }
+
+      /* Tablas internas: reducir padding */
+      table.tbl-inner th,
+      table.tbl-inner td { padding-left:14px; }
+      table.tbl-inner th { font-size:9px; }
+
+      /* Header de grado */
+      .grado-header { padding:12px 14px; }
+      .grado-titulo { font-size:16px; }
+      .grado-total  { font-size:18px; }
     }
 
     /* ── PRINT / PDF ── */
@@ -295,12 +357,13 @@
         <div class="sidebar-label">Filtros</div>
       </div>
       <div class="filter-label">Mes</div>
+      <!-- En desktop: select normal. En mobile: dentro de .mobile-mes-row -->
       <select class="filter-select" id="filtro-mes" onchange="aplicarFiltros()">
         <option value="">Todos los meses</option>
       </select>
       <hr class="sidebar-divider">
       <div class="sidebar-section">
-        <div class="sidebar-label">Grado</div>
+        <div class="sidebar-label">Grado <span style="font-size:9px;font-weight:400;color:#ccc;letter-spacing:0">· tap para seleccionar</span></div>
       </div>
       <div id="grados-nav"></div>
     </div>
