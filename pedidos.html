@@ -380,24 +380,33 @@ async function cargarPedidoDirecto(norden) {
 // ── CSV PARSER ────────────────────────────────────────────────
 function csvAObjetos(csv) {
   const lineas = csv.trim().split('\n');
-  const objs = [];
+  const map = {}, order = [];
   for (let i = 1; i < lineas.length; i++) {
     const cols = parseCsvLine(lineas[i]);
     if (!cols[0]) continue;
-    objs.push({
-      norden:      cols[0]  || '',
-      fecha:       cols[1]  || '',
-      proveedor:   cols[2]  || '',
-      fgp:         cols[3]  || '',
-      productos:   cols[4]  || '',
-      estado:      cols[5]  || 'Solicitado',
-      fechaEstado: cols[6]  || '',
-      quien:       cols[7]  || '',
-      comprobante: cols[8]  || '',
-      notas:       cols[9]  || ''
-    });
+    const norden = cols[0];
+    if (!map[norden]) {
+      map[norden] = {
+        norden,
+        fecha:       cols[1]  || '',
+        proveedor:   cols[2]  || '',
+        fgp:         cols[3]  || '',
+        productos:   [],
+        estado:      cols[5]  || 'Solicitado',
+        fechaEstado: cols[6]  || '',
+        quien:       cols[7]  || '',
+        comprobante: cols[8]  || '',
+        notas:       cols[9]  || ''
+      };
+      order.push(norden);
+    }
+    if (cols[4]) map[norden].productos.push(cols[4]);
   }
-  return objs;
+  return order.map(n => {
+    const p = map[n];
+    p.productos = p.productos.join('\n');
+    return p;
+  });
 }
 
 function parseCsvLine(line) {
