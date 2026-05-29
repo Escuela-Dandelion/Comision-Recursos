@@ -1,0 +1,21 @@
+docs/dashboard-referentes.html
+  ai_agent 823,828
+dashboard-referentes.html
+  s_764ea7e0361745::t_c926364fffeb51 823,828
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0924190890948a58540100e679bdffb96995ba51",
+  "prompts": {},
+  "sessions": {
+    "s_764ea7e0361745": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d188dc1-f8c1-4c6a-9618-dd9074644116",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Ines Robertson <robertson.ine@gmail.com>"
+    }
+  }
+}
