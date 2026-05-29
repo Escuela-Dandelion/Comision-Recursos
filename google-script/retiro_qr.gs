@@ -144,6 +144,26 @@ function doGetInterno(e) {
     return paginaPortalStaff(entregado === '1');
   }
 
+  // Exportar datos filtrados a una pestaña del spreadsheet existente
+  if (action === 'api_export') {
+    var exportEmail = e.parameter.email || '';
+    if (!exportEmail || !AUTH_EMAILS[exportEmail.toLowerCase().trim()]) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Sin acceso.' })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var expAnio  = e.parameter.anio  || '';
+    var expMes   = e.parameter.mes   || '';
+    var expDesde = e.parameter.desde || ''; // YYYY-MM-DD
+    var expHasta = e.parameter.hasta || ''; // YYYY-MM-DD
+    var expMarca = e.parameter.marca || '';
+    var expDash  = e.parameter.dash  || 'general'; // 'general' | 'referentes'
+    try {
+      var result = exportarASheet(expAnio, expMes, expDesde, expHasta, expMarca, expDash);
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    } catch(err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // Endpoint JSON para verificación de PIN desde el cliente (AJAX)
   if (action === 'api_entregar') {
     var notasParam = e.parameter.notas || '';
@@ -1733,4 +1753,84 @@ function getRetirosData(estadoFiltro, diasFiltro) {
     });
   }
   return rows.reverse();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORTAR A GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════════
+
+function parseFechaParaFiltro(fechaStr) {
+  // Convierte 'dd/mm/yyyy' → 'yyyy-mm-dd' para comparación string
+  if (!fechaStr) return '';
+  var p = fechaStr.split('/');
+  if (p.length !== 3) return '';
+  return p[2] + '-' + ('0'+p[1]).slice(-2) + '-' + ('0'+p[0]).slice(-2);
+}
+
+function exportarASheet(anio, mes, desde, hasta, marca, dash) {
+  // Leer datos crudos
+  var ss      = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var srcData = ss.getSheets()[0].getDataRange().getValues();
+
+  // Construir filas (misma lógica que api_dashboard)
+  var rows = [];
+  for (var r = 1; r < srcData.length; r++) {
+    var row       = srcData[r];
+    var fecha     = row[0] ? new Date(row[0]) : null;
+    var pedido    = String(row[1] || '');
+    var nombre    = String(row[3] || 'Sin nombre');
+    var producto  = String(row[5] || '');
+    var cantidad  = parseInt(row[7]) || 1;
+    var bruto     = parseFloat(row[9])  || 0;
+    var comentario= String(row[11] || '').trim();
+    var marcaRow  = String(row[12] || '');
+    var costoUnit = parseFloat(row[13]) || 0;
+    var pagado    = parseFloat(row[14]) || bruto;
+    var neto      = parseFloat(row[15]) || pagado;
+    var mesRow    = fecha ? (fecha.getFullYear() + '-' + ('0' + (fecha.getMonth()+1)).slice(-2)) : '';
+    var fechaStr  = fecha ? fecha.toLocaleDateString('es-AR') : '';
+    var grado     = comentario || '(Sin observaciones)';
+    var costoLinea= costoUnit * cantidad;
+
+    // Aplicar filtros
+    if (anio  && (!mesRow || mesRow.slice(0,4) !== anio)) continue;
+    if (mes   && mesRow !== mes) continue;
+    if (desde || hasta) {
+      var f = parseFechaParaFiltro(fechaStr);
+      if (desde && f && f < desde) continue;
+      if (hasta && f && f > hasta) continue;
+    }
+    if (marca && marcaRow !== marca) continue;
+
+    rows.push([fechaStr, mesRow, pedido, nombre, grado, producto, marcaRow,
+               cantidad, bruto, pagado, neto, costoLinea]);
+  }
+
+  // Crear o limpiar pestaña "Exportación"
+  var tabName  = dash === 'referentes' ? 'Export — Referentes' : 'Export — General';
+  var expSheet = ss.getSheetByName(tabName);
+  if (!expSheet) expSheet = ss.insertSheet(tabName);
+  expSheet.clearContents();
+
+  // Encabezado
+  var headers = [['Fecha','Mes','Pedido','Familia','Grado','Producto','Marca',
+                  'Cantidad','Bruto','Pagado','Neto','Costo']];
+  expSheet.getRange(1, 1, 1, headers[0].length).setValues(headers)
+    .setFontWeight('bold').setBackground('#1a1a6e').setFontColor('#ffffff');
+
+  // Datos
+  if (rows.length > 0) {
+    expSheet.getRange(2, 1, rows.length, headers[0].length).setValues(rows);
+  }
+
+  // Formato columnas numéricas
+  var numFmt = '"$ "#,##0.00';
+  var lastRow = rows.length + 1;
+  if (lastRow > 1) {
+    expSheet.getRange(2, 9, rows.length, 4).setNumberFormat(numFmt);
+  }
+  expSheet.autoResizeColumns(1, headers[0].length);
+
+  var url = ss.getUrl() + '#gid=' + expSheet.getSheetId();
+  return { ok: true, url: url, filas: rows.length };
 }

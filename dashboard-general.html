@@ -220,6 +220,7 @@
       <p id="txt-actualizado">—</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
+      <button class="topbar-btn" id="btn-export" onclick="exportarSheets()" style="background:#2e7d32;color:#fff;border-color:#2e7d32">📊 Exportar a Sheets</button>
       <a href="dashboard-referentes.html" class="topbar-btn" style="background:#1a1a6e;color:#fff;border-color:#1a1a6e;text-decoration:none;display:inline-flex;align-items:center;gap:5px">↗ Ver referentes</a>
       <button class="topbar-btn" onclick="cerrarSesion()">Cerrar sesión</button>
     </div>
@@ -447,6 +448,33 @@ function limpiarFechas() {
   currentDesde = '';
   currentHasta = '';
   render();
+}
+
+function exportarSheets() {
+  var email = leerSesionGoogle();
+  if (!email) { alert('Necesitás estar logueado con Google para exportar.'); return; }
+  var btn = document.getElementById('btn-export');
+  btn.textContent = '⏳ Exportando…';
+  btn.disabled = true;
+  var url = APPS_URL + '?action=api_export&email=' + encodeURIComponent(email) + '&dash=general';
+  if (currentAnio)  url += '&anio='  + encodeURIComponent(currentAnio);
+  if (currentMes)   url += '&mes='   + encodeURIComponent(currentMes);
+  if (currentDesde) url += '&desde=' + encodeURIComponent(currentDesde);
+  if (currentHasta) url += '&hasta=' + encodeURIComponent(currentHasta);
+  if (currentMarca) url += '&marca=' + encodeURIComponent(currentMarca);
+  fetch(url, { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      btn.textContent = '📊 Exportar a Sheets';
+      btn.disabled = false;
+      if (d.ok) { window.open(d.url, '_blank'); }
+      else { alert('Error al exportar: ' + (d.error || 'Intentá de nuevo.')); }
+    })
+    .catch(function(){
+      btn.textContent = '📊 Exportar a Sheets';
+      btn.disabled = false;
+      alert('Error de conexión.');
+    });
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function comision(total) { return total * 0.015; }
