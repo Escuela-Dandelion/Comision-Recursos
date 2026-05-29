@@ -15,6 +15,7 @@ var CONFIG = {
   STAFF_PINS: {
     'Yuliana.Longhi ':   'PYL26',   // Jardín
     'Maria.Martini ':    'PMM26',   // Jardín
+    'Amanda.Benedi ':    'PAB26',   // FGP
     'Ines.Robertson':    'PIR26',   // 4to
     'Delfina.Salvetti':  'PDS26',   // 6to / 10mo
     'Dolo.Dominguez':    'PDD26',   // 2do
@@ -35,6 +36,7 @@ var CONFIG = {
   RETIRO_PINS: [
     'PYL26',  // Yuliana Longhi   — Jardín
     'PMM26',  // Maria Martini    — Jardín
+    'PAB26',  // Amanda Benedi    — FGP
     'PIR26',  // Ines Robertson   — 4to
     'PDS26',  // Delfina Salvetti — 6to / 10mo
     'PDD26',  // Dolo Dominguez   — 2do
@@ -1529,6 +1531,7 @@ var AUTH_EMAILS = {
   'longhi.yuliana@gmail.com':        { role: 'ADMIN', name: 'Yuliana' },
   'yuliana.longhi@dandelion.edu.ar': { role: 'ADMIN', name: 'Yuliana' },
   'martinimaria39@gmail.com':   { role: 'FGP',   name: 'Maria' },
+  'amandabenedi@gmail.com':     { role: 'FGP',   name: 'Amanda' },
   'lourdelcastillo@gmail.com':       { role: 'FGP',   name: 'Luli' },
   'belen.ravaza@dandelion.edu.ar':   { role: 'FGP',   name: 'Belén' },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },

@@ -161,6 +161,45 @@
   .wiki-table tr:last-child td { border-bottom: none; }
   .wiki-table tr:hover td { background: #fafafa; }
 
+  /* ── PIN OVERLAY ── */
+  #pin-overlay {
+    position: fixed; inset: 0; background: rgba(247,248,250,.97);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+  }
+  #pin-overlay.hidden { display: none; }
+  .pin-box {
+    background: #fff; border: 1px solid var(--border); border-radius: 16px;
+    padding: 40px 36px; max-width: 360px; width: 90%; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,.10);
+  }
+  .pin-logo  { font-size: 40px; margin-bottom: 8px; }
+  .pin-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .pin-sub   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .pin-input {
+    width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px;
+    font-size: 20px; letter-spacing: 4px; text-align: center; font-weight: 700;
+    outline: none; margin-bottom: 12px; transition: border-color .2s;
+  }
+  .pin-input:focus { border-color: var(--green); }
+  .pin-btn {
+    width: 100%; padding: 12px; background: var(--green); color: #fff;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .pin-btn:hover { opacity: .88; }
+  .pin-error { color: var(--red); font-size: 12px; min-height: 18px; margin-top: 8px; }
+  .sidebar-logout {
+    margin: auto 12px 16px; padding: 8px 12px; background: none;
+    border: 1px solid var(--border); border-radius: 8px; color: var(--muted);
+    font-size: 12px; cursor: pointer; width: calc(100% - 24px); text-align: left;
+    transition: background .15s;
+  }
+  .sidebar-logout:hover { background: var(--red-light); color: var(--red); border-color: var(--red); }
+
+  /* ── PHONE LINK ── */
+  .wa-link { color: var(--green); text-decoration: none; font-size: 12px; }
+  .wa-link:hover { text-decoration: underline; }
+
   /* ── CHECKLIST ── */
   .checklist { list-style: none; margin: 8px 0 12px; padding: 0; }
   .checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
@@ -243,7 +282,16 @@
     .page-title   { font-size: 22px; }
     h2            { font-size: 16px; }
   }
+  /* ── GOOGLE AUTH ── */
+  .login-divider { display:flex;align-items:center;gap:10px;margin:16px 0; }
+  .login-divider::before,.login-divider::after { content:'';flex:1;height:1px;background:var(--border); }
+  .login-divider span { font-size:11px;color:var(--muted);white-space:nowrap; }
+  #google-btn-wiki { display:flex;justify-content:center;margin-bottom:4px; }
+  .login-loading-wiki { display:none;text-align:center;margin-top:12px; }
+  .login-loading-wiki .spin { display:inline-block;width:22px;height:22px;border:3px solid #c8e6c9;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -260,7 +308,7 @@
     </div>
   </div>
 
-  <a href="https://escuela-dandelion.github.io/Diente-de-Leon/Tienda.html" target="_blank" class="sidebar-cta">🛍️ Ir a la Tienda</a>
+  <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" class="sidebar-cta">🛍️ Ir a la Tienda</a>
   <a href="https://www.proyectosef.com" target="_blank" class="sidebar-cta" style="margin-top:6px;background:var(--earth);">🤝 Ir a SEF</a>
 
   <div class="sidebar-section">Comisión de Recursos</div>
@@ -277,24 +325,44 @@
   <a href="#roles" class="sub">→ Roles</a>
   <a href="#flujo" class="sub">→ Flujo del Proceso</a>
   <a href="#herramientas" class="sub">→ Herramientas</a>
-  <a href="#checklists" class="sub">→ Checklists</a>
   <a href="#piloto" class="sub">→ Piloto</a>
   <a href="#referentes" class="sub">→ Para Referentes</a>
   <a href="#faq" class="sub">→ Preguntas Frecuentes</a>
   <a href="gestion-proveedores.html" class="sub">→ 📦 Gestión Proveedores</a>
-  <a href="https://ine-robertson.github.io/dandelion-tienda-dashboard/" target="_blank" class="sub">→ 📊 Dashboard de Ventas</a>
+  <a href="https://escuela-dandelion.github.io/Comision-Recursos/dashboard-general.html" target="_blank" class="sub">→ 📊 Dashboard de Ventas</a>
 
-  <div class="sidebar-section">🧸 Juguetes</div>
+  <div class="sidebar-section">🌱 Otras Iniciativas</div>
   <a href="#juguetes">Próximamente</a>
+  <button class="sidebar-logout" onclick="cerrarSesion()">🔒 Cerrar sesión</button>
 </nav>
 
 <!-- MAIN -->
+<!-- LOGIN OVERLAY -->
+<div id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-logo">🌼</div>
+    <div class="pin-title">Comisión de Recursos</div>
+    <div class="pin-sub">Wiki · Escuela Dandelion</div>
+    <div id="google-btn-wiki"></div>
+    <p style="font-size:11px;color:var(--muted);margin-top:4px">Para Staff, FGP y Administradores</p>
+    <div class="login-loading-wiki" id="login-loading-wiki">
+      <div class="spin"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Verificando acceso…</p>
+    </div>
+    <div class="login-divider"><span>o ingresá con PIN</span></div>
+    <input id="pin-input" class="pin-input" type="password" maxlength="8" placeholder="••••••" autocomplete="off">
+    <button class="pin-btn" onclick="validarPin()">Ingresar con PIN</button>
+    <div id="pin-error" class="pin-error"></div>
+  </div>
+</div>
+
 <div class="main">
   <!-- TOP BAR -->
   <div class="topbar">
     <a href="#">Wiki</a><span class="sep">›</span>
     <a href="#">Escuela Dandelion</a><span class="sep">›</span>
     <span>Comisión de Recursos</span>
+    <button onclick="cerrarSesion()" style="margin-left:auto;background:none;border:1px solid #e0e0e0;border-radius:6px;padding:4px 12px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='#e0e0e0'">🔒 Cerrar sesión</button>
   </div>
 
   <!-- CONTENT -->
@@ -528,7 +596,7 @@
         </div>
       </div>
 
-      <a href="https://escuela-dandelion.github.io/Diente-de-Leon/Tienda.html" target="_blank" class="cta-tienda">
+      <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" class="cta-tienda">
         <span class="cta-icon">🛍️</span> Visitá la Tienda Diente de León
       </a>
     </div>
@@ -540,23 +608,26 @@
       <h3>🛍️ Subcélula Tienda</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Responsable de la operación y gestión de la Tienda Diente de León.</p>
       <table class="wiki-table">
-        <thead><tr><th>Persona</th><th>Rol</th><th>Notas</th></tr></thead>
+        <thead><tr><th>Persona</th><th>Rol</th><th>Teléfono</th><th>Notas</th></tr></thead>
         <tbody>
-          <tr><td><strong>Yuliana Longhi</strong></td><td><span class="badge badge-active">Coordinación General · Ejecución Logística</span></td><td>Referente principal, coordinación de entregas y referentes</td></tr>
-          <tr><td><strong>Maria Martini</strong></td><td><span class="badge badge-active">Gestión del Proveedor (FGP)</span></td><td></td></tr>
-          <tr><td><strong>Ines Robertson</strong></td><td><span class="badge badge-pilot">Soporte Digital</span></td><td>Tienda Virtual, Formularios, Códigos QR, Procesos, Dashboards de métricas, Flyers</td></tr>
-          <tr><td><strong>Anabella Gargiulo</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td>+54 9 3513 91-5935 · Acceso a Wiki y Dashboards</td></tr>
+          <tr><td><strong>Yuliana Longhi</strong></td><td><span class="badge badge-active">Coordinación General · Ejecución Logística</span></td><td><a class="wa-link" href="https://wa.me/5493513645612" target="_blank">+54 9 3513 64-5612</a></td><td>Referente principal, coordinación de entregas y referentes · <a href="mailto:longhi.yuliana@gmail.com" style="color:var(--green)">longhi.yuliana@gmail.com</a></td></tr>
+          <tr><td><strong>Maria Martini</strong></td><td><span class="badge badge-active">FGP</span></td><td><a class="wa-link" href="https://wa.me/5493516865078" target="_blank">+54 9 3516 86-5078</a></td><td><a href="mailto:martinimaria39@gmail.com" style="color:var(--green)">martinimaria39@gmail.com</a></td></tr>
+          <tr><td><strong>Ines Robertson</strong></td><td><span class="badge badge-pilot">Soporte Digital</span></td><td><a class="wa-link" href="https://wa.me/5493512112050" target="_blank">+54 9 3512 11-2050</a></td><td>Soporte Digital de la Tienda, Admin, Proceso de Gestión con Proveedores, Métricas y Flyers · <a href="mailto:robertson.ine@gmail.com" style="color:var(--green)">robertson.ine@gmail.com</a></td></tr>
+          <tr><td><strong>Belén Ravaza</strong></td><td><span class="badge badge-draft">TBD</span></td><td><a class="wa-link" href="https://wa.me/5493513408751" target="_blank">+54 9 3513 40-8751</a></td><td>Rol pendiente de definir · <a href="mailto:belen.ravaza@dandelion.edu.ar" style="color:var(--green)">belen.ravaza@dandelion.edu.ar</a></td></tr>
+          <tr><td><strong>Luli del Castillo</strong></td><td><span class="badge badge-active">FGP</span></td><td><a class="wa-link" href="https://wa.me/5493513003789" target="_blank">+54 9 3513 00-3789</a></td><td>Oddis: solicitud de pedido, orden al proveedor · <a href="mailto:lourdelcastillo@gmail.com" style="color:var(--green)">lourdelcastillo@gmail.com</a></td></tr>
+          <tr><td><strong>Amanda Benedi</strong></td><td><span class="badge badge-active">FGP</span></td><td><a class="wa-link" href="https://wa.me/5493543584191" target="_blank">+54 9 3543 58-4191</a></td><td><a href="mailto:amandabenedi@gmail.com" style="color:var(--green)">amandabenedi@gmail.com</a></td></tr>
         </tbody>
       </table>
 
       <h3>📦 Comisión de Recursos</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Conjunto de proyectos de recaudación: Diente de León, SEF y Juguetes.</p>
       <table class="wiki-table">
-        <thead><tr><th>Persona</th><th>Rol</th><th>Notas</th></tr></thead>
+        <thead><tr><th>Persona</th><th>Rol</th><th>Teléfono</th><th>Notas</th></tr></thead>
         <tbody>
-          <tr><td><strong>Maximiliano Contreras</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
-          <tr><td><strong>Lucas Di Stefano</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
-          <tr><td><strong>Esteban Próspero</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td></td></tr>
+          <tr><td><strong>Anabella Gargiulo</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td><a class="wa-link" href="https://wa.me/5493513915935" target="_blank">+54 9 3513 91-5935</a></td><td>Rol pendiente de acordar</td></tr>
+          <tr><td><strong>Maximiliano Contreras</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td><a class="wa-link" href="https://wa.me/5493517538199" target="_blank">+54 9 3517 53-8199</a></td><td></td></tr>
+          <tr><td><strong>Lucas Di Stefano</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td><a class="wa-link" href="https://wa.me/5493513003693" target="_blank">+54 9 3513 00-3693</a></td><td></td></tr>
+          <tr><td><strong>Esteban Próspero</strong></td><td><span class="badge badge-active">Comisión de Recursos</span></td><td><a class="wa-link" href="https://wa.me/5493516569914" target="_blank">+54 9 3516 56-9914</a></td><td></td></tr>
         </tbody>
       </table>
 
@@ -579,20 +650,6 @@
       <p>Grupo de familias voluntarias que asumen turnos rotativos para la operación física del proyecto. Los turnos se asignan con anticipación en el calendario compartido.</p>
 
       <table class="wiki-table">
-        <thead><tr><th>Persona</th><th>Contacto</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Ines Robertson</strong></td><td>+54 9 3512 11-2050</td></tr>
-          <tr><td><strong>Jose Carranza</strong></td><td>+54 9 3516 52-9993</td></tr>
-          <tr><td><strong>Yuliana Longhi</strong></td><td>+54 9 3513 64-5612</td></tr>
-          <tr><td><strong>Maria Martini</strong></td><td>+54 9 3516 86-5078</td></tr>
-          <tr><td><strong>Luli del Castillo</strong></td><td>+54 9 3513 00-3789</td></tr>
-          <tr><td><strong>Valeria Pierobon</strong></td><td>+54 9 3512 38-9386</td></tr>
-          <tr><td><strong>Andrea Truppia</strong></td><td>+54 9 3515 64-0578</td></tr>
-          <tr><td><strong>Dario Vota</strong></td><td>+54 9 3512 41-4523</td></tr>
-        </tbody>
-      </table>
-
-      <table class="wiki-table" style="margin-top:16px">
         <thead><tr><th>Sub-rol</th><th>Tarea</th><th>Zona</th></tr></thead>
         <tbody>
           <tr><td><strong>Retiro en proveedor</strong></td><td>Busca la mercadería en el punto acordado, verifica cantidad y estado, lleva a la escuela</td><td>Córdoba capital y alrededores (Saldán, Villa Allende, Mendiolaza, La Calera, Río Ceballos)</td></tr>
@@ -628,61 +685,80 @@
     <div class="section" id="flujo">
       <h2><span class="icon">🔄</span> Flujo del Proceso</h2>
 
-      <h3>A. Reposición de Producto (Escuela → Proveedor)</h3>
+      <h3>A. Reposición de Producto (Proveedor → Escuela)</h3>
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
           <div class="step-body">
-            <div class="step-title">Gatillo de reposición</div>
-            <p class="step-desc">La FGP detecta que el stock llegó al "punto de pedido" definido para ese producto, o se activa por calendario (ej: 1 vez al mes para yerba). Decide iniciar la reposición.</p>
+            <div class="step-title">Alerta de stock bajo — automática</div>
+            <p class="step-desc">El sistema monitorea el stock en TiendaNube cada 6 horas. Cuando un producto llega a 10 unidades o menos, le llega un WhatsApp automático a la FGP responsable con la lista de productos afectados y dos links: uno para hacer el pedido al proveedor y otro para agendar el retiro.</p>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
         <div class="step">
           <div class="step-num">2</div>
           <div class="step-body">
-            <div class="step-title">Solicitud de reposición</div>
-            <p class="step-desc">La FGP completa el Formulario Google "Solicitud de pedido a proveedor" (qué, cuánto, cuándo, dónde, quién paga). Queda registrado en la planilla de pedidos. <strong>[TBD: ¿quién autoriza?]</strong></p>
+            <div class="step-title">Pedido al proveedor</div>
+            <p class="step-desc">La FGP usa el link del mensaje para abrir el formulario <strong>Orden de Pedido</strong> (ya pre-completado con los productos y cantidades). Confirma o ajusta los datos, y envía. Queda registrado en la planilla de pedidos con estado <em>Solicitado</em>.</p>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
         <div class="step">
           <div class="step-num">3</div>
           <div class="step-body">
-            <div class="step-title">Pedido estándar al proveedor</div>
-            <p class="step-desc">La FGP envía el pedido por email/WhatsApp usando la plantilla estándar (SKUs, cantidades, precios acordados, fecha y ventana horaria de retiro).</p>
+            <div class="step-title">Confirmación del proveedor</div>
+            <p class="step-desc">El proveedor confirma fecha, lugar y horario de retiro por WhatsApp o email. La FGP coordina con el pool logístico para asignar quién va a buscar la mercadería.</p>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-body">
-            <div class="step-title">Asignación logística del pool</div>
-            <p class="step-desc">La coordinación logística asigna a una familia del pool el turno de retiro. Se registra en el Calendario Google y en la "Hoja de Turnos".</p>
+            <div class="step-title">Asignación y aviso al pool — con WhatsApp automático</div>
+            <p class="step-desc">La FGP completa el formulario <strong>Agendar Retiro</strong> con los datos del retiro y el colaborador asignado. El sistema crea el evento en el Calendario Google y abre automáticamente WhatsApp con un mensaje pre-armado para el colaborador.</p>
+            <div class="callout" style="margin-top:14px;background:#f0fdf4;border-color:#86efac">
+              <div class="icon">💬</div>
+              <div>
+                <div class="callout-title" style="color:#166534">Ejemplo de mensaje que recibe el colaborador</div>
+                <pre style="font-size:12px;line-height:1.6;color:#374151;white-space:pre-wrap;margin-top:8px;font-family:monospace">🌼 *Diente de León — Retiro de Mercadería*
+
+Hola José! Te asignaron un retiro:
+
+━━━━━━━━━━━━━━━━
+🏪 *Proveedor:* CABALLO NEGRO
+📅 *Fecha de retiro:* 15/05/2026
+🏫 *Fecha máx. entrega escuela:* 16/05/2026
+📍 *Dirección:* Av. Colón 1234, Córdoba
+📋 *N° Orden:* ORD-2026-007
+
+📦 *Productos a retirar:*
+• Yerba Mate 500g
+• Granola Natural 300g
+
+━━━━━━━━━━━━━━━━
+
+✅ *Cuando entregues la mercadería en la escuela, confirmalo tocando este link:*
+https://escuela-dandelion.github.io/Comision-Recursos/confirmar-entrega.html?norden=ORD-2026-007
+
+¡Gracias por tu ayuda! Cualquier inconveniente coordiná con *Maria Martini* al +5493516865078.</pre>
+              </div>
+            </div>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
         <div class="step">
           <div class="step-num">5</div>
           <div class="step-body">
-            <div class="step-title">Retiro y traslado</div>
-            <p class="step-desc">El colaborador asignado retira la mercadería, completa el checklist de retiro y registra evidencia (fotos del remito y los bultos). Completa el formulario "Retiro realizado".</p>
+            <div class="step-title">Retiro y entrega en la escuela</div>
+            <p class="step-desc">El colaborador busca la mercadería en el punto acordado, verifica cantidades y la lleva a la escuela. Al entregarla, toca el link del mensaje de WhatsApp → el sistema actualiza automáticamente el estado del pedido a <em>Entregado en Escuela</em>.</p>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
         <div class="step">
           <div class="step-num">6</div>
           <div class="step-body">
-            <div class="step-title">Recepción y control de calidad</div>
-            <p class="step-desc">En la escuela se verifica lo recibido vs. el remito: cantidades, estado, temperatura (si aplica). Si hay incidencia, queda abierta en la planilla hasta resolución — el producto no ingresa a stock hasta entonces.</p>
-          </div>
-        </div>
-        <div class="step-connector"><div></div></div>
-        <div class="step">
-          <div class="step-num">7</div>
-          <div class="step-body">
             <div class="step-title">Actualización de stock y cierre</div>
-            <p class="step-desc">La Gestoría actualiza el stock en TiendaNube y cierra el pedido en la planilla como "recibido". Si corresponde: registra el pago y adjunta comprobante.</p>
+            <p class="step-desc">La FGP actualiza el stock en TiendaNube y cierra el pedido en la planilla. Si corresponde, registra el pago y adjunta el comprobante.</p>
           </div>
         </div>
       </div>
@@ -724,8 +800,8 @@
         <div class="tool-card">
           <div class="tool-icon">📋</div>
           <div>
-            <div class="tool-name">Google Forms</div>
-            <div class="tool-desc">Formulario de pedido a proveedor, retiro realizado y recepción en escuela.</div>
+            <div class="tool-name">Formularios digitales</div>
+            <div class="tool-desc">Orden de pedido al proveedor, agendar retiro, gestión de proveedores y confirmación de entrega en escuela (un tap desde WhatsApp).</div>
           </div>
         </div>
         <div class="tool-card">
@@ -779,65 +855,31 @@
       </table>
     </div>
 
-    <!-- CHECKLISTS -->
-    <div class="section" id="checklists">
-      <h2><span class="icon">✅</span> Checklists Operativos</h2>
-
-      <h3>Checklist de Retiro en Proveedor</h3>
-      <ul class="checklist">
-        <li><div class="box"></div> Confirmar dirección y horario de retiro con la FGP (con al menos 24hs de anticipación)</li>
-        <li><div class="box"></div> Llevar el pedido impreso o en el celular (SKU, cantidades, precio acordado)</li>
-        <li><div class="box"></div> Contar y verificar los bultos en el momento del retiro</li>
-        <li><div class="box"></div> Fotografiar el remito y los bultos antes de cargar</li>
-        <li><div class="box"></div> Verificar estado general del producto (envases, temperatura si aplica)</li>
-        <li><div class="box"></div> Completar el formulario "Retiro realizado" desde el celular</li>
-        <li><div class="box"></div> Trasladar directamente a la escuela (no dejar en casa intermedia sin aviso)</li>
-      </ul>
-
-      <h3>Checklist de Recepción en Escuela</h3>
-      <ul class="checklist">
-        <li><div class="box"></div> Recibir con el remito en mano y verificar cantidades vs. pedido original</li>
-        <li><div class="box"></div> Revisar estado: envases cerrados, sin roturas, fecha de vencimiento</li>
-        <li><div class="box"></div> Fotografiar lo recibido</li>
-        <li><div class="box"></div> Registrar incidencias si las hay (faltante, producto dañado)</li>
-        <li><div class="box"></div> Completar el formulario "Recepción en escuela"</li>
-        <li><div class="box"></div> Avisar a Gestoría de Tienda para actualizar stock en TiendaNube</li>
-      </ul>
-
-      <h3>Checklist de Armado de Pedidos Comunitarios</h3>
-      <ul class="checklist">
-        <li><div class="box"></div> Descargar el listado de pedidos del mes desde la planilla</li>
-        <li><div class="box"></div> Preparar bolsas/cajas etiquetadas por grado/referente</li>
-        <li><div class="box"></div> Armar cada paquete verificando producto y cantidad</li>
-        <li><div class="box"></div> Registrar cualquier faltante o sustitución</li>
-        <li><div class="box"></div> Marcar pedido como "listo para entrega" en la planilla</li>
-        <li><div class="box"></div> Coordinar con el referente la fecha de retiro en escuela</li>
-      </ul>
-    </div>
 
     <!-- ACCESOS -->
     <div class="section" id="accesos">
       <h2><span class="icon">🔐</span> Accesos y Permisos</h2>
-      <p>Solo requieren gestión de acceso las herramientas internas del equipo. La tienda, la wiki y el dashboard son públicos.</p>
+      <p>El acceso al sistema se gestiona por cuenta de Gmail. La wiki, los dashboards y el Admin requieren login con Google o PIN.</p>
 
       <table class="wiki-table">
         <thead>
-          <tr><th>Rol</th><th>Qué necesita</th><th>Herramientas</th></tr>
+          <tr><th>Rol</th><th>Qué necesita</th><th>Acceso</th></tr>
         </thead>
         <tbody>
           <tr>
             <td><strong>Referente de Grado</strong></td>
-            <td>Escanear códigos QR en el punto de retiro</td>
-            <td><span class="access-pill access-full">Celular con cámara</span> — no requiere acceso a ningún sistema</td>
+            <td>Registrar entregas y ver su dashboard de ventas</td>
+            <td><span class="access-pill access-full">PIN personal</span> — recibido antes del primer turno</td>
           </tr>
           <tr>
-            <td><strong>Gestión con Proveedores</strong><br><small style="color:var(--muted)">FGP · Comisión de Recursos · Pool</small></td>
-            <td>Solicitar pedidos, registrar retiros y seguir el calendario</td>
-            <td>
-              <span class="access-pill access-full">Google Form</span> — Solicitud de pedidos<br>
-              <span class="access-pill access-edit">Google Sheets</span> — Planilla operativa<br>
-              <span class="access-pill access-read">Google Calendar</span> — Turnos y fechas
-            </td>
+            <td><strong>FGP · Comisión de Recursos</strong></td>
+            <td>Gestionar pedidos a proveedores, retiros y seguimiento</td>
+            <td><span class="access-pill access-edit">Gmail</span> — acceso con cuenta de Google al Admin</td>
+          </tr>
+          <tr>
+            <td><strong>Administrador</strong></td>
+            <td>Acceso completo al sistema</td>
+            <td><span class="access-pill access-full">Gmail</span> — acceso completo con cuenta de Google al Admin</td>
           </tr>
         </tbody>
       </table>
@@ -846,7 +888,7 @@
         <div class="icon">📬</div>
         <div>
           <div class="callout-title">¿Cómo solicitar acceso?</div>
-          Escribir a <strong>dientedeleon-admin@googlegroups.com</strong> indicando nombre, rol y herramienta. Los accesos se otorgan antes del primer turno asignado.
+          Escribir a <strong>dientedeleon-admin@googlegroups.com</strong> indicando nombre, Gmail y rol. El acceso se otorga antes del primer turno asignado.
         </div>
       </div>
 
@@ -880,17 +922,17 @@
           <tr>
             <td><strong>Etapa 3</strong> — Primer ciclo</td>
             <td>Ejecutar una reposición completa con el nuevo sistema: pedido → retiro → recepción → armado → entrega</td>
-            <td><span class="badge badge-draft">Pendiente</span></td>
+            <td><span class="badge badge-active">Completada</span></td>
           </tr>
           <tr>
             <td><strong>Etapa 4</strong> — Evaluación</td>
-            <td>Reunión de retrospectiva, ajuste de procesos, documentación final</td>
+            <td>Reunión de retrospectiva, ajuste de procesos, documentación final. Evaluar si el proceso funciona bien para todos.</td>
             <td><span class="badge badge-draft">Pendiente</span></td>
           </tr>
           <tr>
             <td><strong>Etapa 5</strong> — TiendaNube pública</td>
             <td>Lanzamiento de la tienda pública con catálogo inicial y primer despacho externo</td>
-            <td><span class="badge badge-draft">Pendiente</span></td>
+            <td><span class="badge badge-active">Completada</span></td>
           </tr>
         </tbody>
       </table>
@@ -992,7 +1034,7 @@
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo hacen las familias para comprar? <span class="arrow">▶</span></div>
-        <div class="faq-body">Las familias ingresan directamente a la tienda virtual en <a href="https://escuela-dandelion.github.io/Diente-de-Leon/Tienda.html" target="_blank" style="color:var(--green);font-weight:600">tiendadientedeleon.mitiendanube.com</a>, eligen los productos, pagan online y coordinan el retiro. No hace falta que el referente tome el pedido ni cobre.</div>
+        <div class="faq-body">Las familias ingresan directamente a la tienda virtual en <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" style="color:var(--green);font-weight:600">tiendadientedeleon.mitiendanube.com</a>, eligen los productos, pagan online y coordinan el retiro. No hace falta que el referente tome el pedido ni cobre.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cuándo y dónde se retira la mercadería? <span class="arrow">▶</span></div>
@@ -1019,54 +1061,48 @@
     <!-- ══════════════════════════════════════════════ -->
     <div class="section-divider">
       <div class="section-divider-line"></div>
-      <div class="section-divider-label">🧸 Juguetes</div>
+      <div class="section-divider-label">🌱 Otras Iniciativas</div>
       <div class="section-divider-line"></div>
     </div>
 
-    <!-- JUGUETES -->
+    <!-- OTRAS INICIATIVAS -->
     <div class="section" id="juguetes">
-      <h2><span class="icon">🧸</span> Juguetes — Próximamente</h2>
+      <h2><span class="icon">🌱</span> Otras Iniciativas — Próximamente</h2>
 
       <div class="callout callout-purple">
         <div class="icon">🚧</div>
         <div>
-          <div class="callout-title">Esta vertical está en planificación</div>
-          Juguetes es la próxima vertical de la Comisión de Recursos. Aún no está activa — este espacio se irá completando a medida que el proyecto tome forma.
+          <div class="callout-title">Estas iniciativas están en planificación</div>
+          La Comisión de Recursos acompaña otras iniciativas de recaudación de la comunidad. Cada una tiene su propio propósito y destinatario de fondos.
         </div>
       </div>
 
-      <p>
-        La vertical de <strong>Juguetes</strong> se sumará a la <strong>Tienda Virtual de Diente de León</strong>, compartiendo la misma plataforma de venta (TiendaNube). El objetivo es ampliar el catálogo de la tienda con productos para niños, bajo la misma lógica de recaudación: los fondos se destinan a donación a la Escuela Dandelion.
-      </p>
-
-      <div class="role-grid">
-        <div class="role-card amber">
-          <div class="role-name">Tienda compartida</div>
-          <div class="role-abbr amber">TIENDANUBE</div>
-          <ul>
-            <li>Misma plataforma que Diente de León</li>
-            <li>Catálogo unificado por categoría</li>
-            <li>Un solo proceso de compra para el cliente</li>
-          </ul>
-        </div>
-        <div class="role-card blue">
-          <div class="role-name">Mismo destino</div>
-          <div class="role-abbr blue">DONACIÓN</div>
-          <ul>
-            <li>Fondos a la Escuela Dandelion</li>
-            <li>Misma lógica que Diente de León</li>
-            <li>Proveedores internos y/o externos</li>
-          </ul>
+      <div class="callout callout-info" style="margin-bottom:16px">
+        <div class="icon">💬</div>
+        <div>
+          <div class="callout-title">¿Querés sumar un producto o proyecto de recaudación?</div>
+          Contactá a <strong>Maximiliano Contreras</strong> <a class="wa-link" href="https://wa.me/5493517538199" target="_blank">+54 9 3517 53-8199</a> o <strong>Lucas Di Stefano</strong> <a class="wa-link" href="https://wa.me/5493513003693" target="_blank">+54 9 3513 00-3693</a>.
         </div>
       </div>
 
-      <table class="wiki-table" style="margin-top:20px">
-        <thead><tr><th>Aspecto</th><th>Estado</th></tr></thead>
+      <table class="wiki-table" style="margin-top:16px">
+        <thead><tr><th>Iniciativa</th><th>Propósito</th><th>Estado</th></tr></thead>
         <tbody>
-          <tr><td>Definición del proyecto</td><td><span class="badge badge-soon">Pendiente</span></td></tr>
-          <tr><td>Identificación de proveedores</td><td><span class="badge badge-soon">Pendiente</span></td></tr>
-          <tr><td>Integración en TiendaNube</td><td><span class="badge badge-soon">Pendiente</span></td></tr>
-          <tr><td>Responsable del proyecto</td><td><span class="badge badge-soon">Pendiente</span></td></tr>
+          <tr>
+            <td><strong>🧸 Juguetes</strong></td>
+            <td>Ampliar el catálogo de la Tienda Virtual con productos para niños. Fondos a la Escuela Dandelion.</td>
+            <td><span class="badge badge-soon">En planificación</span></td>
+          </tr>
+          <tr>
+            <td><strong>🏔️ El Nazareno</strong></td>
+            <td>Colecta de fondos para el viaje de egresados de 6to grado.</td>
+            <td><span class="badge badge-soon">En planificación</span></td>
+          </tr>
+          <tr>
+            <td><strong>🍕 Pizzas (3er grado)</strong></td>
+            <td>Iniciativa de recaudación propia del grado para financiar actividades.</td>
+            <td><span class="badge badge-soon">En planificación</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -1080,6 +1116,105 @@
 </div>
 
 <script>
+  // ── AUTH (Google + PIN) ──
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+  var GOOGLE_CLIENT_ID = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
+  var SESSION_KEY = 'dl_wiki_session';
+  var SESSION_TTL = 7 * 24 * 3600 * 1000; // 7 días
+
+  function guardarSesion(data) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ data: data, ts: Date.now() }));
+  }
+  function leerSesion() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+      if (!s) return null;
+      if (Date.now() - s.ts > SESSION_TTL) { localStorage.removeItem(SESSION_KEY); return null; }
+      return s.data;
+    } catch(e) { return null; }
+  }
+  function mostrarContenido() {
+    document.getElementById('pin-overlay').classList.add('hidden');
+  }
+  function cerrarSesion() {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('dl_pin');
+    if (window.google && google.accounts) { google.accounts.id.disableAutoSelect(); }
+    window.location.reload();
+  }
+
+  // Google Sign-In
+  window.addEventListener('load', function() {
+    // Auto-login: sesión Google del admin
+    try {
+      var adminSession = JSON.parse(localStorage.getItem('dl_admin_session') || 'null');
+      if (adminSession && adminSession.email && Date.now() < adminSession.expires) {
+        mostrarContenido(); return;
+      }
+    } catch(e) {}
+    // Auto-login: sesión wiki guardada
+    if (leerSesion()) { mostrarContenido(); return; }
+    // Auto-login: PIN guardado (backwards compat)
+    try {
+      var pinSes = JSON.parse(localStorage.getItem('dl_pin') || 'null');
+      if (pinSes && pinSes.pin && (Date.now() - pinSes.ts) < 24 * 3600 * 1000) {
+        mostrarContenido(); return;
+      }
+    } catch(e) {}
+    // Inicializar Google Sign-In
+    if (typeof google !== 'undefined') {
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin });
+      google.accounts.id.renderButton(document.getElementById('google-btn-wiki'),
+        { theme: 'outline', size: 'large', width: 280, text: 'signin_with', locale: 'es' });
+    }
+  });
+
+  function onGoogleLogin(response) {
+    var payload = JSON.parse(atob(response.credential.split('.')[1]));
+    var email = payload.email;
+    document.getElementById('google-btn-wiki').style.display = 'none';
+    document.getElementById('login-loading-wiki').style.display = 'block';
+    fetch(GAS_URL + '?action=verificarEmail&email=' + encodeURIComponent(email))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('login-loading-wiki').style.display = 'none';
+        document.getElementById('google-btn-wiki').style.display = '';
+        if (data.ok) {
+          guardarSesion({ email: email, name: payload.name, role: data.role });
+          mostrarContenido();
+        } else {
+          document.getElementById('pin-error').textContent = 'Tu cuenta no tiene acceso. Contactá al administrador.';
+        }
+      })
+      .catch(function() {
+        document.getElementById('login-loading-wiki').style.display = 'none';
+        document.getElementById('google-btn-wiki').style.display = '';
+        document.getElementById('pin-error').textContent = 'Error de conexión. Intentá de nuevo.';
+      });
+  }
+
+  // PIN (fallback)
+  function validarPin() {
+    var pin = document.getElementById('pin-input').value.trim();
+    if (!pin) return;
+    var errEl = document.getElementById('pin-error');
+    errEl.textContent = 'Verificando…';
+    fetch(GAS_URL + '?action=api_dashboard&pin=' + encodeURIComponent(pin))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          localStorage.setItem('dl_pin', JSON.stringify({ pin: pin, ts: Date.now() }));
+          mostrarContenido();
+        } else {
+          errEl.textContent = 'PIN incorrecto. Verificá y reintentá.';
+        }
+      })
+      .catch(function() { errEl.textContent = 'Error de conexión. Intentá de nuevo.'; });
+  }
+  document.getElementById('pin-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') validarPin();
+  });
+
   const sidebar  = document.querySelector('.sidebar');
   const overlay  = document.getElementById('sidebarOverlay');
   const toggle   = document.getElementById('menuToggle');
