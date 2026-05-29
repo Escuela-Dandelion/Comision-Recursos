@@ -343,19 +343,11 @@
   <div class="login-card">
     <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León">
     <h2>Dashboard Referentes</h2>
-    <p>Ingresá con tu cuenta de Google o con PIN</p>
+    <p>Ingresá con tu cuenta de Google</p>
     <div id="google-btn-ref" style="display:flex;justify-content:center;margin-bottom:4px"></div>
     <div id="login-loading-ref" style="display:none;text-align:center;margin:8px 0">
       <div style="display:inline-block;width:22px;height:22px;border:3px solid #c8e6c9;border-top-color:#1a1a6e;border-radius:50%;animation:spin .7s linear infinite"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin:12px 0 8px">
-      <hr style="flex:1;border:none;border-top:1px solid #e0e0e0">
-      <span style="font-size:12px;color:#bbb">o con PIN</span>
-      <hr style="flex:1;border:none;border-top:1px solid #e0e0e0">
-    </div>
-    <input type="password" id="pin-input" placeholder="••••" maxlength="8"
-           onkeydown="if(event.key==='Enter') ingresar()">
-    <button id="btn-login" onclick="ingresar()">Ingresar</button>
     <p id="login-error"></p>
   </div>
 </div>
@@ -476,69 +468,50 @@ function limpiarFechas() {
 }
 function hoy()       { return _hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
-// ── SESIÓN (24hs en localStorage, compartida con dashboard-general) ──
-var SESSION_KEY = 'dl_pin';
-var SESSION_TTL = 24 * 60 * 60 * 1000;
-function guardarSesion(pin){ localStorage.setItem(SESSION_KEY, JSON.stringify({pin:pin, ts:Date.now()})); }
-function leerSesion()      { try{ var s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return s&&(Date.now()-s.ts)<SESSION_TTL?s.pin:null; }catch(e){ return null; } }
-function borrarSesion()    { localStorage.removeItem(SESSION_KEY); }
+// ── SESIÓN GOOGLE (24hs en localStorage) ──
+var GOOGLE_SESSION_KEY = 'dl_admin_session';
+function guardarSesionGoogle(email){ localStorage.setItem(GOOGLE_SESSION_KEY, JSON.stringify({ email: email, expires: Date.now() + 24*60*60*1000 })); }
+function leerSesionGoogle()        { try{ var s=JSON.parse(localStorage.getItem(GOOGLE_SESSION_KEY)||'null'); return s&&Date.now()<s.expires?s.email:null; }catch(e){ return null; } }
+function borrarSesionGoogle()      { localStorage.removeItem(GOOGLE_SESSION_KEY); }
 
-// ── LOGIN ──
-function ingresar(){
-  var pin=document.getElementById('pin-input').value.trim();
-  if(!pin){ showErr('Ingresá tu PIN.'); return; }
-  _doLogin(pin, true);
+function cerrarSesion(){
+  borrarSesionGoogle();
+  if(typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login').style.display='flex';
 }
-function _doLogin(pin, guardar){
-  var btn=document.getElementById('btn-login');
-  if(btn){ btn.textContent='Verificando…'; btn.disabled=true; }
-  hideErr();
-  fetch(APPS_URL+'?action=api_dashboard&pin='+encodeURIComponent(pin),{redirect:'follow'})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(btn){ btn.textContent='Ingresar'; btn.disabled=false; }
-      if(d.ok){
-        if(guardar) guardarSesion(pin);
-        document.getElementById('login').style.display='none';
-        document.getElementById('dashboard').style.display='flex';
-        initDashboard(d);
-      } else { borrarSesion(); showErr(d.error||'PIN incorrecto.'); }
-    })
-    .catch(function(){ if(btn){ btn.textContent='Ingresar'; btn.disabled=false; } showErr('Error de conexión.'); });
-}
-function cerrarSesion(){ borrarSesion(); document.getElementById('dashboard').style.display='none'; document.getElementById('login').style.display='flex'; document.getElementById('pin-input').value=''; }
 function showErr(msg){ var e=document.getElementById('login-error'); e.textContent=msg; e.style.display='block'; }
 function hideErr()   { document.getElementById('login-error').style.display='none'; }
 
 // ── AUTO-LOGIN al cargar ──
 window.addEventListener('load', function(){
-  // Si hay sesión Google guardada, entrar directo
-  try {
-    var adminSession = JSON.parse(localStorage.getItem('dl_admin_session') || 'null');
-    if (adminSession && adminSession.email && Date.now() < adminSession.expires) {
-      fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(adminSession.email), { redirect:'follow' })
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-          if (d.ok) {
-            document.getElementById('login').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'flex';
-            initDashboard(d);
-          }
-        }).catch(function(){});
-      return;
-    }
-  } catch(e) {}
-  // Fallback: sesión PIN
-  var pin = leerSesion();
-  if (pin) { _doLogin(pin, false); return; }
-  // Sin sesión — mostrar pantalla de login
-  document.getElementById('login').style.display = 'flex';
-  if (typeof google !== 'undefined') {
+  var email = leerSesionGoogle();
+  if (email) {
+    fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(email), { redirect:'follow' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.ok){
+          document.getElementById('login').style.display='none';
+          document.getElementById('dashboard').style.display='flex';
+          initDashboard(d);
+        } else {
+          borrarSesionGoogle();
+          mostrarBotonesLogin();
+        }
+      }).catch(function(){ mostrarBotonesLogin(); });
+    return;
+  }
+  mostrarBotonesLogin();
+});
+
+function mostrarBotonesLogin(){
+  document.getElementById('login').style.display='flex';
+  if(typeof google !== 'undefined'){
     google.accounts.id.initialize({ client_id: '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com', callback: onGoogleLoginRef });
     google.accounts.id.renderButton(document.getElementById('google-btn-ref'),
       { theme: 'outline', size: 'large', width: 280, text: 'signin_with', locale: 'es' });
   }
-});
+}
 
 function onGoogleLoginRef(response) {
   var payload = JSON.parse(atob(response.credential.split('.')[1]));
@@ -551,7 +524,7 @@ function onGoogleLoginRef(response) {
       document.getElementById('login-loading-ref').style.display = 'none';
       document.getElementById('google-btn-ref').style.display = 'flex';
       if (d.ok) {
-        localStorage.setItem('dl_admin_session', JSON.stringify({ email: email, expires: Date.now() + 24*60*60*1000 }));
+        guardarSesionGoogle(email);
         document.getElementById('login').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
         initDashboard(d);
