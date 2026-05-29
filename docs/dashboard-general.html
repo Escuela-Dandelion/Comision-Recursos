@@ -66,6 +66,19 @@
       background:#fff; cursor:pointer; outline:none;
     }
     .filter-select:focus { border-color:#1a1a6e; }
+    .filter-date {
+      width:calc(100% - 32px); margin:0 16px 12px; padding:7px 10px;
+      border:1px solid #e0e0e0; border-radius:8px; font-size:12px;
+      background:#fff; outline:none; color:#333;
+    }
+    .filter-date:focus { border-color:#1a1a6e; }
+    .filter-clear-dates {
+      display:block; width:calc(100% - 32px); margin:0 16px 12px;
+      padding:6px 10px; border:1px solid #e0e0e0; border-radius:8px;
+      font-size:11px; color:#999; background:#fafafa; cursor:pointer;
+      text-align:center;
+    }
+    .filter-clear-dates:hover { background:#f0f0f0; color:#666; }
 
     /* ── MAIN ── */
     .main { flex:1; overflow-y:auto; padding:24px; }
@@ -163,6 +176,8 @@
       .sidebar-divider { display:none; }
       .filter-label    { white-space:nowrap; padding:0 4px 0 10px; font-size:11px; }
       .filter-select   { width:auto; min-width:110px; margin:0 4px; font-size:12px; padding:6px 8px; }
+      .filter-date     { width:auto; min-width:120px; margin:0 4px; font-size:12px; padding:5px 8px; }
+      .filter-clear-dates { width:auto; margin:0 4px; padding:5px 8px; white-space:nowrap; font-size:11px; }
 
       /* Main */
       .main   { padding:12px; }
@@ -175,6 +190,8 @@
       .card-label { font-size:9px; }
     }
   </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 </head>
 <body>
 
@@ -183,10 +200,20 @@
   <div class="login-card">
     <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León">
     <h2>Dashboard General</h2>
-    <p>Ingresá tu PIN para acceder</p>
+    <p>Ingresá con tu cuenta de Google o con PIN</p>
+    <div id="google-btn-dash" style="display:flex;justify-content:center;margin-bottom:4px"></div>
+    <div id="login-loading-dash" style="display:none;text-align:center;margin:8px 0">
+      <div style="display:inline-block;width:22px;height:22px;border:3px solid #c8e6c9;border-top-color:#1a1a6e;border-radius:50%;animation:spin .7s linear infinite"></div>
+      <p style="font-size:12px;color:#888;margin-top:6px">Verificando acceso…</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0">
+      <div style="flex:1;height:1px;background:#e0e0e0"></div>
+      <span style="font-size:11px;color:#aaa;white-space:nowrap">o ingresá con PIN</span>
+      <div style="flex:1;height:1px;background:#e0e0e0"></div>
+    </div>
     <input type="password" id="pin-input" placeholder="••••" maxlength="8"
            onkeydown="if(event.key==='Enter') ingresar()">
-    <button id="btn-login" onclick="ingresar()">Ingresar</button>
+    <button id="btn-login" onclick="ingresar()">Ingresar con PIN</button>
     <p id="login-error"></p>
   </div>
 </div>
@@ -228,6 +255,12 @@
         <option value="">Todos los meses</option>
       </select>
 
+      <div class="filter-label">Desde</div>
+      <input type="date" class="filter-date" id="filtro-desde" onchange="aplicarFiltros()">
+      <div class="filter-label">Hasta</div>
+      <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
+      <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
+
       <hr class="sidebar-divider">
 
       <div class="sidebar-section">
@@ -247,6 +280,7 @@
 
       <div id="contenido" style="display:none">
 
+        <!-- KPIs -->
         <!-- KPIs financieros -->
         <div class="cards">
           <div class="card teal">
@@ -350,8 +384,10 @@ var ALL_ROWS  = [];
 var ALL_MESES = [];
 var chartEvo  = null;
 var chartGrad = null;
-var currentAnio = '';
-var currentMes  = '';
+var currentAnio  = '';
+var currentMes   = '';
+var currentDesde = '';
+var currentHasta = '';
 
 // ── Helpers ──
 var _hoy = new Date();
@@ -398,6 +434,21 @@ function mesLabel(m) {
   var n = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   return n[parseInt(p[1])] + ' ' + p[0].slice(2);
 }
+function parseFechaRow(s) {
+  if (!s) return null;
+  s = String(s);
+  if (s.indexOf('T') !== -1) return s.slice(0, 10);
+  var p = s.split('/');
+  if (p.length === 3) return p[2] + '-' + ('0'+p[1]).slice(-2) + '-' + ('0'+p[0]).slice(-2);
+  return null;
+}
+function limpiarFechas() {
+  document.getElementById('filtro-desde').value = '';
+  document.getElementById('filtro-hasta').value = '';
+  currentDesde = '';
+  currentHasta = '';
+  render();
+}
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function comision(total) { return total * 0.015; }
 
@@ -423,11 +474,6 @@ function _doLogin(pin, guardar) {
     .then(function(d){
       if (btn) { btn.textContent = 'Ingresar'; btn.disabled = false; }
       if (d.ok) {
-        if (d.role === 'referente') {
-          borrarSesion();
-          showErr('Este PIN no tiene acceso al Dashboard General. Usá el Dashboard Referentes.');
-          return;
-        }
         if (guardar) guardarSesion(pin);
         document.getElementById('login').style.display     = 'none';
         document.getElementById('dashboard').style.display = 'flex';
@@ -453,9 +499,57 @@ function hideErr()    { document.getElementById('login-error').style.display='no
 
 // ── AUTO-LOGIN al cargar ──
 window.addEventListener('load', function(){
+  // Si hay sesión Google del admin, bypasear PIN
+  try {
+    var adminSession = JSON.parse(localStorage.getItem('dl_admin_session') || 'null');
+    if (adminSession && adminSession.email && Date.now() < adminSession.expires) {
+      fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(adminSession.email), { redirect:'follow' })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if (d.ok) {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+            initDashboard(d);
+          }
+        }).catch(function(){});
+      return;
+    }
+  } catch(e) {}
+  // Fallback: PIN session
   var pin = leerSesion();
-  if (pin) _doLogin(pin, false);
+  if (pin) { _doLogin(pin, false); return; }
+  // Mostrar botón Google
+  if (typeof google !== 'undefined') {
+    google.accounts.id.initialize({ client_id: '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com', callback: onGoogleLoginDash });
+    google.accounts.id.renderButton(document.getElementById('google-btn-dash'),
+      { theme: 'outline', size: 'large', width: 280, text: 'signin_with', locale: 'es' });
+  }
 });
+
+function onGoogleLoginDash(response) {
+  var payload = JSON.parse(atob(response.credential.split('.')[1]));
+  var email = payload.email;
+  document.getElementById('google-btn-dash').style.display = 'none';
+  document.getElementById('login-loading-dash').style.display = 'block';
+  fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(email), { redirect:'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      document.getElementById('login-loading-dash').style.display = 'none';
+      document.getElementById('google-btn-dash').style.display = 'flex';
+      if (d.ok) {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex';
+        initDashboard(d);
+      } else {
+        showErr('Tu cuenta no tiene acceso. Contactá al administrador.');
+      }
+    })
+    .catch(function(){
+      document.getElementById('login-loading-dash').style.display = 'none';
+      document.getElementById('google-btn-dash').style.display = 'flex';
+      showErr('Error de conexión. Intentá de nuevo.');
+    });
+}
 
 // ── INIT ──
 function initDashboard(d) {
@@ -501,7 +595,9 @@ function poblarMeses(anio) {
 function aplicarFiltros() {
   var nuevoAnio = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
-  currentMes = document.getElementById('filtro-mes').value;
+  currentMes   = document.getElementById('filtro-mes').value;
+  currentDesde = document.getElementById('filtro-desde').value; // YYYY-MM-DD
+  currentHasta = document.getElementById('filtro-hasta').value;
   render();
 }
 
@@ -510,6 +606,15 @@ function render() {
   var rows = ALL_ROWS;
   if (currentAnio) rows = rows.filter(function(r){ return r.mes && r.mes.startsWith(currentAnio); });
   if (currentMes)  rows = rows.filter(function(r){ return r.mes === currentMes; });
+  if (currentDesde || currentHasta) {
+    rows = rows.filter(function(r) {
+      var f = parseFechaRow(r.fecha);
+      if (!f) return true;
+      if (currentDesde && f < currentDesde) return false;
+      if (currentHasta && f > currentHasta) return false;
+      return true;
+    });
+  }
 
   updateCards(rows);
   renderEvolucion(rows);
@@ -526,7 +631,7 @@ function updateCards(rows) {
     totalNeto           += (r.neto_linea||r.total_pagado_linea||r.total_linea||0);
     totalDescuentos     += Math.max(0, (r.total_linea||0) - (r.total_pagado_linea||r.total_linea||0));
     totalProcesamiento  += (r.fee_procesamiento||0);
-    totalCosto    += (r.costo_linea||0);
+    totalCosto      += (r.costo_linea||0);
     totalUnidades += (r.cantidad||0);
     if (r.pedido)  pedidosSet[r.pedido]   = true;
     if (r.familia) familiasSet[r.familia] = true;
@@ -557,8 +662,8 @@ function renderEvolucion(rows) {
   rows.forEach(function(r){
     if (unidMap[r.mes] !== undefined) {
       unidMap[r.mes]   += (r.cantidad||0);
-      ingresMap[r.mes] += (r.neto_linea||r.total_pagado_linea||r.total_linea||0);
-      margenMap[r.mes] += (r.neto_linea||r.total_pagado_linea||r.total_linea||0) - (r.costo_linea||0);
+      ingresMap[r.mes] += (r.total_pagado_linea||r.total_linea||0);
+      margenMap[r.mes] += (r.total_pagado_linea||r.total_linea||0) - (r.costo_linea||0) - comision(r.total_linea||0);
     }
   });
 

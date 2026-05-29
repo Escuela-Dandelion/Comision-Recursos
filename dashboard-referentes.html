@@ -71,6 +71,19 @@
       background:#fff; cursor:pointer; outline:none;
     }
     .filter-select:focus { border-color:#1a1a6e; }
+    .filter-date {
+      width:calc(100% - 32px); margin:0 16px 12px; padding:7px 10px;
+      border:1px solid #e0e0e0; border-radius:8px; font-size:12px;
+      background:#fff; outline:none; color:#333;
+    }
+    .filter-date:focus { border-color:#1a1a6e; }
+    .filter-clear-dates {
+      display:block; width:calc(100% - 32px); margin:0 16px 12px;
+      padding:6px 10px; border:1px solid #e0e0e0; border-radius:8px;
+      font-size:11px; color:#999; background:#fafafa; cursor:pointer;
+      text-align:center;
+    }
+    .filter-clear-dates:hover { background:#f0f0f0; color:#666; }
     .grado-item {
       display:flex; align-items:center; justify-content:space-between;
       padding:9px 12px; margin:0 8px 2px; border-radius:10px;
@@ -212,9 +225,11 @@
       .sidebar-section { padding:0 14px 4px; }
       .sidebar-label   { font-size:9px; }
 
-      /* Filtro mes: ancho completo */
+      /* Filtros: ancho completo */
       .filter-label  { padding:0 14px; font-size:11px; }
       .filter-select { width:calc(100% - 28px); margin:0 14px 10px; }
+      .filter-date   { width:calc(100% - 28px); margin:0 14px 10px; }
+      .filter-clear-dates { width:calc(100% - 28px); margin:0 14px 10px; }
 
       /* Grados → chips horizontales scrolleables */
       #grados-nav {
@@ -373,6 +388,13 @@
       <select class="filter-select" id="filtro-mes" onchange="aplicarFiltros()">
         <option value="">Todos los meses</option>
       </select>
+
+      <div class="filter-label">Desde</div>
+      <input type="date" class="filter-date" id="filtro-desde" onchange="aplicarFiltros()">
+      <div class="filter-label">Hasta</div>
+      <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
+      <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
+
       <hr class="sidebar-divider">
       <div class="sidebar-section">
         <div class="sidebar-label">Grado <span style="font-size:9px;font-weight:400;color:#ccc;letter-spacing:0">· tap para seleccionar</span></div>
@@ -395,6 +417,8 @@ var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMp
 var ALL_ROWS  = [];
 var ALL_MESES = [];
 var currentMes    = '';
+var currentDesde  = '';
+var currentHasta  = '';
 var selectedGrados = []; // [] = todos
 var currentVista  = 'familia'; // 'familia' | 'producto'
 
@@ -430,6 +454,20 @@ function pesos(n)    { return '$ '+(n||0).toLocaleString('es-AR',{minimumFractio
 function pesosCard(n){ var v=(n||0); if(Math.abs(v)>=1000000) return '$ '+(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; if(Math.abs(v)>=1000) return '$ '+(v/1000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'K'; return pesos(v); }
 function mesLabel(m) { var p=m.split('-'),n=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; return n[parseInt(p[1])]+' '+p[0].slice(2); }
 function esc(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function parseFechaRow(s) {
+  if(!s) return null;
+  s=String(s);
+  if(s.indexOf('T')!==-1) return s.slice(0,10);
+  var p=s.split('/');
+  if(p.length===3) return p[2]+'-'+('0'+p[1]).slice(-2)+'-'+('0'+p[0]).slice(-2);
+  return null;
+}
+function limpiarFechas() {
+  document.getElementById('filtro-desde').value='';
+  document.getElementById('filtro-hasta').value='';
+  currentDesde=''; currentHasta='';
+  render();
+}
 function hoy()       { return _hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
 // ── SESIÓN (24hs en localStorage, compartida con dashboard-general) ──
@@ -582,13 +620,25 @@ function toggleGrado(g){
   });
   render();
 }
-function aplicarFiltros(){ currentMes=document.getElementById('filtro-mes').value; render(); }
+function aplicarFiltros(){
+  currentMes=document.getElementById('filtro-mes').value;
+  currentDesde=document.getElementById('filtro-desde').value;
+  currentHasta=document.getElementById('filtro-hasta').value;
+  render();
+}
 function setVista(v){ currentVista=v; render(); }
 
 // ── DATOS FILTRADOS ──
 function getRows(){
   var rows=ALL_ROWS;
   if(currentMes) rows=rows.filter(function(r){ return r.mes===currentMes; });
+  if(currentDesde||currentHasta) rows=rows.filter(function(r){
+    var f=parseFechaRow(r.fecha);
+    if(!f) return true;
+    if(currentDesde && f<currentDesde) return false;
+    if(currentHasta && f>currentHasta) return false;
+    return true;
+  });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   return rows;
 }

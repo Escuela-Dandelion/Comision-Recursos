@@ -66,6 +66,19 @@
       background:#fff; cursor:pointer; outline:none;
     }
     .filter-select:focus { border-color:#1a1a6e; }
+    .filter-date {
+      width:calc(100% - 32px); margin:0 16px 12px; padding:7px 10px;
+      border:1px solid #e0e0e0; border-radius:8px; font-size:12px;
+      background:#fff; outline:none; color:#333;
+    }
+    .filter-date:focus { border-color:#1a1a6e; }
+    .filter-clear-dates {
+      display:block; width:calc(100% - 32px); margin:0 16px 12px;
+      padding:6px 10px; border:1px solid #e0e0e0; border-radius:8px;
+      font-size:11px; color:#999; background:#fafafa; cursor:pointer;
+      text-align:center;
+    }
+    .filter-clear-dates:hover { background:#f0f0f0; color:#666; }
 
     /* ── MAIN ── */
     .main { flex:1; overflow-y:auto; padding:24px; }
@@ -163,6 +176,8 @@
       .sidebar-divider { display:none; }
       .filter-label    { white-space:nowrap; padding:0 4px 0 10px; font-size:11px; }
       .filter-select   { width:auto; min-width:110px; margin:0 4px; font-size:12px; padding:6px 8px; }
+      .filter-date     { width:auto; min-width:120px; margin:0 4px; font-size:12px; padding:5px 8px; }
+      .filter-clear-dates { width:auto; margin:0 4px; padding:5px 8px; white-space:nowrap; font-size:11px; }
 
       /* Main */
       .main   { padding:12px; }
@@ -239,6 +254,12 @@
       <select class="filter-select" id="filtro-mes" onchange="aplicarFiltros()">
         <option value="">Todos los meses</option>
       </select>
+
+      <div class="filter-label">Desde</div>
+      <input type="date" class="filter-date" id="filtro-desde" onchange="aplicarFiltros()">
+      <div class="filter-label">Hasta</div>
+      <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
+      <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
       <hr class="sidebar-divider">
 
@@ -363,8 +384,10 @@ var ALL_ROWS  = [];
 var ALL_MESES = [];
 var chartEvo  = null;
 var chartGrad = null;
-var currentAnio = '';
-var currentMes  = '';
+var currentAnio  = '';
+var currentMes   = '';
+var currentDesde = '';
+var currentHasta = '';
 
 // ── Helpers ──
 var _hoy = new Date();
@@ -410,6 +433,21 @@ function mesLabel(m) {
   var p = m.split('-');
   var n = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   return n[parseInt(p[1])] + ' ' + p[0].slice(2);
+}
+function parseFechaRow(s) {
+  if (!s) return null;
+  s = String(s);
+  if (s.indexOf('T') !== -1) return s.slice(0, 10);
+  var p = s.split('/');
+  if (p.length === 3) return p[2] + '-' + ('0'+p[1]).slice(-2) + '-' + ('0'+p[0]).slice(-2);
+  return null;
+}
+function limpiarFechas() {
+  document.getElementById('filtro-desde').value = '';
+  document.getElementById('filtro-hasta').value = '';
+  currentDesde = '';
+  currentHasta = '';
+  render();
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function comision(total) { return total * 0.015; }
@@ -557,7 +595,9 @@ function poblarMeses(anio) {
 function aplicarFiltros() {
   var nuevoAnio = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
-  currentMes = document.getElementById('filtro-mes').value;
+  currentMes   = document.getElementById('filtro-mes').value;
+  currentDesde = document.getElementById('filtro-desde').value; // YYYY-MM-DD
+  currentHasta = document.getElementById('filtro-hasta').value;
   render();
 }
 
@@ -566,6 +606,15 @@ function render() {
   var rows = ALL_ROWS;
   if (currentAnio) rows = rows.filter(function(r){ return r.mes && r.mes.startsWith(currentAnio); });
   if (currentMes)  rows = rows.filter(function(r){ return r.mes === currentMes; });
+  if (currentDesde || currentHasta) {
+    rows = rows.filter(function(r) {
+      var f = parseFechaRow(r.fecha);
+      if (!f) return true;
+      if (currentDesde && f < currentDesde) return false;
+      if (currentHasta && f > currentHasta) return false;
+      return true;
+    });
+  }
 
   updateCards(rows);
   renderEvolucion(rows);
