@@ -540,6 +540,7 @@
 // ══════════════════════════════════════
 var GOOGLE_CLIENT_ID = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var CONFIG_STAFF_TOKEN = 'test';
 
 // Roles: admin, staff, fgp, referente
 var ROLE_LABELS = { admin: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente' };
@@ -940,7 +941,8 @@ function confirmarEntregaDesdeListado() {
   var token = _vRowActual.id ? btoa(_vRowActual.id + 'retiro2026').substring(0,12) : '';
   var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
   if (notas) url += '&notas=' + encodeURIComponent(notas);
-  fetch(url)
+  if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
+  fetch(url, {redirect:'follow'})
     .then(function(r){ return r.json(); })
     .then(function(d){
       btn.disabled = false; btn.textContent = 'Confirmar entrega';
