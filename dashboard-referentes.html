@@ -395,6 +395,11 @@
       <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
+      <div class="filter-label">Producto</div>
+      <select class="filter-select" id="filtro-producto" onchange="aplicarFiltros()">
+        <option value="">Todos los productos</option>
+      </select>
+
       <hr class="sidebar-divider">
       <div class="sidebar-section">
         <div class="sidebar-label">Grado <span style="font-size:9px;font-weight:400;color:#ccc;letter-spacing:0">· tap para seleccionar</span></div>
@@ -416,9 +421,10 @@
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var ALL_ROWS  = [];
 var ALL_MESES = [];
-var currentMes    = '';
-var currentDesde  = '';
-var currentHasta  = '';
+var currentMes      = '';
+var currentDesde    = '';
+var currentHasta    = '';
+var currentProducto = '';
 var selectedGrados = []; // [] = todos
 var currentVista  = 'familia'; // 'familia' | 'producto'
 
@@ -599,6 +605,15 @@ function initDashboard(d){
     nav.appendChild(div);
   });
   selectedGrados=[];
+
+  // Productos
+  var prodSet={};
+  ALL_ROWS.forEach(function(r){ if(r.producto) prodSet[r.producto]=true; });
+  var prods=Object.keys(prodSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  var selP=document.getElementById('filtro-producto');
+  selP.innerHTML='<option value="">Todos los productos</option>';
+  prods.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; selP.appendChild(o); });
+
   document.getElementById('contenido').style.display='block';
   render();
 }
@@ -624,6 +639,7 @@ function aplicarFiltros(){
   currentMes=document.getElementById('filtro-mes').value;
   currentDesde=document.getElementById('filtro-desde').value;
   currentHasta=document.getElementById('filtro-hasta').value;
+  currentProducto=document.getElementById('filtro-producto').value;
   render();
 }
 function setVista(v){ currentVista=v; render(); }
@@ -639,6 +655,7 @@ function getRows(){
     if(currentHasta && f>currentHasta) return false;
     return true;
   });
+  if(currentProducto) rows=rows.filter(function(r){ return r.producto===currentProducto; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   return rows;
 }
