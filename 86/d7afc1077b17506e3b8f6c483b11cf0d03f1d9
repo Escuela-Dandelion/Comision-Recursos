@@ -1,0 +1,33 @@
+dashboard-referentes.html
+  s_764ea7e0361745::t_fc2e8123313442 228,231-232
+  s_764ea7e0361745::t_a430c4771564c9 623-628
+  s_764ea7e0361745::t_88e67cfcc22b74 635-641
+  s_764ea7e0361745::t_0d6c64c419fe44 391-397
+  s_764ea7e0361745::t_addb4085dc7431 420-421
+  s_764ea7e0361745::t_13ccce8fd16553 457-470
+  s_764ea7e0361745::t_3bb4709153dd8c 74-86
+dashboard-general.html
+  s_764ea7e0361745::t_613919f6f3167c 387-390
+  s_764ea7e0361745::t_659d0475c28902 598-600
+  s_764ea7e0361745::t_0d56a9077e2672 609-617
+  s_764ea7e0361745::t_813303143618c1 258-263
+  s_764ea7e0361745::t_8c481b901dd072 179-180
+  s_764ea7e0361745::t_2dde6486e466fb 437-451
+  s_764ea7e0361745::t_98ab165db55816 69-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "86d7afc1077b17506e3b8f6c483b11cf0d03f1d9",
+  "prompts": {},
+  "sessions": {
+    "s_764ea7e0361745": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d188dc1-f8c1-4c6a-9618-dd9074644116",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Ines Robertson <robertson.ine@gmail.com>"
+    }
+  }
+}
