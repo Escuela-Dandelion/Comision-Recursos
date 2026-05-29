@@ -820,11 +820,12 @@ function renderProductos(rows){
     if(r.pedido && productos[p].familias[f].pedidos.indexOf(r.pedido)===-1) productos[p].familias[f].pedidos.push(r.pedido);
   });
   var prodArr=Object.values(productos).sort(function(a,b){ return b.unidades-a.unidades; });
+  var totalUnidadesRetiro=prodArr.reduce(function(s,p){ return s+p.unidades; },0);
 
   var html='<div class="section-card">'+
     '<div class="section-head">'+
       '<div class="section-title">Lista de retiro <span>unidades a retirar por producto</span></div>'+
-      '<span class="section-count">'+prodArr.length+' productos</span>'+
+      '<span class="section-count">'+prodArr.length+' productos · '+Math.round(totalUnidadesRetiro)+' unidades</span>'+
     '</div>';
 
   prodArr.forEach(function(prod,pi){
