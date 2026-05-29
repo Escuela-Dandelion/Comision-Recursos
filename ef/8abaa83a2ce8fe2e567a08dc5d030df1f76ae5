@@ -1,0 +1,29 @@
+docs/admin.html
+  ai_agent 1240
+admin.html
+  s_764ea7e0361745::t_919fd5c4d4ea64 1240
+wiki-comision-recursos.html
+  s_764ea7e0361745::t_23e34287f7f08a 618
+docs/wiki-comision-recursos.html
+  ai_agent 164-202,285-292,294,311,332,334,336,340-358,365,599,611,613-618,625,627-630,688,693-694,701-702,709-710,717-745,752-753,761,803-804,862,866,871-872,875-882,891,925,929,935,1037,1064,1068,1070,1075-1076,1080-1084,1088-1089,1091-1105,1119-1217
+google-script/retiro_qr.gs
+  s_764ea7e0361745::t_9b204a635a4e60 39
+  s_764ea7e0361745::t_f123713574972f 18
+  s_764ea7e0361745::t_f71c100158cce1 1534
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ef8abaa83a2ce8fe2e567a08dc5d030df1f76ae5",
+  "prompts": {},
+  "sessions": {
+    "s_764ea7e0361745": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d188dc1-f8c1-4c6a-9618-dd9074644116",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Ines Robertson <robertson.ine@gmail.com>"
+    }
+  }
+}
