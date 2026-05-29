@@ -731,11 +731,12 @@ function renderFamilias(rows){
     familias[f].items.push(r);
   });
   var famArr=Object.keys(familias).sort(function(a,b){ return familias[b].total-familias[a].total; });
+  var totalUnidadesFam=famArr.reduce(function(s,f){ return s+familias[f].unidades; },0);
 
   var html='<div class="section-card">'+
     '<div class="section-head">'+
       '<div class="section-title">Familias <span>quién compró qué · clic para expandir</span></div>'+
-      '<span class="section-count">'+famArr.length+' familias</span>'+
+      '<span class="section-count">'+famArr.length+' familias · '+Math.round(totalUnidadesFam)+' unidades</span>'+
     '</div>';
 
   famArr.forEach(function(fname,fi){
