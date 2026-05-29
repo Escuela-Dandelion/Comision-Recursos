@@ -319,12 +319,12 @@
       </button>
 
       <div class="nav-section-label">Reportes</div>
-      <button class="nav-item" data-view="dashboard-general" data-roles="admin,staff,fgp" onclick="showView('dashboard-general', this)">
+      <a class="nav-item" href="dashboard-general.html" data-roles="admin,staff,fgp" style="text-decoration:none">
         <span class="nav-icon">📊</span> Dashboard General
-      </button>
-      <button class="nav-item" data-view="dashboard-referentes" data-roles="admin,staff,fgp,referente" onclick="showView('dashboard-referentes', this)">
+      </a>
+      <a class="nav-item" href="dashboard-referentes.html" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes
-      </button>
+      </a>
     </div>
   </nav>
 
@@ -511,25 +511,6 @@
       <iframe class="view-iframe" src="retiro-proveedor.html" id="iframe-retiro"></iframe>
     </div>
 
-    <!-- DASHBOARD GENERAL -->
-    <div class="view" id="view-dashboard-general">
-      <div class="view-title">📊 Dashboard General</div>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:20px">El dashboard se abre en una pestaña separada para una mejor experiencia.</p>
-      <a href="dashboard-general.html" target="_blank"
-        style="display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;padding:13px 24px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none">
-        📊 Abrir Dashboard General ↗
-      </a>
-    </div>
-
-    <!-- DASHBOARD REFERENTES -->
-    <div class="view" id="view-dashboard-referentes">
-      <div class="view-title">📈 Dashboard Referentes</div>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:20px">El dashboard se abre en una pestaña separada para una mejor experiencia.</p>
-      <a href="dashboard-referentes.html" target="_blank"
-        style="display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;padding:13px 24px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none">
-        📈 Abrir Dashboard Referentes ↗
-      </a>
-    </div>
 
   </main>
 </div>
