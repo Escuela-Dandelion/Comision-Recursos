@@ -482,7 +482,7 @@ function exportarSheets(){
   }
   document.getElementById('btn-export').textContent='⏳ Exportando…';
   document.getElementById('btn-export').disabled=true;
-  _tokenClientExport.requestAccessToken({prompt:''});
+  _tokenClientExport.requestAccessToken({prompt:'consent'});
 }
 function resetBtnExport(){
   var b=document.getElementById('btn-export');
@@ -495,7 +495,7 @@ function _crearSheet(token){
     headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
     body:JSON.stringify({properties:{title:titulo},sheets:[{properties:{title:'Ventas'}}]})
   })
-  .then(function(r){ return r.json(); })
+  .then(function(r){ return r.ok?r.json():r.json().then(function(e){ throw new Error('Crear sheet: '+(e.error&&e.error.message||JSON.stringify(e))); }); })
   .then(function(ss){
     var id=ss.spreadsheetId, url=ss.spreadsheetUrl;
     var headers=[['Fecha','Mes','Pedido','Familia','Grado','Producto','Marca','Cantidad','Bruto','Pagado','Neto','Costo']];
@@ -508,10 +508,11 @@ function _crearSheet(token){
       method:'PUT',
       headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
       body:JSON.stringify({values:headers.concat(filas)})
-    }).then(function(){ return url; });
+    })
+    .then(function(r){ return r.ok?url:r.json().then(function(e){ throw new Error('Escribir datos: '+(e.error&&e.error.message||JSON.stringify(e))); }); });
   })
   .then(function(url){ resetBtnExport(); window.open(url,'_blank'); })
-  .catch(function(){ resetBtnExport(); alert('Error al crear el archivo. Intentá de nuevo.'); });
+  .catch(function(err){ resetBtnExport(); alert('Error: '+(err.message||'Intentá de nuevo.')); });
 }
 function hoy()       { return _hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
