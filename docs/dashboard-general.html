@@ -450,31 +450,53 @@ function limpiarFechas() {
   render();
 }
 
+var _tokenClientExport = null;
 function exportarSheets() {
-  var email = leerSesionGoogle();
-  if (!email) { alert('Necesitás estar logueado con Google para exportar.'); return; }
-  var btn = document.getElementById('btn-export');
-  btn.textContent = '⏳ Exportando…';
-  btn.disabled = true;
-  var url = APPS_URL + '?action=api_export&email=' + encodeURIComponent(email) + '&dash=general';
-  if (currentAnio)  url += '&anio='  + encodeURIComponent(currentAnio);
-  if (currentMes)   url += '&mes='   + encodeURIComponent(currentMes);
-  if (currentDesde) url += '&desde=' + encodeURIComponent(currentDesde);
-  if (currentHasta) url += '&hasta=' + encodeURIComponent(currentHasta);
-  if (currentMarca) url += '&marca=' + encodeURIComponent(currentMarca);
-  fetch(url, { redirect: 'follow' })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      btn.textContent = '📊 Exportar a Sheets';
-      btn.disabled = false;
-      if (d.ok) { window.open(d.url, '_blank'); }
-      else { alert('Error al exportar: ' + (d.error || 'Intentá de nuevo.')); }
-    })
-    .catch(function(){
-      btn.textContent = '📊 Exportar a Sheets';
-      btn.disabled = false;
-      alert('Error de conexión.');
+  if (!_tokenClientExport) {
+    _tokenClientExport = google.accounts.oauth2.initTokenClient({
+      client_id: '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      callback: function(resp) {
+        if (resp.error) { resetBtnExport(); alert('Error de autorización: ' + resp.error); return; }
+        _crearSheet(resp.access_token);
+      }
     });
+  }
+  document.getElementById('btn-export').textContent = '⏳ Exportando…';
+  document.getElementById('btn-export').disabled = true;
+  _tokenClientExport.requestAccessToken({ prompt: '' });
+}
+function resetBtnExport() {
+  var b = document.getElementById('btn-export');
+  b.textContent = '📊 Exportar a Sheets'; b.disabled = false;
+}
+function _crearSheet(token) {
+  var titulo = 'DDL — General ' + new Date().toLocaleDateString('es-AR');
+  fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ properties: { title: titulo },
+      sheets: [{ properties: { title: 'Ventas' } }] })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(ss){
+    var id  = ss.spreadsheetId;
+    var url = ss.spreadsheetUrl;
+    var headers = [['Fecha','Mes','Pedido','Familia','Grado','Producto','Marca','Cantidad','Bruto','Pagado','Neto','Costo']];
+    var filas = _lastFilteredRows.map(function(r){
+      return [r.fecha||'', r.mes||'', r.pedido||'', r.familia||'', r.grado||'',
+              r.producto||'', r.marca||'', r.cantidad||0,
+              r.total_linea||0, r.total_pagado_linea||0, r.neto_linea||0, r.costo_linea||0];
+    });
+    var values = headers.concat(filas);
+    return fetch('https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/Ventas!A1?valueInputOption=RAW', {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: values })
+    }).then(function(){ return url; });
+  })
+  .then(function(url){ resetBtnExport(); window.open(url, '_blank'); })
+  .catch(function(){ resetBtnExport(); alert('Error al crear el archivo. Intentá de nuevo.'); });
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function comision(total) { return total * 0.015; }
