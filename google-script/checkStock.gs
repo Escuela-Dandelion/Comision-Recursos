@@ -132,10 +132,10 @@ function enviarEmail(fgp, marca, items, urls) {
         <ul style="margin:16px 0;padding-left:20px;line-height:1.8">${listaHtml}</ul>
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
         <p><strong>📋 1. Hacer el pedido al proveedor:</strong></p>
-        <p><a href="${urls.orden}" style="color:#3a7d44">${urls.orden}</a></p>
+        <p><a href="${urls.orden}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Hacer el pedido</a></p>
         <br>
         <p><strong>📅 2. Agendar el retiro (cuando el proveedor confirme):</strong></p>
-        <p><a href="${urls.retiro}" style="color:#3a7d44">${urls.retiro}</a></p>
+        <p><a href="${urls.retiro}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Agendar el retiro</a></p>
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
         <p style="font-size:12px;color:#6b7280">Este mensaje fue generado automáticamente por el sistema Diente de León.</p>
       </div>
