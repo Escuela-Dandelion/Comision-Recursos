@@ -3,27 +3,26 @@
 // ============================================================
 
 const CONFIG_STOCK = {
-  STORE_ID:       '7396246',
-  API_TOKEN:      'e3d744d94ddbf13317bef0082c53e2c46fb50631',
-  GREEN_INSTANCE: '7107556439',
-  GREEN_TOKEN:    '7f7e2a357d2a4f0faa7edc4729f4c89f491b1420ef19462783',
-  STOCK_UMBRAL:   10,
-  FORM_URL:       'https://escuela-dandelion.github.io/Comision-Recursos/orden-de-pedido.html',
-  RETIRO_URL:     'https://escuela-dandelion.github.io/Comision-Recursos/retiro-proveedor.html',
-  SHEET_ID:       '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
-  TEST_MODE:      false,
-  TEST_TELEFONO:  '5493512112050'         // ← usado solo si TEST_MODE: true
+  STORE_ID:     '7396246',
+  API_TOKEN:    'e3d744d94ddbf13317bef0082c53e2c46fb50631',
+  STOCK_UMBRAL: 10,
+  FORM_URL:     'https://escuela-dandelion.github.io/Comision-Recursos/orden-de-pedido.html',
+  RETIRO_URL:   'https://escuela-dandelion.github.io/Comision-Recursos/retiro-proveedor.html',
+  SHEET_ID:     '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
+  ADMIN_EMAIL:  'martinimaria39@gmail.com',   // siempre recibe copia del aviso
+  TEST_MODE:    false,
+  TEST_EMAIL:   'robertson.ine@gmail.com'     // usado solo si TEST_MODE: true
 };
 
 const FGP_POR_MARCA = {
-  'LA YAYA':                  { nombre: 'Yuliana Longhi',   telefono: '5493513645612', email: 'longhi.yuliana@gmail.com', tel_proveedor: '' },
-  'ODDIS':                    { nombre: 'Luli Del Castillo', telefono: '5493513003789', email: 'lourdelcastillo@gmail.com', tel_proveedor: '' },
-  'CABALLO NEGRO':            { nombre: 'Maria Martini',     telefono: '5493516865078', email: 'martinimaria39@gmail.com', tel_proveedor: '' },
-  'YEMARI':                   { nombre: 'Maria Martini',     telefono: '5493516865078', email: 'martinimaria39@gmail.com', tel_proveedor: '' },
-  'GROEN':                    { nombre: 'Maria Martini',     telefono: '5493516865078', email: 'martinimaria39@gmail.com', tel_proveedor: '' },
+  'LA YAYA':                  { nombre: 'Yuliana Longhi',    email: 'longhi.yuliana@gmail.com',   tel_proveedor: '' },
+  'ODDIS':                    { nombre: 'Luli del Castillo',  email: 'lourdelcastillo@gmail.com',  tel_proveedor: '' },
+  'CABALLO NEGRO':            { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
+  'YEMARI':                   { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
+  'GROEN':                    { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
   // PARAISA excluida — productos con stock infinito (null), no requieren alerta
-  'EL MAITEN':                { nombre: 'Maria Martini',     telefono: '5493516865078', email: 'martinimaria39@gmail.com', tel_proveedor: '' },
-  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',     telefono: '5493516865078', email: 'martinimaria39@gmail.com', tel_proveedor: '' }
+  'EL MAITEN':                { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
+  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' }
 };
 
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
@@ -35,7 +34,7 @@ function checkStockBajo() {
   Logger.log(`Alertas enviadas previamente: ${JSON.stringify(alertasEnviadas)}`);
   const nuevasAlertas = {};
 
-  // Agrupar alertas por FGP + marca (= un mensaje por proveedor por FGP)
+  // Agrupar alertas por FGP + marca (= un email por proveedor por FGP)
   const alertasPorGrupo = {};
 
   productos.forEach(producto => {
@@ -63,7 +62,7 @@ function checkStockBajo() {
           ? `${nombreProducto} — ${nombreVariante}`
           : nombreProducto;
 
-        const grupoKey = fgp.telefono + '|' + marca;
+        const grupoKey = fgp.email + '|' + marca;
         if (!alertasPorGrupo[grupoKey]) {
           alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [] };
         }
@@ -78,36 +77,15 @@ function checkStockBajo() {
     });
   });
 
-  // Enviar UN mensaje por FGP + proveedor
+  // Enviar UN email por FGP + proveedor
   Object.values(alertasPorGrupo).forEach(function(grupo) {
     const fgp   = grupo.fgp;
     const marca = grupo.marca;
     const items = grupo.items;
+    const urls  = generarUrls(items, marca, fgp);
 
-    const listaProductos = items
-      .map(function(item) {
-        return '• *' + item.descripcion + '* — ' + item.stock + ' unidades';
-      })
-      .join('\n');
-
-    // Generar N° de orden y ambas URLs
-    const urls = generarUrls(items, marca, fgp);
-
-    const prefijo = CONFIG_STOCK.TEST_MODE ? '🧪 *[PRUEBA]* \n\n' : '';
-    const intro   = items.length === 1
-      ? 'El siguiente producto de *' + marca + '* tiene stock bajo:'
-      : 'Los siguientes productos de *' + marca + '* tienen stock bajo:';
-
-    const mensaje =
-      prefijo + '🌼 *Diente de León — Stock Bajo*\n\n' +
-      'Hola ' + fgp.nombre + '! ' + intro + '\n\n' +
-      listaProductos + '\n\n' +
-      '━━━━━━━━━━━━━━━━\n' +
-      '📋 *1. Hacer el pedido al proveedor:*\n' + urls.orden + '\n\n' +
-      '📅 *2. Agendar el retiro (cuando confirme):*\n' + urls.retiro;
-
-    enviarWhatsApp(fgp.telefono, mensaje);
-    Logger.log('Mensaje enviado a ' + fgp.nombre + ' | Proveedor: ' + marca + ' | ' + items.length + ' producto(s)');
+    enviarEmail(fgp, marca, items, urls);
+    Logger.log('Email enviado a ' + fgp.nombre + ' (' + fgp.email + ') | Proveedor: ' + marca + ' | ' + items.length + ' producto(s)');
   });
 
   if (Object.keys(nuevasAlertas).length > 0) {
@@ -115,6 +93,50 @@ function checkStockBajo() {
     PropertiesService.getScriptProperties()
       .setProperty('ALERTAS_ENVIADAS', JSON.stringify(actualizadas));
   }
+}
+
+// ── ENVÍO DE EMAIL ─────────────────────────────────────────
+function enviarEmail(fgp, marca, items, urls) {
+  const destinatario = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_EMAIL : fgp.email;
+
+  // CC al admin, evitando duplicado si el FGP ya es el admin
+  const cc = (destinatario !== CONFIG_STOCK.ADMIN_EMAIL && !CONFIG_STOCK.TEST_MODE)
+    ? CONFIG_STOCK.ADMIN_EMAIL
+    : '';
+
+  const intro = items.length === 1
+    ? `El siguiente producto de <strong>${marca}</strong> tiene stock bajo:`
+    : `Los siguientes productos de <strong>${marca}</strong> tienen stock bajo:`;
+
+  const listaHtml = items.map(function(item) {
+    return `<li><strong>${item.descripcion}</strong> — ${item.stock} unidades restantes</li>`;
+  }).join('');
+
+  const asunto = `🌼 Diente de León — Stock bajo: ${marca}`;
+
+  const cuerpoHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
+      <div style="background:#3a7d44;padding:20px 24px;border-radius:10px 10px 0 0">
+        <h2 style="color:#fff;margin:0;font-size:18px">🌼 Diente de León — Stock Bajo</h2>
+      </div>
+      <div style="background:#f7f8fa;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px">
+        <p>Hola <strong>${fgp.nombre}</strong>! ${intro}</p>
+        <ul style="margin:16px 0;padding-left:20px;line-height:1.8">${listaHtml}</ul>
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
+        <p><strong>📋 1. Hacer el pedido al proveedor:</strong></p>
+        <p><a href="${urls.orden}" style="color:#3a7d44">${urls.orden}</a></p>
+        <br>
+        <p><strong>📅 2. Agendar el retiro (cuando el proveedor confirme):</strong></p>
+        <p><a href="${urls.retiro}" style="color:#3a7d44">${urls.retiro}</a></p>
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
+        <p style="font-size:12px;color:#6b7280">Este mensaje fue generado automáticamente por el sistema Diente de León.</p>
+      </div>
+    </div>`;
+
+  const opciones = { htmlBody: cuerpoHtml };
+  if (cc) opciones.cc = cc;
+
+  MailApp.sendEmail(destinatario, asunto, '', opciones);
 }
 
 // ── LEER TEL DE PROVEEDOR DESDE EL SHEET ───────────────────
@@ -133,17 +155,14 @@ function leerTelProveedor(marca) {
 
 // ── GENERAR AMBAS URLs (orden + retiro) ────────────────────
 function generarUrls(items, marca, fgp) {
-  // Registrar orden una sola vez → obtener N° correlativo
   const nOrden = registrarNuevaOrden(marca, fgp, items);
 
   const productos  = items.map(function(i) { return i.descripcion; }).join('|');
   const cantidades = items.map(function(i) { return i.stock; }).join('|');
   const precios    = items.map(function(i) { return i.precio || ''; }).join('|');
 
-  // Leer tel del proveedor (si fue guardado en algún pedido anterior)
   const telProveedor = fgp.tel_proveedor || leerTelProveedor(marca);
 
-  // URL orden-de-pedido.html
   const paramsOrden = {
     producto:  productos,
     cantidad:  cantidades,
@@ -154,7 +173,6 @@ function generarUrls(items, marca, fgp) {
   };
   if (telProveedor) paramsOrden.tel = telProveedor;
 
-  // URL retiro-proveedor.html
   const paramsRetiro = {
     proveedor: marca,
     producto:  productos.replace(/\|/g, '\n'),
@@ -181,74 +199,23 @@ function registrarNuevaOrden(marca, fgp, items) {
   const config = ss.getSheetByName('Config');
   const pedidos = ss.getSheetByName('Pedidos');
 
-  // Leer y actualizar correlativo
   const ultimo = parseInt(config.getRange('B2').getValue()) || 0;
   const nuevo  = ultimo + 1;
   config.getRange('B2').setValue(nuevo);
 
-  // Formatear número: ORD-2026-001
   const anio   = new Date().getFullYear();
   const nOrden = 'ORD-' + anio + '-' + String(nuevo).padStart(3, '0');
 
-  // Registrar fila en Pedidos
   const descripcionProductos = items.map(function(i) { return i.descripcion; }).join('\n');
   const fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
 
-  // Columnas (nuevo formato 13 cols):
-  // A:N°Orden · B:Fecha · C:Proveedor · D:FGP · E:Productos · F:Estado · G:FechaEst
-  // H:Quien · I:Total · J:Notas · K:EstadoPago · L:FechaPago · M:Comprobante
   pedidos.appendRow([
-    nOrden,           // A: N° Orden
-    fecha,            // B: Fecha
-    marca,            // C: Proveedor
-    fgp.nombre,       // D: FGP
-    descripcionProductos, // E: Productos
-    'Solicitado',     // F: Estado
-    fecha,            // G: Fecha Estado
-    '',               // H: Quien
-    '',               // I: Total
-    '',               // J: Notas
-    'No pagado',      // K: Estado Pago
-    '',               // L: Fecha Pago
-    ''                // M: Comprobante
+    nOrden, fecha, marca, fgp.nombre, descripcionProductos,
+    'Solicitado', fecha, '', '', '', 'No pagado', '', ''
   ]);
 
   Logger.log('Orden registrada: ' + nOrden + ' | ' + marca + ' | ' + fgp.nombre);
   return nOrden;
-}
-
-// ── INICIALIZAR SHEET (correr una sola vez) ────────────────
-function inicializarSheet() {
-  const ss = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
-
-  // Tab Config
-  let config = ss.getSheetByName('Config');
-  if (!config) config = ss.insertSheet('Config');
-  config.clearContents();
-  config.getRange('A1:B1').setValues([['Parámetro', 'Valor']]);
-  config.getRange('A2:B2').setValues([['ULTIMO_CORRELATIVO', 0]]);
-  config.getRange('A1:B1').setFontWeight('bold').setBackground('#e8f5e9');
-
-  // Tab Pedidos
-  let pedidos = ss.getSheetByName('Pedidos');
-  if (!pedidos) pedidos = ss.insertSheet('Pedidos');
-  pedidos.clearContents();
-  const headers = ['N° Orden', 'Fecha', 'Proveedor', 'FGP', 'Productos', 'Estado', 'Fecha Estado', 'Quien retira', 'Total', 'Notas', 'Estado Pago', 'Fecha de Pago', 'Comprobante'];
-  pedidos.getRange(1, 1, 1, headers.length).setValues([headers]);
-  pedidos.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#e8f5e9').setFontColor('#3a7d44');
-  pedidos.setColumnWidth(1, 130);
-  pedidos.setColumnWidth(5, 280);
-  pedidos.setColumnWidth(8, 200);
-
-  // Validación de estado con dropdown
-  const estadosValidos = 'Solicitado,Confirmado,En proceso,Lista para Recibir,Recibido,Pagado';
-  const regla = SpreadsheetApp.newDataValidation()
-    .requireValueInList(estadosValidos.split(','))
-    .setAllowInvalid(false)
-    .build();
-  pedidos.getRange('F2:F1000').setDataValidation(regla);
-
-  Logger.log('Sheet inicializada correctamente.');
 }
 
 // ── TIENDANUBE API ─────────────────────────────────────────
@@ -262,17 +229,6 @@ function obtenerProductos() {
     }
   });
   return JSON.parse(response.getContentText());
-}
-
-// ── GREEN-API ──────────────────────────────────────────────
-function enviarWhatsApp(telefono, mensaje) {
-  const destino = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_TELEFONO : telefono;
-  UrlFetchApp.fetch(
-    'https://api.green-api.com/waInstance' + CONFIG_STOCK.GREEN_INSTANCE + '/sendMessage/' + CONFIG_STOCK.GREEN_TOKEN, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify({ chatId: destino + '@c.us', message: mensaje })
-  });
 }
 
 // ── ALERTAS ────────────────────────────────────────────────
