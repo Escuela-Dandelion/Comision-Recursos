@@ -54,6 +54,13 @@ function checkStockBajo() {
       const clave = `${producto.id}_${variante.id}`;
       Logger.log(`  Variante: ${clave} | Stock: ${stock} | Ya enviada: ${!!alertasEnviadas[clave]}`);
 
+      if (stock > CONFIG_STOCK.STOCK_UMBRAL && alertasEnviadas[clave]) {
+        // Stock se repuso — limpiar la alerta para que vuelva a disparar cuando baje de nuevo
+        delete alertasEnviadas[clave];
+        nuevasAlertas['__reset__'] = true;
+        Logger.log(`  Stock repuesto — alerta reseteada: ${clave}`);
+      }
+
       if (stock <= CONFIG_STOCK.STOCK_UMBRAL && !alertasEnviadas[clave]) {
         const nombreVariante = variante.values && variante.values.length > 0
           ? variante.values.map(v => v.es || v).join(' / ')
@@ -89,9 +96,9 @@ function checkStockBajo() {
   });
 
   if (Object.keys(nuevasAlertas).length > 0) {
-    const actualizadas = Object.assign(obtenerAlertasEnviadas(), nuevasAlertas);
+    delete nuevasAlertas['__reset__'];
     PropertiesService.getScriptProperties()
-      .setProperty('ALERTAS_ENVIADAS', JSON.stringify(actualizadas));
+      .setProperty('ALERTAS_ENVIADAS', JSON.stringify(alertasEnviadas));
   }
 }
 
