@@ -140,14 +140,12 @@ function enviarEmail(fgp, marca, items, urls) {
       </div>
     </div>`;
 
-  Logger.log('Enviando email a: ' + destinatario + (cc ? ' | CC: ' + cc : ''));
+  const opciones = { htmlBody: cuerpoHtml };
+  if (cc) opciones.cc = cc;
 
-  try {
-    MailApp.sendEmail(destinatario, asunto, 'Stock bajo: ' + marca + '\n\n' + items.map(i => i.descripcion + ' — ' + i.stock + ' unidades').join('\n') + '\n\nPedido: ' + urls.orden + '\nRetiro: ' + urls.retiro);
-    Logger.log('Email enviado OK');
-  } catch(e) {
-    Logger.log('ERROR al enviar email: ' + e.message);
-  }
+  Logger.log('Enviando email a: ' + destinatario + (cc ? ' | CC: ' + cc : ''));
+  MailApp.sendEmail(destinatario, asunto, '', opciones);
+  Logger.log('Email enviado OK');
 }
 
 // ── LEER TEL DE PROVEEDOR DESDE EL SHEET ───────────────────
