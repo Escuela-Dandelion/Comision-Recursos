@@ -123,7 +123,8 @@ function enviarEmail(fgp, marca, items, urls) {
 
   const cuerpoHtml = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
-      <div style="background:#3a7d44;padding:20px 24px;border-radius:10px 10px 0 0">
+      <div style="background:#3a7d44;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center">
+        <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León" style="height:64px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto">
         <h2 style="color:#fff;margin:0;font-size:18px">🌼 Diente de León — Stock Bajo</h2>
       </div>
       <div style="background:#f7f8fa;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px">
