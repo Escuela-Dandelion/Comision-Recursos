@@ -95,11 +95,11 @@ function checkStockBajo() {
     Logger.log('Email enviado a ' + fgp.nombre + ' (' + fgp.email + ') | Proveedor: ' + marca + ' | ' + items.length + ' producto(s)');
   });
 
-  if (Object.keys(nuevasAlertas).length > 0) {
-    delete nuevasAlertas['__reset__'];
-    PropertiesService.getScriptProperties()
-      .setProperty('ALERTAS_ENVIADAS', JSON.stringify(alertasEnviadas));
-  }
+  delete alertasEnviadas['__reset__'];
+  delete nuevasAlertas['__reset__'];
+  const toGuardar = Object.assign(alertasEnviadas, nuevasAlertas);
+  PropertiesService.getScriptProperties()
+    .setProperty('ALERTAS_ENVIADAS', JSON.stringify(toGuardar));
 }
 
 // ── ENVÍO DE EMAIL ─────────────────────────────────────────
