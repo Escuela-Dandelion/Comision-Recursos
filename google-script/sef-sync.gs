@@ -220,16 +220,25 @@ var EMAILS_PERMITIDOS = [
 ];
 
 function doGet(e) {
-  var email = (e && e.parameter && e.parameter.email || '').toLowerCase().trim();
+  var email    = (e && e.parameter && e.parameter.email    || '').toLowerCase().trim();
+  var callback = (e && e.parameter && e.parameter.callback || '');
+
+  var data;
   if (!email || EMAILS_PERMITIDOS.indexOf(email) === -1) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: 'Sin acceso' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    data = { ok: false, error: 'Sin acceso' };
+  } else {
+    data = agregarDatos();
+    data.ok = true;
   }
-  var data = agregarDatos();
-  data.ok = true;
+
+  var json = JSON.stringify(data);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
-    .createTextOutput(JSON.stringify(data))
+    .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
 

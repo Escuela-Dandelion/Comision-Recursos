@@ -303,41 +303,59 @@ function onGoogleLogin(response) {
   fetchDatos(email);
 }
 
-// ── FETCH DATOS ─────────────────────────────────────────────
+// ── FETCH DATOS (JSONP para evitar CORS con GAS) ────────────
 var DATOS = null;
 
 function fetchDatos(email) {
   document.getElementById('loading-dash').style.display = 'block';
   document.getElementById('contenido').style.display    = 'none';
 
-  fetch(GAS_URL + '?email=' + encodeURIComponent(email), { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      document.getElementById('login-loading').style.display  = 'none';
-      document.getElementById('google-btn').style.display     = 'flex';
+  var cbName = '_sefCb_' + Date.now();
+  var script = document.createElement('script');
+  var timer  = setTimeout(function() {
+    cleanup();
+    onFetchError();
+  }, 15000);
 
-      if (!d.ok) {
-        showErr('Tu cuenta no tiene acceso. Contacta al administrador.');
-        return;
-      }
+  function cleanup() {
+    clearTimeout(timer);
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+  }
 
-      guardarSesion(email);
-      document.getElementById('login').style.display      = 'none';
-      document.getElementById('dashboard').style.display  = 'flex';
+  window[cbName] = function(d) {
+    cleanup();
+    document.getElementById('login-loading').style.display = 'none';
+    document.getElementById('google-btn').style.display    = 'flex';
+
+    if (!d.ok) {
+      showErr('Tu cuenta no tiene acceso. Contacta al administrador.');
       document.getElementById('loading-dash').style.display = 'none';
-      document.getElementById('contenido').style.display  = 'block';
+      return;
+    }
 
-      DATOS = d;
-      document.getElementById('txt-generado').textContent = 'Datos al ' + d.generado;
-      poblarFiltros(d.por_mes);
-      aplicarFiltros();
-    })
-    .catch(function(err) {
-      document.getElementById('login-loading').style.display = 'none';
-      document.getElementById('google-btn').style.display    = 'flex';
-      showErr('Error de conexion. Verificá tu acceso a internet.');
-      document.getElementById('loading-dash').style.display  = 'none';
-    });
+    guardarSesion(email);
+    document.getElementById('login').style.display        = 'none';
+    document.getElementById('dashboard').style.display    = 'flex';
+    document.getElementById('loading-dash').style.display = 'none';
+    document.getElementById('contenido').style.display    = 'block';
+
+    DATOS = d;
+    document.getElementById('txt-generado').textContent = 'Datos al ' + d.generado;
+    poblarFiltros(d.por_mes);
+    aplicarFiltros();
+  };
+
+  function onFetchError() {
+    document.getElementById('login-loading').style.display = 'none';
+    document.getElementById('google-btn').style.display    = 'flex';
+    document.getElementById('loading-dash').style.display  = 'none';
+    showErr('Error de conexion con el servidor. Intenta de nuevo.');
+  }
+
+  script.onerror = function() { cleanup(); onFetchError(); };
+  script.src = GAS_URL + '?email=' + encodeURIComponent(email) + '&callback=' + cbName;
+  document.head.appendChild(script);
 }
 
 // ── FILTROS ─────────────────────────────────────────────────
