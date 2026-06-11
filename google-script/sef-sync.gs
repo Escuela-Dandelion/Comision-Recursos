@@ -242,6 +242,23 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Normaliza cualquier valor de fecha (Date obj, ISO string, DD/MM/YYYY, etc.) a "YYYY-MM"
+function toMes(val) {
+  if (!val && val !== 0) return null;
+  if (Object.prototype.toString.call(val) === '[object Date]') {
+    var y  = val.getFullYear();
+    var mo = ('0' + (val.getMonth() + 1)).slice(-2);
+    return isNaN(y) ? null : y + '-' + mo;
+  }
+  var s = String(val).trim();
+  // ISO: 2026-01-15 o 2026-01
+  if (/^\d{4}-\d{2}/.test(s)) return s.substring(0, 7);
+  // DD/MM/YYYY o D/M/YYYY
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return m[3] + '-' + ('0' + m[2]).slice(-2);
+  return null;
+}
+
 function agregarDatos() {
   var ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
   var sheetTrx = ss.getSheetByName('Transacciones');
@@ -254,17 +271,23 @@ function agregarDatos() {
     ? sheetUsr.getRange(2, 1, sheetUsr.getLastRow() - 1, HEADERS_USR.length).getValues()
     : [];
 
-  var trxByMes = {};
-  var uamByMes = {};
+  var trxByMes          = {};
+  var compraCountByMes  = {}; // mes → { cid → count }
+  var vendedoresByMes   = {}; // mes → { vid → true }
+  var emprendByMes      = {}; // mes → { eid → true }
+  var emprendFirstSeen  = {}; // eid → first mes
+  var dniByMes          = {}; // mes → { dni → true }
 
   for (var i = 0; i < trxRows.length; i++) {
     var r = trxRows[i];
-    var fecha = String(r[0]);
-    if (!fecha || fecha.length < 7) continue;
-    var mes = fecha.substring(0, 7);
+    var mes = toMes(r[0]);
+    if (!mes) continue;
 
-    if (!trxByMes[mes]) trxByMes[mes] = { cantidad:0, monto_total:0, donacion_comprador:0, donacion_vendedor:0, retencion_sef:0, a_comunidad:0, a_destinos:0 };
-    if (!uamByMes[mes]) uamByMes[mes] = {};
+    if (!trxByMes[mes])         trxByMes[mes]         = { cantidad:0, monto_total:0, donacion_comprador:0, donacion_vendedor:0, retencion_sef:0, a_comunidad:0, a_destinos:0 };
+    if (!compraCountByMes[mes]) compraCountByMes[mes]  = {};
+    if (!vendedoresByMes[mes])  vendedoresByMes[mes]   = {};
+    if (!emprendByMes[mes])     emprendByMes[mes]      = {};
+    if (!dniByMes[mes])         dniByMes[mes]          = {};
 
     var t = trxByMes[mes];
     t.cantidad++;
@@ -276,11 +299,22 @@ function agregarDatos() {
     var destino = String(r[12]);
     if (destino && destino !== '') {
       t.a_destinos += parseFloat(r[8]) || 0;
+      dniByMes[mes][destino] = true;
     } else {
       t.a_comunidad += parseFloat(r[8]) || 0;
     }
+
     var cid = String(r[3]);
-    if (cid) uamByMes[mes][cid] = true;
+    if (cid) compraCountByMes[mes][cid] = (compraCountByMes[mes][cid] || 0) + 1;
+
+    var vid = String(r[4]);
+    if (vid) vendedoresByMes[mes][vid] = true;
+
+    var eid = String(r[5]);
+    if (eid) {
+      emprendByMes[mes][eid] = true;
+      if (!emprendFirstSeen[eid] || mes < emprendFirstSeen[eid]) emprendFirstSeen[eid] = mes;
+    }
   }
 
   var curiosos = 0, zombies = 0;
@@ -289,11 +323,8 @@ function agregarDatos() {
     var u = usrRows[j];
     if (u[7] === 'Si') curiosos++;
     if (u[8] === 'Si') zombies++;
-    var fechaReg = String(u[3]);
-    if (fechaReg && fechaReg.length >= 7) {
-      var mr = fechaReg.substring(0, 7);
-      nuevosByMes[mr] = (nuevosByMes[mr] || 0) + 1;
-    }
+    var mr = toMes(u[3]);
+    if (mr) nuevosByMes[mr] = (nuevosByMes[mr] || 0) + 1;
   }
 
   var allMeses = {};
@@ -302,19 +333,41 @@ function agregarDatos() {
   var meses = Object.keys(allMeses).sort();
 
   var porMes = meses.map(function(mes) {
-    var t = trxByMes[mes] || { cantidad:0, monto_total:0, donacion_comprador:0, donacion_vendedor:0, retencion_sef:0, a_comunidad:0, a_destinos:0 };
+    var t   = trxByMes[mes]         || { cantidad:0, monto_total:0, donacion_comprador:0, donacion_vendedor:0, retencion_sef:0, a_comunidad:0, a_destinos:0 };
+    var cc  = compraCountByMes[mes] || {};
+    var vnd = vendedoresByMes[mes]  || {};
+    var emp = emprendByMes[mes]     || {};
+    var dni = dniByMes[mes]         || {};
+
+    var uam = 0, eventuales = 0, activos = 0;
+    Object.keys(cc).forEach(function(cid) {
+      uam++;
+      if (cc[cid] === 1) eventuales++;
+      else activos++;
+    });
+
+    var nuevos_emprendimientos = Object.keys(emp).filter(function(eid) {
+      return emprendFirstSeen[eid] === mes;
+    }).length;
+
     return {
-      mes:                mes,
-      nuevos_usuarios:    nuevosByMes[mes] || 0,
-      uam:                Object.keys(uamByMes[mes] || {}).length,
-      cantidad:           t.cantidad,
-      monto_total:        Math.round(t.monto_total),
-      donacion_comprador: Math.round(t.donacion_comprador),
-      donacion_vendedor:  Math.round(t.donacion_vendedor),
-      retencion_sef:      Math.round(t.retencion_sef),
-      a_comunidad:        Math.round(t.a_comunidad),
-      a_destinos:         Math.round(t.a_destinos),
-      donacion_total:     Math.round(t.donacion_comprador + t.donacion_vendedor)
+      mes:                    mes,
+      nuevos_usuarios:        nuevosByMes[mes]   || 0,
+      uam:                    uam,
+      eventuales:             eventuales,
+      activos:                activos,
+      prosumidores:           Object.keys(vnd).length,
+      emprendimientos:        Object.keys(emp).length,
+      nuevos_emprendimientos: nuevos_emprendimientos,
+      cantidad:               t.cantidad,
+      monto_total:            Math.round(t.monto_total),
+      donacion_comprador:     Math.round(t.donacion_comprador),
+      donacion_vendedor:      Math.round(t.donacion_vendedor),
+      retencion_sef:          Math.round(t.retencion_sef),
+      a_comunidad:            Math.round(t.a_comunidad),
+      a_destinos:             Math.round(t.a_destinos),
+      donacion_total:         Math.round(t.donacion_comprador + t.donacion_vendedor),
+      dni_destino:            Object.keys(dni).length
     };
   });
 

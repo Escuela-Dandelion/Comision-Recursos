@@ -73,7 +73,7 @@
     .sidebar-info { padding:0 16px; font-size:11px; color:#bbb; line-height:1.8; }
 
     /* ── MAIN ── */
-    .main { flex:1; overflow-y:auto; padding:20px 24px; }
+    .main { flex:1; overflow-y:scroll; padding:20px 24px; will-change:transform; }
     #loading-dash { text-align:center; padding:80px; color:#aaa; font-size:15px; }
     #contenido { display:none; }
 
@@ -98,25 +98,34 @@
       content:attr(data-tip); position:absolute; left:0; top:16px; background:#333; color:#fff;
       font-size:11px; padding:6px 10px; border-radius:8px; white-space:normal; width:220px; z-index:10; line-height:1.4;
     }
-    .card.blue   { border-left-color:#2563eb; background:#eff6ff; }
-    .card.blue   .card-label, .card.blue   .card-value { color:#1d4ed8; }
-    .card.teal   { border-left-color:#0f766e; background:#f0fdfa; }
-    .card.teal   .card-label, .card.teal   .card-value { color:#0f766e; }
-    .card.green  { border-left-color:#059669; background:#f0fdf4; }
-    .card.green  .card-label, .card.green  .card-value { color:#059669; }
-    .card.amber  { border-left-color:#d97706; background:#fffbeb; }
-    .card.amber  .card-label, .card.amber  .card-value { color:#d97706; }
-    .card.rose   { border-left-color:#e11d48; background:#fff1f2; }
-    .card.rose   .card-label, .card.rose   .card-value { color:#e11d48; }
-    .card.indigo { border-left-color:#6366f1; background:#eef2ff; }
-    .card.indigo .card-label, .card.indigo .card-value { color:#4f46e5; }
-    .card.gray   { border-left-color:#6b7280; background:#f9fafb; }
-    .card.gray   .card-label, .card.gray   .card-value { color:#6b7280; }
+    .card.blue    { border-left-color:#2563eb; background:#eff6ff; }
+    .card.blue    .card-label, .card.blue    .card-value { color:#1d4ed8; }
+    .card.teal    { border-left-color:#0f766e; background:#f0fdfa; }
+    .card.teal    .card-label, .card.teal    .card-value { color:#0f766e; }
+    .card.green   { border-left-color:#059669; background:#f0fdf4; }
+    .card.green   .card-label, .card.green   .card-value { color:#059669; }
+    .card.amber   { border-left-color:#d97706; background:#fffbeb; }
+    .card.amber   .card-label, .card.amber   .card-value { color:#d97706; }
+    .card.rose    { border-left-color:#e11d48; background:#fff1f2; }
+    .card.rose    .card-label, .card.rose    .card-value { color:#e11d48; }
+    .card.indigo  { border-left-color:#6366f1; background:#eef2ff; }
+    .card.indigo  .card-label, .card.indigo  .card-value { color:#4f46e5; }
+    .card.gray    { border-left-color:#6b7280; background:#f9fafb; }
+    .card.gray    .card-label, .card.gray    .card-value { color:#6b7280; }
+    .card.purple  { border-left-color:#9333ea; background:#faf5ff; }
+    .card.purple  .card-label, .card.purple  .card-value { color:#7e22ce; }
+    .card.orange  { border-left-color:#ea580c; background:#fff7ed; }
+    .card.orange  .card-label, .card.orange  .card-value { color:#c2410c; }
 
     /* ── CHARTS ── */
     .section-card  { background:#fff; border-radius:12px; border:1px solid #eee; padding:20px; margin-bottom:20px; }
     .chart-title   { font-size:13px; font-weight:600; color:#333; margin-bottom:16px; }
     .grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-bottom:20px; }
+    .grid-2-eq { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+    .chart-wrap      { position:relative; }
+    .chart-wrap.tall { height:220px; }
+    .chart-wrap.med  { height:180px; }
+    .chart-wrap.low  { height:130px; }
 
     /* ── MOBILE ── */
     @media (max-width:700px) {
@@ -134,7 +143,7 @@
       .filter-clear   { width:auto; margin:0 4px; padding:5px 8px; white-space:nowrap; }
       .main           { padding:12px; }
       .cards          { grid-template-columns:1fr 1fr; gap:8px; }
-      .grid-2         { grid-template-columns:1fr; }
+      .grid-2, .grid-2-eq { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -162,7 +171,7 @@
     <div class="topbar-brand">
       <span class="ico">🤝</span>
       <div>
-        <h1>Dashboard SEF — SER Economico Fraterno</h1>
+        <h1>Dashboard SEF — Sistema Economico Fraterno</h1>
         <p id="txt-periodo">—</p>
       </div>
     </div>
@@ -214,26 +223,34 @@
         <div class="section-title">Usuarios <span class="sub">registrados en proyectosef.com</span></div>
         <div class="cards" id="cards-usuarios"></div>
         <div class="section-card">
-          <div class="chart-title">Evolucion mensual — Usuarios nuevos y activos (UAM)</div>
-          <canvas id="chart-usuarios" height="90"></canvas>
+          <div class="chart-title">Evolucion mensual — Tipos de usuario activo</div>
+          <div class="chart-wrap tall"><canvas id="chart-usuarios"></canvas></div>
         </div>
 
-        <!-- ECONOMIA -->
-        <div class="section-title" style="margin-top:4px">Economia <span class="sub">transacciones SEF</span></div>
+        <!-- PROSUMIDORES -->
+        <div class="section-title" style="margin-top:4px">Prosumidores <span class="sub">emprendimientos que ofrecen y consumen</span></div>
+        <div class="cards" id="cards-prosumidores"></div>
+        <div class="section-card">
+          <div class="chart-title">Evolucion mensual — Prosumidores y emprendimientos activos</div>
+          <div class="chart-wrap tall"><canvas id="chart-prosumidores"></canvas></div>
+        </div>
+
+        <!-- OPERACIONES -->
+        <div class="section-title" style="margin-top:4px">Operaciones <span class="sub">transacciones SEF</span></div>
         <div class="cards" id="cards-economia"></div>
         <div class="grid-2">
           <div class="section-card">
             <div class="chart-title">Evolucion mensual — Distribucion de montos</div>
-            <canvas id="chart-montos" height="160"></canvas>
+            <div class="chart-wrap med"><canvas id="chart-montos"></canvas></div>
           </div>
           <div class="section-card">
             <div class="chart-title">Distribucion de la donacion</div>
-            <canvas id="chart-dona" height="160"></canvas>
+            <div class="chart-wrap med"><canvas id="chart-dona"></canvas></div>
           </div>
         </div>
         <div class="section-card">
-          <div class="chart-title">Cantidad de compras por mes</div>
-          <canvas id="chart-compras" height="80"></canvas>
+          <div class="chart-title">Cantidad de consumos por mes</div>
+          <div class="chart-wrap low"><canvas id="chart-compras"></canvas></div>
         </div>
 
       </div><!-- /contenido -->
@@ -242,10 +259,10 @@
 </div><!-- /dashboard -->
 
 <script>
-// ── CONFIG ─────────────────────────────────────────────────
-var GAS_URL      = 'https://script.google.com/macros/s/AKfycbxzDcPkOm1nyZXY5WFEruq3ZluQZKjzfmYpaPV5hT1SQJailwcm7V37a2esf6AK5EE/exec';
-var CLIENT_ID    = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
-var SESSION_KEY  = 'sef_session';
+// ── CONFIG ──────────────────────────────────────────────────
+var GAS_URL     = 'https://script.google.com/macros/s/AKfycbxzDcPkOm1nyZXY5WFEruq3ZluQZKjzfmYpaPV5hT1SQJailwcm7V37a2esf6AK5EE/exec';
+var CLIENT_ID   = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
+var SESSION_KEY = 'sef_session';
 
 // ── SESIÓN ─────────────────────────────────────────────────
 function guardarSesion(email) {
@@ -342,6 +359,7 @@ function fetchDatos(email) {
 
     DATOS = d;
     document.getElementById('txt-generado').textContent = 'Datos al ' + d.generado;
+    initCharts();
     poblarFiltros(d.por_mes);
     aplicarFiltros();
   };
@@ -363,11 +381,16 @@ function poblarFiltros(porMes) {
   var anios = {};
   porMes.forEach(function(m) { anios[m.mes.substring(0,4)] = true; });
   var sel = document.getElementById('filtro-anio');
+  // limpiar opciones previas excepto "Todos"
+  while (sel.options.length > 1) sel.remove(1);
   Object.keys(anios).sort().reverse().forEach(function(a) {
     var opt = document.createElement('option');
     opt.value = a; opt.textContent = a;
     sel.appendChild(opt);
   });
+  // seleccionar 2026 por defecto si existe, o el año más reciente
+  if (anios['2026']) sel.value = '2026';
+  else if (Object.keys(anios).length > 0) sel.value = Object.keys(anios).sort().reverse()[0];
 }
 
 function limpiarFiltros() {
@@ -397,9 +420,119 @@ function aplicarFiltros() {
   renderTodo(filtrado);
 }
 
-// ── RENDER ───────────────────────────────────────────────────
-var chartUsr = null, chartMon = null, chartDon = null, chartCmp = null;
+// ── CHARTS: init una vez, actualizar in-place ────────────────
+var CH = {}; // contenedor de instancias Chart.js
+var CHART_BASE = { responsive:true, maintainAspectRatio:false, animation:false };
 
+function initCharts() {
+  var lineScales = {
+    y:{ beginAtZero:true, ticks:{ font:{ size:10 } } },
+    x:{ ticks:{ maxRotation:45, font:{ size:10 } } }
+  };
+  var noLabels = { display:false };
+
+  CH.usr = new Chart(document.getElementById('chart-usuarios').getContext('2d'), {
+    type:'line',
+    data:{ labels:[], datasets:[
+      { label:'Nuevos registrados',    data:[], borderColor:'#059669', backgroundColor:'rgba(5,150,105,.1)', tension:.3, fill:true, pointRadius:2 },
+      { label:'UAM (total activos)',   data:[], borderColor:'#0f766e', tension:.3, pointRadius:2, borderWidth:2 },
+      { label:'Eventuales (1 consumo)',data:[], borderColor:'#6366f1', tension:.3, pointRadius:2, borderDash:[4,2] },
+      { label:'Activos (>1 consumo)', data:[], borderColor:'#9333ea', tension:.3, pointRadius:2, borderWidth:2 }
+    ]},
+    options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
+  });
+
+  CH.pros = new Chart(document.getElementById('chart-prosumidores').getContext('2d'), {
+    type:'bar',
+    data:{ labels:[], datasets:[
+      { label:'Nuevos emprendimientos', data:[], backgroundColor:'rgba(5,150,105,.5)', type:'bar', order:3 },
+      { label:'Emprendimientos activos',data:[], borderColor:'#0f766e', type:'line', tension:.3, pointRadius:2, borderWidth:2, fill:false, order:2 },
+      { label:'Prosumidores activos',   data:[], borderColor:'#9333ea', backgroundColor:'rgba(147,51,234,.1)', type:'line', tension:.3, pointRadius:2, fill:true, order:1 }
+    ]},
+    options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
+  });
+
+  CH.mon = new Chart(document.getElementById('chart-montos').getContext('2d'), {
+    type:'bar',
+    data:{ labels:[], datasets:[
+      { label:'A comunidad',       data:[], backgroundColor:'#6366f1', stack:'dona' },
+      { label:'A destinos part.',  data:[], backgroundColor:'#a5b4fc', stack:'dona' },
+      { label:'Sostenimiento SEF', data:[], backgroundColor:'#fbbf24', stack:'dona' },
+      { label:'Consumo (÷100)',    data:[], backgroundColor:'rgba(15,76,117,.12)', stack:'consumo' }
+    ]},
+    options: Object.assign({}, CHART_BASE, {
+      plugins:{ legend:{ position:'top', labels:{ font:{ size:10 } } }, datalabels:noLabels,
+        tooltip:{ callbacks:{ label:function(c){
+          var v = c.dataset.label.includes('÷100') ? c.parsed.y*100 : c.parsed.y;
+          return c.dataset.label.replace(' (÷100)','') + ': $' + moneyFmt(v);
+        }}}
+      },
+      scales:{ y:{ beginAtZero:true, ticks:{ font:{ size:10 }, callback:function(v){ return '$'+moneyFmt(v); } } }, x:{ ticks:{ font:{ size:10 }, maxRotation:45 } } }
+    })
+  });
+
+  CH.don = new Chart(document.getElementById('chart-dona').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:['A Comunidad','A Destinos Part.','Sostenimiento SEF'], datasets:[{ data:[0,0,0], backgroundColor:['#6366f1','#a5b4fc','#fbbf24'], borderWidth:2, borderColor:'#fff' }] },
+    options: Object.assign({}, CHART_BASE, {
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ size:10 }, padding:8 } },
+        datalabels:{ color:'#fff', font:{ weight:'bold', size:11 },
+          formatter:function(v,c){ var t=c.dataset.data.reduce(function(a,b){return a+b;},0); return t?Math.round(v/t*100)+'%':''; }
+        }
+      }
+    }),
+    plugins:[ChartDataLabels]
+  });
+
+  CH.cmp = new Chart(document.getElementById('chart-compras').getContext('2d'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Consumos', data:[], backgroundColor:'#0f4c75', borderRadius:4 }] },
+    options: Object.assign({}, CHART_BASE, {
+      plugins:{
+        legend:{ display:false },
+        datalabels:{ color:'#fff', font:{ size:10, weight:'bold' }, anchor:'center', align:'center', formatter:function(v){ return v>0?v:''; } }
+      },
+      scales:lineScales
+    }),
+    plugins:[ChartDataLabels]
+  });
+}
+
+function actualizarCharts(meses, labels, comunidad, destinos, sef) {
+  var D = CH.usr.data;
+  D.labels            = labels;
+  D.datasets[0].data  = meses.map(function(m){ return m.nuevos_usuarios; });
+  D.datasets[1].data  = meses.map(function(m){ return m.uam; });
+  D.datasets[2].data  = meses.map(function(m){ return m.eventuales; });
+  D.datasets[3].data  = meses.map(function(m){ return m.activos; });
+  CH.usr.update('none');
+
+  D = CH.pros.data;
+  D.labels            = labels;
+  D.datasets[0].data  = meses.map(function(m){ return m.nuevos_emprendimientos; });
+  D.datasets[1].data  = meses.map(function(m){ return m.emprendimientos; });
+  D.datasets[2].data  = meses.map(function(m){ return m.prosumidores; });
+  CH.pros.update('none');
+
+  D = CH.mon.data;
+  D.labels            = labels;
+  D.datasets[0].data  = meses.map(function(m){ return m.a_comunidad; });
+  D.datasets[1].data  = meses.map(function(m){ return m.a_destinos; });
+  D.datasets[2].data  = meses.map(function(m){ return m.retencion_sef; });
+  D.datasets[3].data  = meses.map(function(m){ return Math.round(m.monto_total/100); });
+  CH.mon.update('none');
+
+  CH.don.data.datasets[0].data = [comunidad, destinos, sef];
+  CH.don.update('none');
+
+  D = CH.cmp.data;
+  D.labels            = labels;
+  D.datasets[0].data  = meses.map(function(m){ return m.cantidad; });
+  CH.cmp.update('none');
+}
+
+// ── RENDER ───────────────────────────────────────────────────
 function renderTodo(meses) {
   var totalCantidad  = sumar(meses, 'cantidad');
   var totalMonto     = sumar(meses, 'monto_total');
@@ -408,155 +541,82 @@ function renderTodo(meses) {
   var totalComunidad = sumar(meses, 'a_comunidad');
   var totalDestinos  = sumar(meses, 'a_destinos');
   var totalNuevos    = sumar(meses, 'nuevos_usuarios');
-  var uamPromedio    = meses.length ? Math.round(sumar(meses, 'uam') / meses.length) : 0;
+  var totalNuevosEmp = sumar(meses, 'nuevos_emprendimientos');
+  var totalDniDest   = sumar(meses, 'dni_destino');
+
+  var uamPromedio       = meses.length ? Math.round(sumar(meses,'uam')         / meses.length) : 0;
+  var eventualesPromedio= meses.length ? Math.round(sumar(meses,'eventuales')  / meses.length) : 0;
+  var activosPromedio   = meses.length ? Math.round(sumar(meses,'activos')     / meses.length) : 0;
+  var prosuPromedio     = meses.length ? Math.round(sumar(meses,'prosumidores')/ meses.length) : 0;
+  var empPromedio       = meses.length ? Math.round(sumar(meses,'emprendimientos') / meses.length) : 0;
 
   var totUsr   = DATOS.usuarios.total;
   var curiosos = DATOS.usuarios.curiosos;
   var zombies  = DATOS.usuarios.zombies;
 
-  // Cards usuarios
+  // ── Cards usuarios
   document.getElementById('cards-usuarios').innerHTML = cardsHtml([
-    { label: 'Registrados',     value: numFmt(totUsr),      sub: 'total historico',                                   color: 'blue'   },
-    { label: 'UAM <span class="info-tip" data-tip="Usuarios Activos Mensuales: promedio de compradores unicos por mes en el periodo.">ℹ</span>',
-                                value: numFmt(uamPromedio),  sub: 'promedio del periodo',                              color: 'teal'   },
-    { label: 'Usuarios Nuevos', value: numFmt(totalNuevos), sub: 'registrados en el periodo',                         color: 'green'  },
-    { label: 'Curiosos <span class="info-tip" data-tip="Registrados que nunca realizaron una compra.">ℹ</span>',
-                                value: numFmt(curiosos),     sub: pct(curiosos, totUsr) + '% del total',              color: 'amber'  },
-    { label: 'Zombies <span class="info-tip" data-tip="Compradores sin actividad en los ultimos 6 meses.">ℹ</span>',
-                                value: numFmt(zombies),      sub: pct(zombies, totUsr) + '% del total',               color: 'rose'   }
+    { label: 'Registrados',
+      value: numFmt(totUsr), sub: 'total historico', color: 'blue' },
+    { label: 'Usuarios Nuevos',
+      value: numFmt(totalNuevos), sub: 'registrados en el periodo', color: 'green' },
+    { label: 'UAM <span class="info-tip" data-tip="Usuarios Activos Mensuales: promedio de compradores unicos por mes.">&#9432;</span>',
+      value: numFmt(uamPromedio), sub: 'promedio mensual del periodo', color: 'teal' },
+    { label: 'Eventuales <span class="info-tip" data-tip="Compradores con exactamente 1 consumo en el mes.">&#9432;</span>',
+      value: numFmt(eventualesPromedio), sub: 'promedio mensual', color: 'indigo' },
+    { label: 'Activos <span class="info-tip" data-tip="Compradores con mas de 1 consumo en el mes.">&#9432;</span>',
+      value: numFmt(activosPromedio), sub: 'promedio mensual', color: 'purple' },
+    { label: 'Curiosos <span class="info-tip" data-tip="Registrados que nunca realizaron una compra.">&#9432;</span>',
+      value: numFmt(curiosos), sub: pct(curiosos, totUsr) + '% del total', color: 'amber' },
+    { label: 'Zombies <span class="info-tip" data-tip="Compradores sin actividad en los ultimos 6 meses.">&#9432;</span>',
+      value: numFmt(zombies), sub: pct(zombies, totUsr) + '% del total', color: 'rose' }
   ]);
 
-  // Cards economía
+  // ── Cards prosumidores
+  document.getElementById('cards-prosumidores').innerHTML = cardsHtml([
+    { label: 'Prosumidores <span class="info-tip" data-tip="Emprendedores unicos que vendieron en el periodo (promedio mensual).">&#9432;</span>',
+      value: numFmt(prosuPromedio), sub: 'promedio mensual del periodo', color: 'purple' },
+    { label: 'Emprendimientos <span class="info-tip" data-tip="Emprendimientos unicos activos (promedio mensual).">&#9432;</span>',
+      value: numFmt(empPromedio), sub: 'promedio mensual activos', color: 'teal' },
+    { label: 'Nuevos Emprendimientos',
+      value: numFmt(totalNuevosEmp), sub: 'primera aparicion en el periodo', color: 'green' }
+  ]);
+
+  // ── Cards economia
   document.getElementById('cards-economia').innerHTML = cardsHtml([
-    { label: 'Compras',            value: numFmt(totalCantidad),              sub: 'transacciones SEF',                           color: 'blue'   },
-    { label: 'Monto Compras',      value: '$' + moneyFmt(totalMonto),         sub: 'valor total transaccionado',                  color: 'teal'   },
-    { label: 'Monto Donacion',     value: '$' + moneyFmt(totalDonacion),      sub: pct(totalDonacion, totalMonto) + '% del total',color: 'green'  },
-    { label: 'Sostenimiento SEF',  value: '$' + moneyFmt(totalSef),           sub: pct(totalSef, totalMonto) + '% del total',    color: 'amber'  },
-    { label: 'A Comunidad',        value: '$' + moneyFmt(totalComunidad),     sub: pct(totalComunidad, totalDonacion + totalSef) + '% de lo donado', color: 'indigo' },
-    { label: 'A Destinos Part.',   value: '$' + moneyFmt(totalDestinos),      sub: pct(totalDestinos,  totalDonacion + totalSef) + '% de lo donado', color: 'gray'   }
+    { label: 'Consumos',
+      value: numFmt(totalCantidad), sub: 'transacciones SEF', color: 'blue' },
+    { label: 'Monto Consumos',
+      value: '$' + moneyFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
+    { label: 'Monto Donacion',
+      value: '$' + moneyFmt(totalDonacion), sub: pct(totalDonacion, totalMonto) + '% del consumo', color: 'green' },
+    { label: 'Sostenimiento SEF',
+      value: '$' + moneyFmt(totalSef), sub: pct(totalSef, totalMonto) + '% del consumo', color: 'amber' },
+    { label: 'A Comunidad/Escuela',
+      value: '$' + moneyFmt(totalComunidad), sub: pct(totalComunidad, totalDonacion + totalSef) + '% de lo donado', color: 'indigo' },
+    { label: 'A Destinos Part.',
+      value: '$' + moneyFmt(totalDestinos), sub: pct(totalDestinos, totalDonacion + totalSef) + '% de lo donado', color: 'gray' },
+    { label: 'DNI Destino <span class="info-tip" data-tip="Cantidad de personas distintas que recibieron donacion a destino particular.">&#9432;</span>',
+      value: numFmt(totalDniDest), sub: 'receptores unicos', color: 'orange' }
   ]);
 
-  // Sidebar info
+  // ── Sidebar
   document.getElementById('sidebar-info').innerHTML =
     '<strong>' + meses.length + '</strong> meses<br>' +
-    '<strong>' + numFmt(totalCantidad) + '</strong> compras<br>' +
+    '<strong>' + numFmt(totalCantidad) + '</strong> consumos<br>' +
     '<strong>$' + moneyFmt(totalMonto) + '</strong> total';
 
-  // Periodo en topbar
+  // ── Periodo
   if (meses.length) {
     document.getElementById('txt-periodo').textContent =
       mesLabel(meses[0].mes) + ' — ' + mesLabel(meses[meses.length-1].mes);
   }
 
   var labels = meses.map(function(m) { return mesLabel(m.mes); });
-  renderChartUsuarios(labels, meses);
-  renderChartMontos(labels, meses);
-  renderChartDona(totalComunidad, totalDestinos, totalSef);
-  renderChartCompras(labels, meses);
+  actualizarCharts(meses, labels, totalComunidad, totalDestinos, totalSef);
 }
 
 // ── CHARTS ───────────────────────────────────────────────────
-function renderChartUsuarios(labels, meses) {
-  var ctx = document.getElementById('chart-usuarios').getContext('2d');
-  if (chartUsr) chartUsr.destroy();
-  chartUsr = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'Nuevos usuarios', data: meses.map(function(m){ return m.nuevos_usuarios; }),
-          borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.1)', tension:.3, fill:true, pointRadius:3 },
-        { label: 'UAM', data: meses.map(function(m){ return m.uam; }),
-          borderColor: '#0f766e', backgroundColor: 'transparent', tension:.3, pointRadius:3 }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:{ display:false } },
-      scales:{ y:{ beginAtZero:true }, x:{ ticks:{ maxRotation:45, font:{ size:10 } } } }
-    }
-  });
-}
-
-function renderChartMontos(labels, meses) {
-  var ctx = document.getElementById('chart-montos').getContext('2d');
-  if (chartMon) chartMon.destroy();
-  chartMon = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'A comunidad',      data: meses.map(function(m){ return m.a_comunidad; }),        backgroundColor: '#6366f1', stack:'dona' },
-        { label: 'A destinos part.', data: meses.map(function(m){ return m.a_destinos; }),         backgroundColor: '#a5b4fc', stack:'dona' },
-        { label: 'Sostenimiento SEF',data: meses.map(function(m){ return m.retencion_sef; }),      backgroundColor: '#fbbf24', stack:'dona' },
-        { label: 'Compra (÷100)',    data: meses.map(function(m){ return Math.round(m.monto_total/100); }), backgroundColor: 'rgba(15,76,117,.12)', stack:'compra' }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'top', labels:{ font:{ size:10 } } },
-        datalabels:{ display:false },
-        tooltip:{ callbacks:{ label: function(ctx){
-          var v = ctx.dataset.label.includes('÷100') ? ctx.parsed.y * 100 : ctx.parsed.y;
-          return ctx.dataset.label.replace(' (÷100)','') + ': $' + moneyFmt(v);
-        }}}
-      },
-      scales:{
-        y:{ beginAtZero:true, ticks:{ font:{ size:10 }, callback: function(v){ return '$'+moneyFmt(v); } } },
-        x:{ ticks:{ font:{ size:10 }, maxRotation:45 } }
-      }
-    }
-  });
-}
-
-function renderChartDona(comunidad, destinos, sef) {
-  var ctx = document.getElementById('chart-dona').getContext('2d');
-  if (chartDon) chartDon.destroy();
-  chartDon = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['A Comunidad','A Destinos Part.','Sostenimiento SEF'],
-      datasets:[{ data:[comunidad, destinos, sef], backgroundColor:['#6366f1','#a5b4fc','#fbbf24'], borderWidth:2, borderColor:'#fff' }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{ size:10 }, padding:8 } },
-        datalabels:{ color:'#fff', font:{ weight:'bold', size:11 },
-          formatter: function(v, ctx){
-            var total = ctx.dataset.data.reduce(function(a,b){ return a+b; },0);
-            return total ? Math.round(v/total*100)+'%' : '';
-          }
-        }
-      }
-    },
-    plugins:[ChartDataLabels]
-  });
-}
-
-function renderChartCompras(labels, meses) {
-  var ctx = document.getElementById('chart-compras').getContext('2d');
-  if (chartCmp) chartCmp.destroy();
-  chartCmp = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets:[{ label:'Compras', data: meses.map(function(m){ return m.cantidad; }), backgroundColor:'#0f4c75', borderRadius:4 }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:true,
-      plugins:{
-        legend:{ display:false },
-        datalabels:{ color:'#fff', font:{ size:10, weight:'bold' }, anchor:'center', align:'center',
-          formatter: function(v){ return v > 0 ? v : ''; }
-        }
-      },
-      scales:{ y:{ beginAtZero:true }, x:{ ticks:{ maxRotation:45, font:{ size:10 } } } }
-    },
-    plugins:[ChartDataLabels]
-  });
-}
 
 // ── HELPERS ──────────────────────────────────────────────────
 function sumar(arr, key) { return arr.reduce(function(a,m){ return a+(m[key]||0); },0); }
