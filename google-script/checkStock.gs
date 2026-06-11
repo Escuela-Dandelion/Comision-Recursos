@@ -91,7 +91,7 @@ function checkStockBajo() {
     const items = grupo.items;
     const urls  = generarUrls(items, marca, fgp);
 
-    enviarEmail(fgp, marca, items, urls);
+    enviarAlertaStock(fgp, marca, items, urls);
     Logger.log('Email enviado a ' + fgp.nombre + ' (' + fgp.email + ') | Proveedor: ' + marca + ' | ' + items.length + ' producto(s)');
   });
 
@@ -103,7 +103,7 @@ function checkStockBajo() {
 }
 
 // ── ENVÍO DE EMAIL ─────────────────────────────────────────
-function enviarEmail(fgp, marca, items, urls) {
+function enviarAlertaStock(fgp, marca, items, urls) {
   const destinatario = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_EMAIL : fgp.email;
 
   // CC al admin, evitando duplicado si el FGP ya es el admin
@@ -119,7 +119,7 @@ function enviarEmail(fgp, marca, items, urls) {
     return `<li><strong>${item.descripcion}</strong> — ${item.stock} unidades restantes</li>`;
   }).join('');
 
-  const asunto = `🌼 Diente de León — Stock bajo: ${marca}`;
+  const asunto = `Diente de Leon - Stock bajo: ${marca}`;
 
   const cuerpoHtml = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">

@@ -296,7 +296,7 @@ function fetchOrder(orderId) {
 // ──────────────────────────────────────────────────────────
 
 function enviarEmail(email, nombre, order, qrUrl, productos) {
-  var asunto = CONFIG.TIENDA_NOMBRE + ' — Tu código QR para retirar el pedido #' + order.number;
+  var asunto = 'Diente de Leon - Tu QR para retirar el pedido #' + order.number;
 
   var html =
     '<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px">' +
