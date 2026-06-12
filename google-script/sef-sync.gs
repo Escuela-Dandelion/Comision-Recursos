@@ -9,6 +9,10 @@ const CFG = {
   SHEET_ID: '1grum3nxlMLn4y4Br6qrvvRNUs3bVLtwNJF_EI-RBgLQ',
 };
 
+const HEADERS_FEES = [
+  'fecha', 'wc_orden_id', 'mp_payment_id', 'monto', 'fee_meli'
+];
+
 const HEADERS_TRX = [
   'fecha_operacion', 'wc_orden_id', 'orden_original', 'comprador_id', 'vendedor_id',
   'emprendimiento', 'comunidad', 'monto_total', 'donacion_comprador',
@@ -32,7 +36,15 @@ function wcHeaders() {
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
 function sincronizarTodo() {
   sincronizarTransacciones();
+  sincronizarFeesMeli();
   sincronizarUsuarios();
+}
+
+// Guardar el access token de MP una sola vez desde el editor de Apps Script:
+//   configurarTokenMP('APP_USR-...')
+function configurarTokenMP(token) {
+  PropertiesService.getScriptProperties().setProperty('MP_ACCESS_TOKEN', token);
+  Logger.log('Token MP guardado.');
 }
 
 // ── TRANSACCIONES ──────────────────────────────────────────
@@ -264,9 +276,21 @@ function toMes(val) {
 }
 
 function agregarDatos() {
-  var ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
-  var sheetTrx = ss.getSheetByName('Transacciones');
-  var sheetUsr = ss.getSheetByName('Usuarios');
+  var ss        = SpreadsheetApp.openById(CFG.SHEET_ID);
+  var sheetTrx  = ss.getSheetByName('Transacciones');
+  var sheetUsr  = ss.getSheetByName('Usuarios');
+  var sheetFees = ss.getSheetByName('FeesMeli');
+
+  // fees por mes: mes → total fee
+  var feesByMes = {};
+  if (sheetFees && sheetFees.getLastRow() > 1) {
+    var feesData = sheetFees.getRange(2, 1, sheetFees.getLastRow() - 1, HEADERS_FEES.length).getValues();
+    for (var fi = 0; fi < feesData.length; fi++) {
+      var fMes = toMes(feesData[fi][0]);
+      if (!fMes) continue;
+      feesByMes[fMes] = (feesByMes[fMes] || 0) + (parseFloat(feesData[fi][4]) || 0);
+    }
+  }
 
   var trxRows = sheetTrx && sheetTrx.getLastRow() > 1
     ? sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, HEADERS_TRX.length).getValues()
@@ -380,7 +404,8 @@ function agregarDatos() {
       a_comunidad:            Math.round(t.a_comunidad),
       a_destinos:             Math.round(t.a_destinos),
       donacion_total:         Math.round(t.donacion_comprador + t.donacion_vendedor),
-      dni_destino:            Object.keys(dni).length
+      dni_destino:            Object.keys(dni).length,
+      fee_meli:               Math.round(feesByMes[mes] || 0)
     };
   });
 
@@ -402,6 +427,100 @@ function agregarDatos() {
     compradores_por_mes:  compradoresPorMes,
     vendedores_por_mes:   vendedoresPorMes
   };
+}
+
+// ── FEES MERCADO PAGO ──────────────────────────────────────
+// Captura las órdenes de "Pago de Donaciones" (paso 3 del flujo SEF),
+// consulta la API de MP por el fee real de cada una y lo guarda en FeesMeli.
+function sincronizarFeesMeli() {
+  const token = PropertiesService.getScriptProperties().getProperty('MP_ACCESS_TOKEN');
+  if (!token) {
+    Logger.log('FeesMeli: sin token MP — salteando. Corré configurarTokenMP(token) primero.');
+    return;
+  }
+
+  const ss    = SpreadsheetApp.openById(CFG.SHEET_ID);
+  const sheet = obtenerHoja(ss, 'FeesMeli', HEADERS_FEES);
+
+  const idsExistentes = obtenerSet(sheet, 2); // col 2 = wc_orden_id
+  const props    = PropertiesService.getScriptProperties();
+  const lastSync = props.getProperty('LAST_SYNC_FEES');
+
+  let page = 1;
+  let nuevas = 0;
+  let debeParar = false;
+
+  while (!debeParar) {
+    let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
+    if (lastSync) url += '&after=' + lastSync;
+
+    const resp = UrlFetchApp.fetch(url, wcHeaders());
+    if (resp.getResponseCode() !== 200) break;
+
+    const orders = JSON.parse(resp.getContentText());
+    if (orders.length === 0) break;
+
+    const rows = [];
+    for (var i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const meta  = metaMap(order.meta_data);
+
+      // Solo órdenes de donación: tienen orden_de_pago y payment ID de MP
+      if (!meta.orden_de_pago || !meta._Mercado_Pago_Payment_IDs) continue;
+
+      const id = String(order.id);
+      if (idsExistentes.has(id)) {
+        debeParar = true;
+        continue;
+      }
+
+      const mpId   = String(meta._Mercado_Pago_Payment_IDs).trim();
+      const fecha  = order.date_created ? order.date_created.substring(0, 10) : '';
+      const monto  = parseFloat(order.total) || 0;
+      const fee    = obtenerFeeMeli(mpId, token);
+
+      rows.push([fecha, order.id, mpId, monto, fee]);
+      idsExistentes.add(id);
+      nuevas++;
+
+      Utilities.sleep(500); // pausa entre llamadas a la API de MP
+    }
+
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADERS_FEES.length).setValues(rows);
+    }
+
+    const totalPages = parseInt(resp.getHeaders()['x-wp-totalpages'] || '1');
+    Logger.log('FeesMeli página ' + page + '/' + totalPages + ' — ' + nuevas + ' nuevas');
+    if (page >= totalPages) break;
+    page++;
+    Utilities.sleep(2000);
+  }
+
+  props.setProperty('LAST_SYNC_FEES', new Date().toISOString());
+  Logger.log('FeesMeli: ' + nuevas + ' nuevas registradas.');
+}
+
+function obtenerFeeMeli(mpPaymentId, token) {
+  try {
+    const resp = UrlFetchApp.fetch(
+      'https://api.mercadopago.com/v1/payments/' + mpPaymentId,
+      { headers: { 'Authorization': 'Bearer ' + token }, muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) return 0;
+    const data = JSON.parse(resp.getContentText());
+    var fee = 0;
+    (data.fee_details || []).forEach(function(f) { fee += f.amount || 0; });
+    return Math.round(fee);
+  } catch(e) {
+    Logger.log('Error fee MP ' + mpPaymentId + ': ' + e);
+    return 0;
+  }
+}
+
+function resetearFees() {
+  PropertiesService.getScriptProperties().deleteProperty('LAST_SYNC_FEES');
+  Logger.log('Sync fees reseteado.');
 }
 
 // ── TRIGGER ────────────────────────────────────────────────

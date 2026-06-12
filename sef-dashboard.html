@@ -587,6 +587,8 @@ function renderTodo(meses) {
   var totalNuevos    = sumar(meses, 'nuevos_usuarios');
   var totalNuevosEmp = sumar(meses, 'nuevos_emprendimientos');
   var totalDniDest   = sumar(meses, 'dni_destino');
+  var totalFeeMeli   = sumar(meses, 'fee_meli');
+  var totalNeto      = totalComunidad - totalFeeMeli;
 
   var uamPromedio       = meses.length ? Math.round(sumar(meses,'uam')         / meses.length) : 0;
   var eventualesPromedio= meses.length ? Math.round(sumar(meses,'eventuales')  / meses.length) : 0;
@@ -683,7 +685,11 @@ function renderTodo(meses) {
     { label: 'A Destinos Part.',
       value: '$' + moneyFmt(totalDestinos), sub: pct(totalDestinos, totalDonacion + totalSef) + '% de lo donado', color: 'gray' },
     { label: 'DNI Destino <span class="info-tip" data-tip="Cantidad de personas distintas que recibieron donacion a destino particular.">&#9432;</span>',
-      value: numFmt(totalDniDest), sub: 'receptores unicos', color: 'orange' }
+      value: numFmt(totalDniDest), sub: 'receptores unicos', color: 'orange' },
+    { label: 'Comision MELI <span class="info-tip" data-tip="Fee real cobrado por Mercado Pago sobre los pagos de donacion del periodo.">&#9432;</span>',
+      value: totalFeeMeli ? '-$' + moneyFmt(totalFeeMeli) : '—', sub: totalFeeMeli ? pct(totalFeeMeli, totalMonto) + '% del consumo' : 'sin datos', color: 'rose' },
+    { label: 'Neto a Comunidad <span class="info-tip" data-tip="A Comunidad/Escuela menos la comision de Mercado Pago.">&#9432;</span>',
+      value: '$' + moneyFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
   ]);
 
   // ── Sidebar
