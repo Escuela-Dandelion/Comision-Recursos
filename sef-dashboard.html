@@ -642,9 +642,9 @@ function renderTodo(meses) {
     { label: 'MAU <span class="info-tip" data-tip="Con filtro: compradores unicos en el periodo. Sin filtro: promedio de compradores por mes. MAU = Eventuales + Recurrentes.">&#9432;</span>',
       value: numFmt(mauVal), sub: mauSub, color: 'teal' },
     { label: 'Eventuales <span class="info-tip" data-tip="Con filtro: compraron exactamente 1 vez en todo el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
-      value: numFmt(evVal), sub: evSub, color: 'indigo' },
+      value: numFmt(evVal) + pctBadge(evVal, mauVal), sub: evSub, color: 'indigo' },
     { label: 'Recurrentes <span class="info-tip" data-tip="Con filtro: compraron mas de 1 vez en el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
-      value: numFmt(recVal), sub: recSub, color: 'purple' },
+      value: numFmt(recVal) + pctBadge(recVal, mauVal), sub: recSub, color: 'purple' },
     { label: 'Curiosos <span class="info-tip" data-tip="Con filtro: registrados en el periodo que nunca compraron. Sin filtro: total historico.">&#9432;</span>',
       value: numFmt(curiosos), sub: curSub, color: 'amber' },
     { label: 'Zombies <span class="info-tip" data-tip="Con filtro: ultima compra en el periodo, ahora sin actividad 6+ meses. Sin filtro: total historico.">&#9432;</span>',
@@ -711,6 +711,10 @@ function sumar(arr, key) { return arr.reduce(function(a,m){ return a+(m[key]||0)
 function numFmt(n)    { return Number(n).toLocaleString('es-AR'); }
 function moneyFmt(n)  { return Math.round(n).toLocaleString('es-AR'); }
 function pct(p, t)    { return t ? Math.round(p/t*100) : 0; }
+function pctBadge(p, t) {
+  if (!t) return '';
+  return ' <span style="font-size:13px;font-weight:500;opacity:.65">(' + pct(p,t) + '%)</span>';
+}
 function mesLabel(mes) {
   var nn = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var p  = mes.split('-');

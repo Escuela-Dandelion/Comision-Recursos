@@ -122,14 +122,15 @@ function sincronizarUsuarios() {
   }
 
   // Calcular ultima_compra y total_compras desde Transacciones
-  const compraMap = {}; // comprador_id → { ultima, total }
+  const compraMap = {}; // comprador_id → { ultima: "YYYY-MM", total }
   if (sheetTrx && sheetTrx.getLastRow() > 1) {
     const data = sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, 4).getValues();
     for (var i = 0; i < data.length; i++) {
-      const fecha = String(data[i][0]);
-      const cid   = String(data[i][3]); // col 4 = comprador_id
-      if (!compraMap[cid]) compraMap[cid] = { ultima: fecha, total: 0 };
-      if (fecha > compraMap[cid].ultima) compraMap[cid].ultima = fecha;
+      var mes = toMes(data[i][0]); // normaliza Date obj o string a "YYYY-MM"
+      if (!mes) continue;
+      var cid = String(data[i][3]);
+      if (!compraMap[cid]) compraMap[cid] = { ultima: mes, total: 0 };
+      if (mes > compraMap[cid].ultima) compraMap[cid].ultima = mes;
       compraMap[cid].total++;
     }
   }
@@ -156,7 +157,7 @@ function sincronizarUsuarios() {
       const curioso = !isPaying;
       let zombi = false;
       if (isPaying && info.ultima) {
-        zombi = new Date(info.ultima) < hace6meses;
+        zombi = new Date(info.ultima + '-01') < hace6meses; // "YYYY-MM" → "YYYY-MM-01"
       }
 
       rows.push([
