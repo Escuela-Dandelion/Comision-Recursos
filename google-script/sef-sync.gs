@@ -444,14 +444,16 @@ function sincronizarFeesMeli() {
   const sheet = obtenerHoja(ss, 'FeesMeli', HEADERS_FEES);
 
   const idsExistentes = obtenerSet(sheet, 2); // col 2 = wc_orden_id
-  const props    = PropertiesService.getScriptProperties();
-  const lastSync = props.getProperty('LAST_SYNC_FEES');
+  const props     = PropertiesService.getScriptProperties();
+  const lastSync  = props.getProperty('LAST_SYNC_FEES');
+  const startTime = Date.now();
+  const MAX_MS    = 5 * 60 * 1000; // corta a los 5 min para no chocar con el límite de 6
 
-  let page = 1;
+  // Retoma desde la página donde quedó si hubo un corte anterior
+  let page   = parseInt(props.getProperty('FEES_RESUME_PAGE') || '1');
   let nuevas = 0;
-  let debeParar = false;
 
-  while (!debeParar) {
+  while (true) {
     let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
     url += '&after=' + (lastSync || CFG.FECHA_MIN);
 
@@ -466,25 +468,21 @@ function sincronizarFeesMeli() {
       const order = orders[i];
       const meta  = metaMap(order.meta_data);
 
-      // Solo órdenes de donación: tienen orden_de_pago y payment ID de MP
       if (!meta.orden_de_pago || !meta._Mercado_Pago_Payment_IDs) continue;
 
       const id = String(order.id);
-      if (idsExistentes.has(id)) {
-        debeParar = true;
-        continue;
-      }
+      if (idsExistentes.has(id)) continue; // ya procesada, salteamos sin parar
 
-      const mpId   = String(meta._Mercado_Pago_Payment_IDs).trim();
-      const fecha  = order.date_created ? order.date_created.substring(0, 10) : '';
-      const monto  = parseFloat(order.total) || 0;
-      const fee    = obtenerFeeMeli(mpId, token);
+      const mpId  = String(meta._Mercado_Pago_Payment_IDs).trim();
+      const fecha = order.date_created ? order.date_created.substring(0, 10) : '';
+      const monto = parseFloat(order.total) || 0;
+      const fee   = obtenerFeeMeli(mpId, token);
 
       rows.push([fecha, order.id, mpId, monto, fee]);
       idsExistentes.add(id);
       nuevas++;
 
-      Utilities.sleep(500); // pausa entre llamadas a la API de MP
+      Utilities.sleep(500);
     }
 
     if (rows.length > 0) {
@@ -492,12 +490,29 @@ function sincronizarFeesMeli() {
     }
 
     const totalPages = parseInt(resp.getHeaders()['x-wp-totalpages'] || '1');
-    Logger.log('FeesMeli página ' + page + '/' + totalPages + ' — ' + nuevas + ' nuevas');
-    if (page >= totalPages) break;
+    Logger.log('FeesMeli página ' + page + '/' + totalPages + ' — ' + nuevas + ' nuevas esta ejecucion');
+
+    if (page >= totalPages) {
+      // Sync completo
+      props.deleteProperty('FEES_RESUME_PAGE');
+      props.setProperty('LAST_SYNC_FEES', new Date().toISOString());
+      Logger.log('FeesMeli: sync completo. ' + nuevas + ' nuevas registradas.');
+      return;
+    }
+
     page++;
+
+    if (Date.now() - startTime > MAX_MS) {
+      // Guarda la página donde quedó y avisa
+      props.setProperty('FEES_RESUME_PAGE', String(page));
+      Logger.log('FeesMeli: tiempo limite alcanzado. Corré sincronizarFeesMeli() de nuevo para continuar desde página ' + page + '/' + totalPages + '.');
+      return;
+    }
+
     Utilities.sleep(2000);
   }
 
+  props.deleteProperty('FEES_RESUME_PAGE');
   props.setProperty('LAST_SYNC_FEES', new Date().toISOString());
   Logger.log('FeesMeli: ' + nuevas + ' nuevas registradas.');
 }
