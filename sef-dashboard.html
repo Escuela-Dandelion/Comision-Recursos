@@ -647,7 +647,7 @@ function renderTodo(meses) {
       value: numFmt(recVal) + pctBadge(recVal, mauVal), sub: recSub, color: 'purple' },
     { label: 'Curiosos <span class="info-tip" data-tip="Con filtro: registrados en el periodo que nunca compraron. Sin filtro: total historico.">&#9432;</span>',
       value: numFmt(curiosos), sub: curSub, color: 'amber' },
-    { label: 'Zombies <span class="info-tip" data-tip="Con filtro: ultima compra en el periodo, ahora sin actividad 6+ meses. Sin filtro: total historico.">&#9432;</span>',
+    { label: 'Zombies <span class="info-tip" data-tip="Compradores que llevan mas de 6 meses sin comprar. Siempre muestra el total actual — es un estado de hoy, no un evento del periodo filtrado.">&#9432;</span>',
       value: numFmt(zombies), sub: zombSub, color: 'rose' }
   ]);
 
