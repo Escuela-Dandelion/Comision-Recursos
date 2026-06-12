@@ -414,6 +414,13 @@ function filtrarMeses(porMes) {
   });
 }
 
+function hayFiltro() {
+  return document.getElementById('filtro-anio').value  ||
+         document.getElementById('filtro-mes').value   ||
+         document.getElementById('filtro-desde').value ||
+         document.getElementById('filtro-hasta').value;
+}
+
 function aplicarFiltros() {
   if (!DATOS) return;
   var filtrado = filtrarMeses(DATOS.por_mes);
@@ -550,26 +557,40 @@ function renderTodo(meses) {
   var prosuPromedio     = meses.length ? Math.round(sumar(meses,'prosumidores')/ meses.length) : 0;
   var empPromedio       = meses.length ? Math.round(sumar(meses,'emprendimientos') / meses.length) : 0;
 
-  var totUsr   = DATOS.usuarios.total;
-  var curiosos = DATOS.usuarios.curiosos;
-  var zombies  = DATOS.usuarios.zombies;
+  var conFiltro = !!hayFiltro();
+  var totUsr    = DATOS.usuarios.total;
+
+  var registrados, regSub, curiosos, curSub, zombies, zombSub;
+  if (conFiltro) {
+    registrados = totalNuevos;
+    regSub      = 'se registraron en el periodo';
+    curiosos    = sumar(meses, 'nuevos_curiosos');
+    curSub      = 'de los nuevos que nunca compraron';
+    zombies     = sumar(meses, 'nuevos_zombies');
+    zombSub     = 'ultima compra en el periodo, ahora inactivos';
+  } else {
+    registrados = totUsr;
+    regSub      = 'total historico acumulado';
+    curiosos    = DATOS.usuarios.curiosos;
+    curSub      = pct(curiosos, totUsr) + '% del total registrado';
+    zombies     = DATOS.usuarios.zombies;
+    zombSub     = pct(zombies, totUsr - DATOS.usuarios.curiosos) + '% de compradores activos';
+  }
 
   // ── Cards usuarios
   document.getElementById('cards-usuarios').innerHTML = cardsHtml([
     { label: 'Registrados',
-      value: numFmt(totUsr), sub: 'total historico', color: 'blue' },
-    { label: 'Usuarios Nuevos',
-      value: numFmt(totalNuevos), sub: 'registrados en el periodo', color: 'green' },
+      value: numFmt(registrados), sub: regSub, color: 'blue' },
     { label: 'UAM <span class="info-tip" data-tip="Usuarios Activos Mensuales: promedio de compradores unicos por mes.">&#9432;</span>',
       value: numFmt(uamPromedio), sub: 'promedio mensual del periodo', color: 'teal' },
     { label: 'Eventuales <span class="info-tip" data-tip="Compradores con exactamente 1 consumo en el mes.">&#9432;</span>',
       value: numFmt(eventualesPromedio), sub: 'promedio mensual', color: 'indigo' },
     { label: 'Activos <span class="info-tip" data-tip="Compradores con mas de 1 consumo en el mes.">&#9432;</span>',
       value: numFmt(activosPromedio), sub: 'promedio mensual', color: 'purple' },
-    { label: 'Curiosos <span class="info-tip" data-tip="Registrados que nunca realizaron una compra.">&#9432;</span>',
-      value: numFmt(curiosos), sub: pct(curiosos, totUsr) + '% del total', color: 'amber' },
-    { label: 'Zombies <span class="info-tip" data-tip="Compradores sin actividad en los ultimos 6 meses.">&#9432;</span>',
-      value: numFmt(zombies), sub: pct(zombies, totUsr) + '% del total', color: 'rose' }
+    { label: 'Curiosos <span class="info-tip" data-tip="Sin filtro: total nunca compraron. Con filtro: registrados en el periodo que nunca compraron.">&#9432;</span>',
+      value: numFmt(curiosos), sub: curSub, color: 'amber' },
+    { label: 'Zombies <span class="info-tip" data-tip="Sin filtro: total sin compras en 6 meses. Con filtro: cuya ultima compra fue en el periodo y ahora estan inactivos.">&#9432;</span>',
+      value: numFmt(zombies), sub: zombSub, color: 'rose' }
   ]);
 
   // ── Cards prosumidores

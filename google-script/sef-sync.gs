@@ -318,13 +318,20 @@ function agregarDatos() {
   }
 
   var curiosos = 0, zombies = 0;
-  var nuevosByMes = {};
+  var nuevosByMes    = {}; // mes registro → nuevos usuarios
+  var curiososByMes  = {}; // mes registro → nuevos curiosos (registrado ese mes, nunca compró)
+  var zombiesByMes   = {}; // mes ultima_compra → zombies (última compra ese mes, ahora inactivos)
   for (var j = 0; j < usrRows.length; j++) {
     var u = usrRows[j];
     if (u[7] === 'Si') curiosos++;
     if (u[8] === 'Si') zombies++;
-    var mr = toMes(u[3]);
-    if (mr) nuevosByMes[mr] = (nuevosByMes[mr] || 0) + 1;
+    var mr = toMes(u[3]); // fecha_registro
+    if (mr) {
+      nuevosByMes[mr] = (nuevosByMes[mr] || 0) + 1;
+      if (u[7] === 'Si') curiososByMes[mr] = (curiososByMes[mr] || 0) + 1;
+    }
+    var mz = toMes(u[5]); // ultima_compra
+    if (mz && u[8] === 'Si') zombiesByMes[mz] = (zombiesByMes[mz] || 0) + 1;
   }
 
   var allMeses = {};
@@ -359,6 +366,8 @@ function agregarDatos() {
       prosumidores:           Object.keys(vnd).length,
       emprendimientos:        Object.keys(emp).length,
       nuevos_emprendimientos: nuevos_emprendimientos,
+      nuevos_curiosos:        curiososByMes[mes] || 0,
+      nuevos_zombies:         zombiesByMes[mes]  || 0,
       cantidad:               t.cantidad,
       monto_total:            Math.round(t.monto_total),
       donacion_comprador:     Math.round(t.donacion_comprador),
