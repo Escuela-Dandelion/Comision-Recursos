@@ -363,9 +363,10 @@ function agregarDatos() {
     if (mz && u[8] === 'Si') zombiesByMes[mz] = (zombiesByMes[mz] || 0) + 1;
   }
 
+  var fechaMinMes = CFG.FECHA_MIN.substring(0, 7); // "2024-01"
   var allMeses = {};
-  Object.keys(trxByMes).forEach(function(m) { allMeses[m] = true; });
-  Object.keys(nuevosByMes).forEach(function(m) { allMeses[m] = true; });
+  Object.keys(trxByMes).forEach(function(m) { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(nuevosByMes).forEach(function(m) { if (m >= fechaMinMes) allMeses[m] = true; });
   var meses = Object.keys(allMeses).sort();
 
   var porMes = meses.map(function(mes) {
