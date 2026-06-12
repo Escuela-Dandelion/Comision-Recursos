@@ -380,11 +380,23 @@ function agregarDatos() {
     };
   });
 
+  // Exponer comprador y vendedor por mes para cálculo de ventana en el cliente
+  var compradoresPorMes = {};
+  var vendedoresPorMes  = {};
+  Object.keys(compraCountByMes).forEach(function(m) {
+    compradoresPorMes[m] = compraCountByMes[m];
+  });
+  Object.keys(vendedoresByMes).forEach(function(m) {
+    vendedoresPorMes[m] = Object.keys(vendedoresByMes[m]);
+  });
+
   return {
-    generado:      Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy HH:mm'),
-    usuarios:      { total: usrRows.length, curiosos: curiosos, zombies: zombies },
-    transacciones: { total: trxRows.length },
-    por_mes:       porMes
+    generado:             Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy HH:mm'),
+    usuarios:             { total: usrRows.length, curiosos: curiosos, zombies: zombies },
+    transacciones:        { total: trxRows.length },
+    por_mes:              porMes,
+    compradores_por_mes:  compradoresPorMes,
+    vendedores_por_mes:   vendedoresPorMes
   };
 }
 

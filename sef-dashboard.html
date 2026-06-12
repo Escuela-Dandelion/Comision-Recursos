@@ -539,6 +539,29 @@ function actualizarCharts(meses, labels, comunidad, destinos, sef) {
   CH.cmp.update('none');
 }
 
+// ── CÁLCULO DE PERÍODO (ventana variable) ────────────────────
+// Combina los compradores de todos los meses filtrados y clasifica por
+// cantidad total de compras en el período, no por mes individual.
+function calcularPeriodo(meses) {
+  var compradores = {}; // cid → compras totales en el período
+  var vendedores  = {}; // vid → true
+  meses.forEach(function(m) {
+    var cc = (DATOS.compradores_por_mes || {})[m.mes] || {};
+    Object.keys(cc).forEach(function(cid) {
+      compradores[cid] = (compradores[cid] || 0) + cc[cid];
+    });
+    var vv = (DATOS.vendedores_por_mes || {})[m.mes] || [];
+    vv.forEach(function(vid) { vendedores[vid] = true; });
+  });
+  var mau = 0, eventuales = 0, recurrentes = 0;
+  Object.keys(compradores).forEach(function(cid) {
+    mau++;
+    if (compradores[cid] === 1) eventuales++;
+    else recurrentes++;
+  });
+  return { mau: mau, eventuales: eventuales, recurrentes: recurrentes, prosumidores: Object.keys(vendedores).length };
+}
+
 // ── RENDER ───────────────────────────────────────────────────
 function renderTodo(meses) {
   var totalCantidad  = sumar(meses, 'cantidad');
@@ -559,46 +582,74 @@ function renderTodo(meses) {
 
   var conFiltro = !!hayFiltro();
   var totUsr    = DATOS.usuarios.total;
+  var periodo   = calcularPeriodo(meses);
 
+  // ── Usuarios
   var registrados, regSub, curiosos, curSub, zombies, zombSub;
+  var mauVal, mauSub, evVal, evSub, recVal, recSub;
+
   if (conFiltro) {
     registrados = totalNuevos;
     regSub      = 'se registraron en el periodo';
     curiosos    = sumar(meses, 'nuevos_curiosos');
-    curSub      = 'de los nuevos que nunca compraron';
+    curSub      = numFmt(curiosos) + ' de ' + numFmt(registrados) + ' registrados en el periodo';
     zombies     = sumar(meses, 'nuevos_zombies');
     zombSub     = 'ultima compra en el periodo, ahora inactivos';
+    // Período completo (ventana variable)
+    mauVal  = periodo.mau;
+    mauSub  = 'compradores unicos en el periodo';
+    evVal   = periodo.eventuales;
+    evSub   = numFmt(evVal) + ' de ' + numFmt(mauVal) + ' compradores del periodo';
+    recVal  = periodo.recurrentes;
+    recSub  = numFmt(recVal) + ' de ' + numFmt(mauVal) + ' compradores del periodo';
   } else {
+    var compradores = totUsr - DATOS.usuarios.curiosos;
     registrados = totUsr;
     regSub      = 'total historico acumulado';
     curiosos    = DATOS.usuarios.curiosos;
-    curSub      = pct(curiosos, totUsr) + '% del total registrado';
+    curSub      = numFmt(curiosos) + ' de ' + numFmt(totUsr) + ' registrados';
     zombies     = DATOS.usuarios.zombies;
-    zombSub     = pct(zombies, totUsr - DATOS.usuarios.curiosos) + '% de compradores activos';
+    zombSub     = numFmt(zombies) + ' de ' + numFmt(compradores) + ' compradores';
+    // Sin filtro: promedios mensuales
+    mauVal  = uamPromedio;
+    mauSub  = 'promedio mensual (sobre ' + DATOS.por_mes.length + ' meses)';
+    evVal   = eventualesPromedio;
+    evSub   = 'promedio mensual de ' + numFmt(mauVal) + ' compradores/mes';
+    recVal  = activosPromedio;
+    recSub  = 'promedio mensual de ' + numFmt(mauVal) + ' compradores/mes';
   }
 
   // ── Cards usuarios
   document.getElementById('cards-usuarios').innerHTML = cardsHtml([
     { label: 'Registrados',
       value: numFmt(registrados), sub: regSub, color: 'blue' },
-    { label: 'MAU <span class="info-tip" data-tip="Monthly Active Users: compradores unicos en el mes. MAU = Eventuales + Recurrentes.">&#9432;</span>',
-      value: numFmt(uamPromedio), sub: 'promedio mensual del periodo', color: 'teal' },
-    { label: 'Eventuales <span class="info-tip" data-tip="Compradores con exactamente 1 consumo en el mes.">&#9432;</span>',
-      value: numFmt(eventualesPromedio), sub: 'promedio mensual', color: 'indigo' },
-    { label: 'Recurrentes <span class="info-tip" data-tip="Compradores con mas de 1 consumo en el mes.">&#9432;</span>',
-      value: numFmt(activosPromedio), sub: 'promedio mensual', color: 'purple' },
-    { label: 'Curiosos <span class="info-tip" data-tip="Sin filtro: total nunca compraron. Con filtro: registrados en el periodo que nunca compraron.">&#9432;</span>',
+    { label: 'MAU <span class="info-tip" data-tip="Con filtro: compradores unicos en el periodo. Sin filtro: promedio de compradores por mes. MAU = Eventuales + Recurrentes.">&#9432;</span>',
+      value: numFmt(mauVal), sub: mauSub, color: 'teal' },
+    { label: 'Eventuales <span class="info-tip" data-tip="Con filtro: compraron exactamente 1 vez en todo el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
+      value: numFmt(evVal), sub: evSub, color: 'indigo' },
+    { label: 'Recurrentes <span class="info-tip" data-tip="Con filtro: compraron mas de 1 vez en el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
+      value: numFmt(recVal), sub: recSub, color: 'purple' },
+    { label: 'Curiosos <span class="info-tip" data-tip="Con filtro: registrados en el periodo que nunca compraron. Sin filtro: total historico.">&#9432;</span>',
       value: numFmt(curiosos), sub: curSub, color: 'amber' },
-    { label: 'Zombies <span class="info-tip" data-tip="Sin filtro: total sin compras en 6 meses. Con filtro: cuya ultima compra fue en el periodo y ahora estan inactivos.">&#9432;</span>',
+    { label: 'Zombies <span class="info-tip" data-tip="Con filtro: ultima compra en el periodo, ahora sin actividad 6+ meses. Sin filtro: total historico.">&#9432;</span>',
       value: numFmt(zombies), sub: zombSub, color: 'rose' }
   ]);
 
   // ── Cards prosumidores
+  var prosuVal, prosuSub;
+  if (conFiltro) {
+    prosuVal = periodo.prosumidores;
+    prosuSub = 'vendedores unicos en el periodo';
+  } else {
+    prosuVal = prosuPromedio;
+    prosuSub = 'promedio mensual (sobre ' + DATOS.por_mes.length + ' meses)';
+  }
   document.getElementById('cards-prosumidores').innerHTML = cardsHtml([
-    { label: 'Prosumidores <span class="info-tip" data-tip="Emprendedores unicos que vendieron en el periodo (promedio mensual).">&#9432;</span>',
-      value: numFmt(prosuPromedio), sub: 'promedio mensual del periodo', color: 'purple' },
-    { label: 'Emprendimientos <span class="info-tip" data-tip="Emprendimientos unicos activos (promedio mensual).">&#9432;</span>',
-      value: numFmt(empPromedio), sub: 'promedio mensual activos', color: 'teal' },
+    { label: 'Prosumidores <span class="info-tip" data-tip="Con filtro: vendedores unicos en el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
+      value: numFmt(prosuVal), sub: prosuSub, color: 'purple' },
+    { label: 'Emprendimientos <span class="info-tip" data-tip="Emprendimientos unicos activos en el periodo (promedio mensual sin filtro).">&#9432;</span>',
+      value: numFmt(conFiltro ? sumar(meses,'emprendimientos') : empPromedio),
+      sub: conFiltro ? 'activos en el periodo' : 'promedio mensual activos', color: 'teal' },
     { label: 'Nuevos Emprendimientos',
       value: numFmt(totalNuevosEmp), sub: 'primera aparicion en el periodo', color: 'green' }
   ]);
