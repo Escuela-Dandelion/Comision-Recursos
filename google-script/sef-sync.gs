@@ -13,7 +13,7 @@ const CFG = {
 const HEADERS_FEES = [
   'fecha', 'wc_orden_id', 'mp_payment_id', 'monto', 'fee_meli'
 ];
-
+ 
 const HEADERS_TRX = [
   'fecha_operacion', 'wc_orden_id', 'orden_original', 'comprador_id', 'vendedor_id',
   'emprendimiento', 'comunidad', 'monto_total', 'donacion_comprador',
