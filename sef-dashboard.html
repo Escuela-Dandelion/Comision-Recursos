@@ -62,7 +62,18 @@
       border:1px solid #e0e0e0; border-radius:8px; font-size:13px;
       background:#fff; cursor:pointer; outline:none; color:#333;
     }
-    .filter-select:focus, .filter-date:focus { border-color:#0f4c75; }
+    .filter-select:focus { border-color:#0f4c75; }
+    .mes-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:4px;
+      padding:0 16px; margin-bottom:8px;
+    }
+    .mes-btn {
+      padding:5px 2px; border:1px solid #e0e0e0; border-radius:6px;
+      font-size:11px; color:#888; background:#fafafa; cursor:pointer; text-align:center;
+      transition:background .15s, color .15s;
+    }
+    .mes-btn:hover  { background:#e8f0fb; color:#0f4c75; border-color:#bcd0f0; }
+    .mes-btn.activo { background:#0f4c75; color:#fff; border-color:#0f4c75; }
     .filter-clear {
       display:block; width:calc(100% - 32px); margin:4px 16px 8px;
       padding:6px 10px; border:1px solid #e0e0e0; border-radius:8px;
@@ -138,8 +149,9 @@
       }
       .sidebar-label, .sidebar-divider, .sidebar-info { display:none; }
       .filter-label   { white-space:nowrap; padding:0 4px 0 8px; font-size:11px; margin-top:0; }
-      .filter-select,
-      .filter-date    { width:auto; min-width:100px; margin:0 4px; font-size:12px; padding:5px 8px; }
+      .filter-select  { width:auto; min-width:100px; margin:0 4px; font-size:12px; padding:5px 8px; }
+      .mes-grid       { display:flex; flex-wrap:nowrap; padding:0 4px; gap:3px; }
+      .mes-btn        { padding:4px 6px; white-space:nowrap; font-size:11px; }
       .filter-clear   { width:auto; margin:0 4px; padding:5px 8px; white-space:nowrap; }
       .main           { padding:12px; }
       .cards          { grid-template-columns:1fr 1fr; gap:8px; }
@@ -192,21 +204,21 @@
         <option value="">Todos</option>
       </select>
 
-      <div class="filter-label">Mes</div>
-      <select class="filter-select" id="filtro-mes" onchange="aplicarFiltros()">
-        <option value="">Todos</option>
-        <option value="01">Enero</option><option value="02">Febrero</option>
-        <option value="03">Marzo</option><option value="04">Abril</option>
-        <option value="05">Mayo</option><option value="06">Junio</option>
-        <option value="07">Julio</option><option value="08">Agosto</option>
-        <option value="09">Septiembre</option><option value="10">Octubre</option>
-        <option value="11">Noviembre</option><option value="12">Diciembre</option>
-      </select>
-
-      <div class="filter-label">Desde</div>
-      <input type="month" class="filter-date" id="filtro-desde" onchange="aplicarFiltros()">
-      <div class="filter-label">Hasta</div>
-      <input type="month" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
+      <div class="filter-label">Meses</div>
+      <div class="mes-grid" id="mes-grid">
+        <button class="mes-btn" data-mes="01" onclick="toggleMes('01')">Ene</button>
+        <button class="mes-btn" data-mes="02" onclick="toggleMes('02')">Feb</button>
+        <button class="mes-btn" data-mes="03" onclick="toggleMes('03')">Mar</button>
+        <button class="mes-btn" data-mes="04" onclick="toggleMes('04')">Abr</button>
+        <button class="mes-btn" data-mes="05" onclick="toggleMes('05')">May</button>
+        <button class="mes-btn" data-mes="06" onclick="toggleMes('06')">Jun</button>
+        <button class="mes-btn" data-mes="07" onclick="toggleMes('07')">Jul</button>
+        <button class="mes-btn" data-mes="08" onclick="toggleMes('08')">Ago</button>
+        <button class="mes-btn" data-mes="09" onclick="toggleMes('09')">Sep</button>
+        <button class="mes-btn" data-mes="10" onclick="toggleMes('10')">Oct</button>
+        <button class="mes-btn" data-mes="11" onclick="toggleMes('11')">Nov</button>
+        <button class="mes-btn" data-mes="12" onclick="toggleMes('12')">Dic</button>
+      </div>
       <button class="filter-clear" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
 
       <div class="sidebar-divider"></div>
@@ -377,11 +389,12 @@ function fetchDatos(email) {
 }
 
 // ── FILTROS ─────────────────────────────────────────────────
+var mesesSeleccionados = new Set();
+
 function poblarFiltros(porMes) {
   var anios = {};
   porMes.forEach(function(m) { anios[m.mes.substring(0,4)] = true; });
   var sel = document.getElementById('filtro-anio');
-  // limpiar opciones previas excepto "Todos"
   while (sel.options.length > 1) sel.remove(1);
   Object.keys(anios).sort().reverse().forEach(function(a) {
     var opt = document.createElement('option');
@@ -393,32 +406,35 @@ function poblarFiltros(porMes) {
   else if (Object.keys(anios).length > 0) sel.value = Object.keys(anios).sort().reverse()[0];
 }
 
+function toggleMes(mes) {
+  if (mesesSeleccionados.has(mes)) {
+    mesesSeleccionados.delete(mes);
+  } else {
+    mesesSeleccionados.add(mes);
+  }
+  document.querySelector('[data-mes="' + mes + '"]')
+    .classList.toggle('activo', mesesSeleccionados.has(mes));
+  aplicarFiltros();
+}
+
 function limpiarFiltros() {
-  ['filtro-anio','filtro-mes','filtro-desde','filtro-hasta'].forEach(function(id) {
-    document.getElementById(id).value = '';
-  });
+  document.getElementById('filtro-anio').value = '';
+  mesesSeleccionados.clear();
+  document.querySelectorAll('.mes-btn').forEach(function(b) { b.classList.remove('activo'); });
   aplicarFiltros();
 }
 
 function filtrarMeses(porMes) {
-  var anio  = document.getElementById('filtro-anio').value;
-  var mes   = document.getElementById('filtro-mes').value;
-  var desde = document.getElementById('filtro-desde').value;
-  var hasta = document.getElementById('filtro-hasta').value;
+  var anio = document.getElementById('filtro-anio').value;
   return porMes.filter(function(m) {
-    if (anio  && !m.mes.startsWith(anio))     return false;
-    if (mes   && m.mes.substring(5) !== mes)  return false;
-    if (desde && m.mes < desde)               return false;
-    if (hasta && m.mes > hasta)               return false;
+    if (anio && !m.mes.startsWith(anio)) return false;
+    if (mesesSeleccionados.size > 0 && !mesesSeleccionados.has(m.mes.substring(5))) return false;
     return true;
   });
 }
 
 function hayFiltro() {
-  return document.getElementById('filtro-anio').value  ||
-         document.getElementById('filtro-mes').value   ||
-         document.getElementById('filtro-desde').value ||
-         document.getElementById('filtro-hasta').value;
+  return document.getElementById('filtro-anio').value || mesesSeleccionados.size > 0;
 }
 
 function aplicarFiltros() {
