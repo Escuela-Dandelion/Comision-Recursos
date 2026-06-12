@@ -3,10 +3,11 @@
 // ============================================================
 
 const CFG = {
-  WC_URL:   'https://www.proyectosef.com/wp-json/wc/v3',
-  CK:       'ck_f3af37eaf1c6331524c1a500872f1dfd22573940',
-  CS:       'cs_05d7681e32d757c231ee28e3860177c3b4e7626e',
-  SHEET_ID: '1grum3nxlMLn4y4Br6qrvvRNUs3bVLtwNJF_EI-RBgLQ',
+  WC_URL:    'https://www.proyectosef.com/wp-json/wc/v3',
+  CK:        'ck_f3af37eaf1c6331524c1a500872f1dfd22573940',
+  CS:        'cs_05d7681e32d757c231ee28e3860177c3b4e7626e',
+  SHEET_ID:  '1grum3nxlMLn4y4Br6qrvvRNUs3bVLtwNJF_EI-RBgLQ',
+  FECHA_MIN: '2024-01-01T00:00:00', // ignorar transacciones anteriores a 2024
 };
 
 const HEADERS_FEES = [
@@ -62,7 +63,7 @@ function sincronizarTransacciones() {
 
   while (!debeParar) {
     let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
-    if (lastSync) url += '&after=' + lastSync;
+    url += '&after=' + (lastSync || CFG.FECHA_MIN);
 
     const resp = UrlFetchApp.fetch(url, wcHeaders());
     if (resp.getResponseCode() !== 200) {
@@ -452,7 +453,7 @@ function sincronizarFeesMeli() {
 
   while (!debeParar) {
     let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
-    if (lastSync) url += '&after=' + lastSync;
+    url += '&after=' + (lastSync || CFG.FECHA_MIN);
 
     const resp = UrlFetchApp.fetch(url, wcHeaders());
     if (resp.getResponseCode() !== 200) break;
