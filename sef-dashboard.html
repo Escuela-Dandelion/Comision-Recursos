@@ -663,9 +663,9 @@ function renderTodo(meses) {
   document.getElementById('cards-prosumidores').innerHTML = cardsHtml([
     { label: 'Prosumidores <span class="info-tip" data-tip="Con filtro: vendedores unicos en el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
       value: numFmt(prosuVal), sub: prosuSub, color: 'purple' },
-    { label: 'Emprendimientos <span class="info-tip" data-tip="Con filtro: emprendimientos unicos activos en el periodo. Sin filtro: promedio mensual.">&#9432;</span>',
+    { label: 'Emprendimientos <span class="info-tip" data-tip="Con filtro: emprendimientos con al menos una venta en el periodo (equivale a prosumidores activos). Sin filtro: promedio mensual de emprendimientos activos.">&#9432;</span>',
       value: numFmt(conFiltro ? periodo.prosumidores : empPromedio),
-      sub: conFiltro ? 'unicos activos en el periodo' : 'promedio mensual activos', color: 'teal' },
+      sub: conFiltro ? 'con ventas en el periodo' : 'promedio mensual activos', color: 'teal' },
     { label: 'Nuevos Emprendimientos',
       value: numFmt(totalNuevosEmp), sub: 'primera aparicion en el periodo', color: 'green' }
   ]);
