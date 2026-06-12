@@ -589,6 +589,8 @@ function renderTodo(meses) {
   var totalDniDest   = sumar(meses, 'dni_destino');
   var totalFeeMeli   = sumar(meses, 'fee_meli');
   var totalNeto      = totalComunidad - totalFeeMeli;
+  var totalInformada = sumar(meses, 'cantidad_informada');
+  var totalPendiente = totalInformada > 0 ? totalInformada - totalCantidad : 0;
 
   var uamPromedio       = meses.length ? Math.round(sumar(meses,'uam')         / meses.length) : 0;
   var eventualesPromedio= meses.length ? Math.round(sumar(meses,'eventuales')  / meses.length) : 0;
@@ -672,8 +674,12 @@ function renderTodo(meses) {
 
   // ── Cards economia
   document.getElementById('cards-economia').innerHTML = cardsHtml([
-    { label: 'Consumos',
-      value: numFmt(totalCantidad), sub: 'transacciones SEF', color: 'blue' },
+    { label: 'Consumos confirmados <span class="info-tip" data-tip="Transacciones confirmadas por el prosumidor (paso 2 del flujo SEF). Son las que generan donacion real.">&#9432;</span>',
+      value: numFmt(totalCantidad), sub: 'transacciones SEF confirmadas', color: 'blue' },
+    { label: 'Consumos informados <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1). Incluye los ya confirmados mas los pendientes de confirmacion por el prosumidor.">&#9432;</span>',
+      value: totalInformada ? numFmt(totalInformada) : '—',
+      sub: totalInformada ? numFmt(totalPendiente) + ' pendientes de confirmacion' : 'sin datos (ejecutar sincronizarDevengadas)',
+      color: totalPendiente > 0 ? 'amber' : 'teal' },
     { label: 'Monto Consumos',
       value: '$' + moneyFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
     { label: 'Monto Donacion',

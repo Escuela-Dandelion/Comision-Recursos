@@ -13,6 +13,12 @@ const CFG = {
 const HEADERS_FEES = [
   'fecha', 'wc_orden_id', 'mp_payment_id', 'monto', 'fee_meli'
 ];
+
+const HEADERS_DEV = [
+  'fecha_operacion', 'wc_orden_id', 'quien_informo', 'comprador_id', 'vendedor_id',
+  'emprendimiento', 'comunidad', 'monto_total', 'donacion_comprador',
+  'donacion_vendedor', 'retencion_sef', 'destino_particular'
+];
  
 const HEADERS_TRX = [
   'fecha_operacion', 'wc_orden_id', 'orden_original', 'comprador_id', 'vendedor_id',
@@ -36,6 +42,7 @@ function wcHeaders() {
 
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
 function sincronizarTodo() {
+  sincronizarDevengadas();
   sincronizarTransacciones();
   sincronizarFeesMeli();
   sincronizarUsuarios();
@@ -46,6 +53,82 @@ function sincronizarTodo() {
 function configurarTokenMP(token) {
   PropertiesService.getScriptProperties().setProperty('MP_ACCESS_TOKEN', token);
   Logger.log('Token MP guardado.');
+}
+
+// ── DEVENGADAS (step 1: consumidor informa) ────────────────
+// Captura órdenes con quien_informo en metadata pero sin orden_original.
+// Representa todos los consumos informados, confirmados o no.
+function sincronizarDevengadas() {
+  const ss    = SpreadsheetApp.openById(CFG.SHEET_ID);
+  const sheet = obtenerHoja(ss, 'Devengadas', HEADERS_DEV);
+
+  const idsExistentes = obtenerSet(sheet, 2); // col 2 = wc_orden_id
+  const props    = PropertiesService.getScriptProperties();
+  const lastSync = props.getProperty('LAST_SYNC_DEV');
+
+  let page = 1, nuevas = 0, debeParar = false;
+
+  while (!debeParar) {
+    let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
+    url += '&after=' + (lastSync || CFG.FECHA_MIN);
+
+    const resp = UrlFetchApp.fetch(url, wcHeaders());
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('Devengadas error: ' + resp.getResponseCode());
+      break;
+    }
+
+    const orders = JSON.parse(resp.getContentText());
+    if (orders.length === 0) break;
+
+    const rows = [];
+    for (var i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const meta  = metaMap(order.meta_data);
+
+      // Step 1: tiene quien_informo pero NO tiene orden_original
+      if (!meta.quien_informo || meta.orden_original) continue;
+
+      const id = String(order.id);
+      if (idsExistentes.has(id)) { debeParar = true; continue; }
+
+      var fechaOp = meta.fecha_operacion || (order.date_created ? order.date_created.substring(0, 10) : '');
+      rows.push([
+        fechaOp,
+        order.id,
+        meta.quien_informo || '',
+        meta.comprador     || '',
+        meta.vendedor      || '',
+        meta.emprendimiento || '',
+        meta.comunidad_beneficiaria || meta.comunidad_comprador || '',
+        parseFloat(meta.monto_total                || 0),
+        parseFloat(meta.monto_donacion_comprador   || 0),
+        parseFloat(meta.monto_donacion_vendedor    || 0),
+        parseFloat(meta.monto_retencion_sef        || 0),
+        (meta.dni_destino_comprador && meta.dni_destino_comprador !== '0') ? meta.dni_destino_comprador : ''
+      ]);
+      idsExistentes.add(id);
+      nuevas++;
+    }
+
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADERS_DEV.length).setValues(rows);
+    }
+
+    const totalPages = parseInt(resp.getHeaders()['x-wp-totalpages'] || '1');
+    Logger.log('Devengadas página ' + page + '/' + totalPages + ' — ' + nuevas + ' nuevas');
+    if (page >= totalPages) break;
+    page++;
+    Utilities.sleep(2000);
+  }
+
+  props.setProperty('LAST_SYNC_DEV', new Date().toISOString());
+  Logger.log('Devengadas: ' + nuevas + ' nuevas registradas.');
+}
+
+function resetearDevengadas() {
+  PropertiesService.getScriptProperties().deleteProperty('LAST_SYNC_DEV');
+  Logger.log('Sync devengadas reseteado.');
 }
 
 // ── TRANSACCIONES ──────────────────────────────────────────
@@ -281,6 +364,7 @@ function agregarDatos() {
   var sheetTrx  = ss.getSheetByName('Transacciones');
   var sheetUsr  = ss.getSheetByName('Usuarios');
   var sheetFees = ss.getSheetByName('FeesMeli');
+  var sheetDev  = ss.getSheetByName('Devengadas');
 
   // fees por mes: mes → total fee
   var feesByMes = {};
@@ -290,6 +374,17 @@ function agregarDatos() {
       var fMes = toMes(feesData[fi][0]);
       if (!fMes) continue;
       feesByMes[fMes] = (feesByMes[fMes] || 0) + (parseFloat(feesData[fi][4]) || 0);
+    }
+  }
+
+  // devengadas por mes: mes → cantidad informada (paso 1, con o sin confirmación)
+  var devByMes = {};
+  if (sheetDev && sheetDev.getLastRow() > 1) {
+    var devData = sheetDev.getRange(2, 1, sheetDev.getLastRow() - 1, HEADERS_DEV.length).getValues();
+    for (var di = 0; di < devData.length; di++) {
+      var dMes = toMes(devData[di][0]);
+      if (!dMes) continue;
+      devByMes[dMes] = (devByMes[dMes] || 0) + 1;
     }
   }
 
@@ -407,7 +502,8 @@ function agregarDatos() {
       a_destinos:             Math.round(t.a_destinos),
       donacion_total:         Math.round(t.donacion_comprador + t.donacion_vendedor),
       dni_destino:            Object.keys(dni).length,
-      fee_meli:               Math.round(feesByMes[mes] || 0)
+      fee_meli:               Math.round(feesByMes[mes] || 0),
+      cantidad_informada:     devByMes[mes] || 0
     };
   });
 
