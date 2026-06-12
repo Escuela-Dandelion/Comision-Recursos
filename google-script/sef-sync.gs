@@ -49,7 +49,7 @@ function sincronizarTransacciones() {
   let debeParar = false;
 
   while (!debeParar) {
-    let url = CFG.WC_URL + '/orders?status=completed&per_page=100&page=' + page + '&orderby=id&order=desc';
+    let url = CFG.WC_URL + '/orders?status=completed&per_page=50&page=' + page + '&orderby=id&order=desc';
     if (lastSync) url += '&after=' + lastSync;
 
     const resp = UrlFetchApp.fetch(url, wcHeaders());
@@ -75,8 +75,9 @@ function sincronizarTransacciones() {
         continue;
       }
 
+      var fechaOp = meta.fecha_operacion || (order.date_created ? order.date_created.substring(0, 10) : '');
       rows.push([
-        meta.fecha_operacion || '',
+        fechaOp,
         order.id,
         meta.orden_original   || '',
         meta.comprador        || '',
@@ -104,6 +105,7 @@ function sincronizarTransacciones() {
     Logger.log('Página ' + page + '/' + totalPages + ' — ' + nuevas + ' nuevas hasta ahora');
     if (page >= totalPages) break;
     page++;
+    Utilities.sleep(2000); // 2 segundos entre páginas para no saturar el servidor
   }
 
   props.setProperty('LAST_SYNC_TRX', new Date().toISOString());
@@ -142,7 +144,7 @@ function sincronizarUsuarios() {
   const rows = [];
 
   while (true) {
-    const resp = UrlFetchApp.fetch(CFG.WC_URL + '/customers?per_page=100&page=' + page, wcHeaders());
+    const resp = UrlFetchApp.fetch(CFG.WC_URL + '/customers?per_page=50&page=' + page, wcHeaders());
     if (resp.getResponseCode() !== 200) break;
 
     const customers = JSON.parse(resp.getContentText());
@@ -176,6 +178,7 @@ function sincronizarUsuarios() {
     const totalPages = parseInt(resp.getHeaders()['x-wp-totalpages'] || '1');
     if (page >= totalPages) break;
     page++;
+    Utilities.sleep(2000); // 2 segundos entre páginas para no saturar el servidor
   }
 
   if (rows.length > 0) {
