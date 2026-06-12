@@ -442,9 +442,9 @@ function initCharts() {
     type:'line',
     data:{ labels:[], datasets:[
       { label:'Nuevos registrados',    data:[], borderColor:'#059669', backgroundColor:'rgba(5,150,105,.1)', tension:.3, fill:true, pointRadius:2 },
-      { label:'UAM (total activos)',   data:[], borderColor:'#0f766e', tension:.3, pointRadius:2, borderWidth:2 },
-      { label:'Eventuales (1 consumo)',data:[], borderColor:'#6366f1', tension:.3, pointRadius:2, borderDash:[4,2] },
-      { label:'Activos (>1 consumo)', data:[], borderColor:'#9333ea', tension:.3, pointRadius:2, borderWidth:2 }
+      { label:'MAU (total compradores)',  data:[], borderColor:'#0f766e', tension:.3, pointRadius:2, borderWidth:2 },
+      { label:'Eventuales (1 consumo)',  data:[], borderColor:'#6366f1', tension:.3, pointRadius:2, borderDash:[4,2] },
+      { label:'Recurrentes (>1 consumo)',data:[], borderColor:'#9333ea', tension:.3, pointRadius:2, borderWidth:2 }
     ]},
     options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
   });
@@ -581,11 +581,11 @@ function renderTodo(meses) {
   document.getElementById('cards-usuarios').innerHTML = cardsHtml([
     { label: 'Registrados',
       value: numFmt(registrados), sub: regSub, color: 'blue' },
-    { label: 'UAM <span class="info-tip" data-tip="Usuarios Activos Mensuales: promedio de compradores unicos por mes.">&#9432;</span>',
+    { label: 'MAU <span class="info-tip" data-tip="Monthly Active Users: compradores unicos en el mes. MAU = Eventuales + Recurrentes.">&#9432;</span>',
       value: numFmt(uamPromedio), sub: 'promedio mensual del periodo', color: 'teal' },
     { label: 'Eventuales <span class="info-tip" data-tip="Compradores con exactamente 1 consumo en el mes.">&#9432;</span>',
       value: numFmt(eventualesPromedio), sub: 'promedio mensual', color: 'indigo' },
-    { label: 'Activos <span class="info-tip" data-tip="Compradores con mas de 1 consumo en el mes.">&#9432;</span>',
+    { label: 'Recurrentes <span class="info-tip" data-tip="Compradores con mas de 1 consumo en el mes.">&#9432;</span>',
       value: numFmt(activosPromedio), sub: 'promedio mensual', color: 'purple' },
     { label: 'Curiosos <span class="info-tip" data-tip="Sin filtro: total nunca compraron. Con filtro: registrados en el periodo que nunca compraron.">&#9432;</span>',
       value: numFmt(curiosos), sub: curSub, color: 'amber' },
