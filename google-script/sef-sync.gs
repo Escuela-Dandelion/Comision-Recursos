@@ -325,11 +325,12 @@ function agregarDatos() {
     t.retencion_sef      += parseFloat(r[10]) || 0;
 
     var destino = String(r[12]);
+    var donacionTotal = (parseFloat(r[8]) || 0) + (parseFloat(r[9]) || 0);
     if (destino && destino !== '') {
-      t.a_destinos += parseFloat(r[8]) || 0;
+      t.a_destinos += donacionTotal;
       dniByMes[mes][destino] = true;
     } else {
-      t.a_comunidad += parseFloat(r[8]) || 0;
+      t.a_comunidad += donacionTotal;
     }
 
     var cid = String(r[3]);
