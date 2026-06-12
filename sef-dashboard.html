@@ -609,8 +609,8 @@ function renderTodo(meses) {
     regSub      = 'se registraron en el periodo';
     curiosos    = sumar(meses, 'nuevos_curiosos');
     curSub      = numFmt(curiosos) + ' de ' + numFmt(registrados) + ' registrados en el periodo';
-    zombies     = sumar(meses, 'nuevos_zombies');
-    zombSub     = 'ultima compra en el periodo, ahora inactivos';
+    zombies     = DATOS.usuarios.zombies;
+    zombSub     = numFmt(zombies) + ' de ' + numFmt(totUsr - DATOS.usuarios.curiosos) + ' compradores (hoy)';
     // Período completo (ventana variable)
     mauVal  = periodo.mau;
     mauSub  = 'compradores unicos en el periodo';
