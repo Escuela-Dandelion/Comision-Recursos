@@ -389,9 +389,20 @@ function agregarDatos() {
     if (oid) confirmados[oid] = true;
   }
 
+  var usrRowsEarly = sheetUsr && sheetUsr.getLastRow() > 1
+    ? sheetUsr.getRange(2, 1, sheetUsr.getLastRow() - 1, HEADERS_USR.length).getValues()
+    : [];
+  var vidToNombre = {};
+  for (var ui = 0; ui < usrRowsEarly.length; ui++) {
+    var uid = String(usrRowsEarly[ui][0]);
+    if (uid) vidToNombre[uid] = String(usrRowsEarly[ui][2]).trim() || uid;
+  }
+
   // devengadas por mes + pendientes por emprendimiento
   var devByMes = {};
   var pendientesPorEmp = {};
+  var totalInformados = 0;
+  var empTotales = {}; // total informados por emprendimiento (todos, confirmados o no)
   if (sheetDev && sheetDev.getLastRow() > 1) {
     var devData = sheetDev.getRange(2, 1, sheetDev.getLastRow() - 1, HEADERS_DEV.length).getValues();
     for (var di = 0; di < devData.length; di++) {
@@ -399,23 +410,26 @@ function agregarDatos() {
       var dMes  = toMes(dRow[0]);
       if (dMes) devByMes[dMes] = (devByMes[dMes] || 0) + 1;
 
+      var empRaw = String(dRow[5]).trim();
+      var emp    = empRaw || vidToNombre[String(dRow[4])] || 'Sin nombre';
+      totalInformados++;
+      empTotales[emp] = (empTotales[emp] || 0) + 1;
+
       var dId = String(dRow[1]);
       if (!confirmados[dId]) {
-        var emp   = String(dRow[5]) || 'Sin emprendimiento';
-        var monto = parseFloat(dRow[7]) || 0;
+        var monto  = parseFloat(dRow[7]) || 0;
         var dFecha = dRow[0] ? (Object.prototype.toString.call(dRow[0]) === '[object Date]'
           ? dRow[0].toISOString().substring(0, 10)
           : String(dRow[0]).substring(0, 10)) : '';
         if (!pendientesPorEmp[emp]) pendientesPorEmp[emp] = { count: 0, monto: 0, oldest: dFecha };
         pendientesPorEmp[emp].count++;
         pendientesPorEmp[emp].monto += monto;
-        if (dFecha && dFecha < pendientesPorEmp[emp].oldest) pendientesPorEmp[emp].oldest = dFecha;
+        if (dFecha && (!pendientesPorEmp[emp].oldest || dFecha < pendientesPorEmp[emp].oldest))
+          pendientesPorEmp[emp].oldest = dFecha;
       }
     }
   }
-  var usrRows = sheetUsr && sheetUsr.getLastRow() > 1
-    ? sheetUsr.getRange(2, 1, sheetUsr.getLastRow() - 1, HEADERS_USR.length).getValues()
-    : [];
+  var usrRows = usrRowsEarly;
 
   var trxByMes          = {};
   var compraCountByMes  = {}; // mes → { cid → count }
@@ -543,6 +557,7 @@ function agregarDatos() {
     return {
       emprendimiento: emp,
       count:          pendientesPorEmp[emp].count,
+      total:          empTotales[emp] || 0,
       monto:          Math.round(pendientesPorEmp[emp].monto),
       oldest:         pendientesPorEmp[emp].oldest
     };
@@ -555,7 +570,8 @@ function agregarDatos() {
     por_mes:                porMes,
     compradores_por_mes:    compradoresPorMes,
     vendedores_por_mes:     vendedoresPorMes,
-    pendientes_por_vendedor: pendientesArr
+    pendientes_por_vendedor: pendientesArr,
+    total_informados:        totalInformados
   };
 }
 
