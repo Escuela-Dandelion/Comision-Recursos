@@ -1037,8 +1037,8 @@ function sumar(arr, key) { return arr.reduce(function(a,m){ return a+(m[key]||0)
 function numFmt(n)    { return Number(n).toLocaleString('es-AR'); }
 function moneyFmt(n)  { return Math.round(n).toLocaleString('es-AR'); }
 function kFmt(v) {
-  if (v >= 1000000) return '$' + (v/1000000).toLocaleString('es-AR', {maximumFractionDigits:1}) + 'M';
-  if (v >= 1000)    return '$' + Math.round(v/1000) + 'k';
+  if (v >= 1000000) return '$' + (v/1000000).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) + 'M';
+  if (v >= 1000)    return '$' + (v/1000).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) + 'k';
   return '$' + Math.round(v);
 }
 function pct(p, t)    { return t ? Math.round(p/t*100) : 0; }
