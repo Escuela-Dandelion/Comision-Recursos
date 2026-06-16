@@ -716,7 +716,12 @@ function renderEvolucion(rows) {
           borderWidth: 1,
           borderRadius: 4,
           pointStyle: 'circle',
-          yAxisID: 'y'
+          yAxisID: 'y',
+          datalabels: {
+            anchor: 'end', align: 'top', color: '#6ea8d0',
+            font: { size: 9, weight: 'bold' },
+            formatter: function(v){ return v > 0 ? v : ''; }
+          }
         },
         {
           type: 'line',
@@ -730,7 +735,12 @@ function renderEvolucion(rows) {
           pointStyle: 'circle',
           tension: 0.3,
           fill: false,
-          yAxisID: 'y1'
+          yAxisID: 'y1',
+          datalabels: {
+            anchor: 'end', align: 'top', color: '#1a1a6e',
+            font: { size: 9, weight: 'bold' },
+            formatter: function(v){ return v > 0 ? '$ ' + v.toLocaleString('es-AR') : ''; }
+          }
         },
         {
           type: 'line',
@@ -745,7 +755,12 @@ function renderEvolucion(rows) {
           borderDash: [5,4],
           tension: 0.3,
           fill: false,
-          yAxisID: 'y1'
+          yAxisID: 'y1',
+          datalabels: {
+            anchor: 'end', align: 'bottom', color: '#2e7d32',
+            font: { size: 9, weight: 'bold' },
+            formatter: function(v){ return v > 0 ? '$ ' + v.toLocaleString('es-AR') : ''; }
+          }
         }
       ]
     },
@@ -766,7 +781,7 @@ function renderEvolucion(rows) {
             color: '#444'
           }
         },
-        datalabels: { display: false },
+        datalabels: {},
         tooltip: {
           callbacks: {
             label: function(ctx){
@@ -795,7 +810,8 @@ function renderEvolucion(rows) {
         },
         x: { ticks: { font: { size: 11 } }, grid: { display: false } }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
