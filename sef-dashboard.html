@@ -104,6 +104,15 @@
     .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
     .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
     .card-sub   { font-size:10px; color:#aaa; margin-top:4px; }
+    .card.clickable { cursor:pointer; transition:box-shadow .15s, border-left-width .15s; }
+    .card.clickable:hover { box-shadow:0 3px 10px rgba(0,0,0,.1); border-left-width:4px; }
+    .card.clickable.open  { border-left-width:4px; }
+    #card-pendientes {
+      overflow:hidden;
+      transition:max-height .25s ease, opacity .2s ease;
+      max-height:0; opacity:0;
+    }
+    #card-pendientes.visible { max-height:800px; opacity:1; }
     .info-tip   { cursor:help; font-size:11px; color:#aaa; font-weight:400; position:relative; }
     .info-tip:hover::after {
       content:attr(data-tip); position:absolute; left:0; top:16px; background:#333; color:#fff;
@@ -328,9 +337,11 @@
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">transacciones SEF</span></div>
         <div class="cards" id="cards-economia"></div>
-        <div class="section-card" id="card-pendientes" style="display:none">
-          <div class="chart-title">Por confirmar por vendedor <span style="font-size:11px;font-weight:400;color:#aaa">consumos informados sin confirmacion del prosumidor</span></div>
-          <div id="tabla-pendientes"></div>
+        <div class="section-card" id="card-pendientes" style="padding-top:0;padding-bottom:0;margin-top:0">
+          <div style="padding:14px 16px">
+            <div class="chart-title" id="pend-title"></div>
+            <div id="tabla-pendientes"></div>
+          </div>
         </div>
         <div class="section-card">
           <div class="chart-title">Evolucion mensual — Distribucion de montos y consumos</div>
@@ -974,8 +985,14 @@ function renderTodo(meses) {
       value: numFmt(totalCantidad), sub: 'transacciones SEF confirmadas', color: 'blue' },
     { label: 'Consumos informados <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1). Incluye los ya confirmados mas los pendientes de confirmacion por el prosumidor.">&#9432;</span>',
       value: totalInformada ? numFmt(totalInformada) : '—',
-      sub: totalInformada ? numFmt(totalPendiente) + ' pendientes de confirmacion' : 'sin datos (ejecutar sincronizarDevengadas)',
-      color: totalPendiente > 0 ? 'amber' : 'teal' },
+      sub: totalInformada
+        ? (totalPendiente > 0
+            ? numFmt(totalPendiente) + ' pendientes &nbsp;<span style="font-size:9px;opacity:.6">▼ ver detalle</span>'
+            : 'todos confirmados')
+        : 'sin datos (ejecutar sincronizarDevengadas)',
+      color: totalPendiente > 0 ? 'amber' : 'teal',
+      id: 'kpi-informados',
+      onclick: totalPendiente > 0 ? 'togglePendientes()' : '' },
     { label: 'Monto Consumos',
       value: '$' + moneyFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
     { label: 'Monto Donacion',
@@ -1030,11 +1047,9 @@ function mesLabel(mes) {
   return nn[parseInt(p[1])] + ' ' + p[0].slice(2);
 }
 function renderPendientes() {
-  var pend     = (DATOS && DATOS.pendientes_por_vendedor) || [];
-  var card     = document.getElementById('card-pendientes');
-  var tbl      = document.getElementById('tabla-pendientes');
-  if (!pend.length) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
+  var pend = (DATOS && DATOS.pendientes_por_vendedor) || [];
+  var tbl  = document.getElementById('tabla-pendientes');
+  if (!pend.length) return;
 
   var totalPend = pend.reduce(function(s, p) { return s + p.count; }, 0);
   var totalInf  = DATOS.total_informados || 0;
@@ -1043,7 +1058,7 @@ function renderPendientes() {
   var badge = '<span style="background:#fff1f2;color:#e11d48;font-weight:700;font-size:13px;' +
     'padding:2px 10px;border-radius:12px;margin-left:8px">' + totalPend + ' pendientes</span>' +
     '<span style="font-size:11px;color:#aaa;margin-left:8px">' + pctGlobal + '% del total informado</span>';
-  document.querySelector('#card-pendientes .chart-title').innerHTML =
+  document.getElementById('pend-title').innerHTML =
     'Por confirmar por vendedor ' +
     '<span style="font-size:11px;font-weight:400;color:#aaa">consumos informados sin confirmacion del prosumidor</span>' +
     badge;
@@ -1070,12 +1085,22 @@ function renderPendientes() {
 
 function cardsHtml(cards) {
   return cards.map(function(c){
-    return '<div class="card '+(c.color||'')+'">'+
-      '<div class="card-label">'+c.label+'</div>'+
-      '<div class="card-value">'+c.value+'</div>'+
-      '<div class="card-sub">'+(c.sub||'')+'</div>'+
+    var cls   = 'card ' + (c.color||'') + (c.onclick ? ' clickable' : '');
+    var attrs = (c.id      ? ' id="'     + c.id      + '"' : '') +
+                (c.onclick ? ' onclick="' + c.onclick + '"' : '');
+    return '<div class="' + cls + '"' + attrs + '>' +
+      '<div class="card-label">' + c.label        + '</div>' +
+      '<div class="card-value">' + c.value        + '</div>' +
+      '<div class="card-sub">'   + (c.sub || '')  + '</div>' +
       '</div>';
   }).join('');
+}
+
+function togglePendientes() {
+  var card = document.getElementById('card-pendientes');
+  var kpi  = document.getElementById('kpi-informados');
+  var open = card.classList.toggle('visible');
+  if (kpi) kpi.classList.toggle('open', open);
 }
 </script>
 </body>
