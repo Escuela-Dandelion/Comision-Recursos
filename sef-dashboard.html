@@ -464,19 +464,28 @@ function initCharts() {
     options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
   });
 
+  var barLabels = {
+    color:'#fff', font:{ size:9, weight:'bold' }, anchor:'center', align:'center',
+    display:function(ctx){ return ctx.dataset.data[ctx.dataIndex] > 5000; },
+    formatter:function(v){ return '$'+moneyFmt(v); }
+  };
   CH.ops = new Chart(document.getElementById('chart-ops').getContext('2d'), {
     type:'bar',
     data:{ labels:[], datasets:[
-      { label:'A comunidad',       data:[], backgroundColor:'#6366f1', stack:'dona', yAxisID:'yM', order:2 },
-      { label:'A destinos part.',  data:[], backgroundColor:'#a5b4fc', stack:'dona', yAxisID:'yM', order:2 },
-      { label:'Sostenimiento SEF', data:[], backgroundColor:'#fbbf24', stack:'dona', yAxisID:'yM', order:2 },
+      { label:'A comunidad',       data:[], backgroundColor:'#6366f1', stack:'dona', yAxisID:'yM', order:2, datalabels:barLabels },
+      { label:'A destinos part.',  data:[], backgroundColor:'#a5b4fc', stack:'dona', yAxisID:'yM', order:2, datalabels:barLabels },
+      { label:'Sostenimiento SEF', data:[], backgroundColor:'#fbbf24', stack:'dona', yAxisID:'yM', order:2, datalabels:barLabels },
       { label:'Consumos',          data:[], type:'line', borderColor:'#0f4c75', backgroundColor:'rgba(15,76,117,.1)',
-        yAxisID:'yC', tension:.3, pointRadius:3, pointBackgroundColor:'#0f4c75', fill:false, order:1 }
+        yAxisID:'yC', tension:.3, pointRadius:3, pointBackgroundColor:'#0f4c75', fill:false, order:1,
+        datalabels:{ color:'#0f4c75', font:{ size:10, weight:'bold' }, anchor:'end', align:'top', offset:4,
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex] > 0; },
+          formatter:function(v){ return v; }
+        }
+      }
     ]},
     options: Object.assign({}, CHART_BASE, {
       plugins:{
         legend:{ position:'top', labels:{ font:{ size:10 } } },
-        datalabels:noLabels,
         tooltip:{ callbacks:{ label:function(c){
           if (c.dataset.yAxisID === 'yM') return c.dataset.label + ': $' + moneyFmt(c.parsed.y);
           return 'Consumos: ' + c.parsed.y;
@@ -487,7 +496,8 @@ function initCharts() {
         yM:{ position:'right', beginAtZero:true, ticks:{ font:{ size:10 }, callback:function(v){ return '$'+moneyFmt(v); } }, grid:{ drawOnChartArea:false } },
         x:{ ticks:{ font:{ size:10 }, maxRotation:45 } }
       }
-    })
+    }),
+    plugins:[ChartDataLabels]
   });
 }
 
