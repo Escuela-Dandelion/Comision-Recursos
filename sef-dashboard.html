@@ -234,19 +234,9 @@
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">transacciones SEF</span></div>
         <div class="cards" id="cards-economia"></div>
-        <div class="grid-2">
-          <div class="section-card">
-            <div class="chart-title">Evolucion mensual — Distribucion de montos</div>
-            <div class="chart-wrap med"><canvas id="chart-montos"></canvas></div>
-          </div>
-          <div class="section-card">
-            <div class="chart-title">Distribucion de la donacion</div>
-            <div class="chart-wrap med"><canvas id="chart-dona"></canvas></div>
-          </div>
-        </div>
         <div class="section-card">
-          <div class="chart-title">Cantidad de consumos por mes</div>
-          <div class="chart-wrap low"><canvas id="chart-compras"></canvas></div>
+          <div class="chart-title">Evolucion mensual — Distribucion de montos y consumos</div>
+          <div class="chart-wrap tall"><canvas id="chart-ops"></canvas></div>
         </div>
 
         <!-- PROSUMIDORES -->
@@ -474,50 +464,30 @@ function initCharts() {
     options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
   });
 
-  CH.mon = new Chart(document.getElementById('chart-montos').getContext('2d'), {
+  CH.ops = new Chart(document.getElementById('chart-ops').getContext('2d'), {
     type:'bar',
     data:{ labels:[], datasets:[
-      { label:'A comunidad',       data:[], backgroundColor:'#6366f1', stack:'dona' },
-      { label:'A destinos part.',  data:[], backgroundColor:'#a5b4fc', stack:'dona' },
-      { label:'Sostenimiento SEF', data:[], backgroundColor:'#fbbf24', stack:'dona' },
-      { label:'Consumo (÷100)',    data:[], backgroundColor:'rgba(15,76,117,.12)', stack:'consumo' }
+      { label:'A comunidad',       data:[], backgroundColor:'#6366f1', stack:'dona', yAxisID:'yM', order:2 },
+      { label:'A destinos part.',  data:[], backgroundColor:'#a5b4fc', stack:'dona', yAxisID:'yM', order:2 },
+      { label:'Sostenimiento SEF', data:[], backgroundColor:'#fbbf24', stack:'dona', yAxisID:'yM', order:2 },
+      { label:'Consumos',          data:[], type:'line', borderColor:'#0f4c75', backgroundColor:'rgba(15,76,117,.1)',
+        yAxisID:'yC', tension:.3, pointRadius:3, pointBackgroundColor:'#0f4c75', fill:false, order:1 }
     ]},
     options: Object.assign({}, CHART_BASE, {
-      plugins:{ legend:{ position:'top', labels:{ font:{ size:10 } } }, datalabels:noLabels,
+      plugins:{
+        legend:{ position:'top', labels:{ font:{ size:10 } } },
+        datalabels:noLabels,
         tooltip:{ callbacks:{ label:function(c){
-          var v = c.dataset.label.includes('÷100') ? c.parsed.y*100 : c.parsed.y;
-          return c.dataset.label.replace(' (÷100)','') + ': $' + moneyFmt(v);
+          if (c.dataset.yAxisID === 'yM') return c.dataset.label + ': $' + moneyFmt(c.parsed.y);
+          return 'Consumos: ' + c.parsed.y;
         }}}
       },
-      scales:{ y:{ beginAtZero:true, ticks:{ font:{ size:10 }, callback:function(v){ return '$'+moneyFmt(v); } } }, x:{ ticks:{ font:{ size:10 }, maxRotation:45 } } }
-    })
-  });
-
-  CH.don = new Chart(document.getElementById('chart-dona').getContext('2d'), {
-    type:'doughnut',
-    data:{ labels:['A Comunidad','A Destinos Part.','Sostenimiento SEF'], datasets:[{ data:[0,0,0], backgroundColor:['#6366f1','#a5b4fc','#fbbf24'], borderWidth:2, borderColor:'#fff' }] },
-    options: Object.assign({}, CHART_BASE, {
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{ size:10 }, padding:8 } },
-        datalabels:{ color:'#fff', font:{ weight:'bold', size:11 },
-          formatter:function(v,c){ var t=c.dataset.data.reduce(function(a,b){return a+b;},0); return t?Math.round(v/t*100)+'%':''; }
-        }
+      scales:{
+        yC:{ position:'left',  beginAtZero:true, ticks:{ font:{ size:10 }, color:'#0f4c75' }, grid:{ drawOnChartArea:true } },
+        yM:{ position:'right', beginAtZero:true, ticks:{ font:{ size:10 }, callback:function(v){ return '$'+moneyFmt(v); } }, grid:{ drawOnChartArea:false } },
+        x:{ ticks:{ font:{ size:10 }, maxRotation:45 } }
       }
-    }),
-    plugins:[ChartDataLabels]
-  });
-
-  CH.cmp = new Chart(document.getElementById('chart-compras').getContext('2d'), {
-    type:'bar',
-    data:{ labels:[], datasets:[{ label:'Consumos', data:[], backgroundColor:'#0f4c75', borderRadius:4 }] },
-    options: Object.assign({}, CHART_BASE, {
-      plugins:{
-        legend:{ display:false },
-        datalabels:{ color:'#fff', font:{ size:10, weight:'bold' }, anchor:'center', align:'center', formatter:function(v){ return v>0?v:''; } }
-      },
-      scales:lineScales
-    }),
-    plugins:[ChartDataLabels]
+    })
   });
 }
 
@@ -536,21 +506,13 @@ function actualizarCharts(meses, labels, comunidad, destinos, sef) {
   D.datasets[1].data = meses.map(function(m){ return m.prosumidores; });
   CH.pros.update('none');
 
-  D = CH.mon.data;
+  D = CH.ops.data;
   D.labels            = labels;
   D.datasets[0].data  = meses.map(function(m){ return m.a_comunidad; });
   D.datasets[1].data  = meses.map(function(m){ return m.a_destinos; });
   D.datasets[2].data  = meses.map(function(m){ return m.retencion_sef; });
-  D.datasets[3].data  = meses.map(function(m){ return Math.round(m.monto_total/100); });
-  CH.mon.update('none');
-
-  CH.don.data.datasets[0].data = [comunidad, destinos, sef];
-  CH.don.update('none');
-
-  D = CH.cmp.data;
-  D.labels            = labels;
-  D.datasets[0].data  = meses.map(function(m){ return m.cantidad; });
-  CH.cmp.update('none');
+  D.datasets[3].data  = meses.map(function(m){ return m.cantidad; });
+  CH.ops.update('none');
 }
 
 // ── CÁLCULO DE PERÍODO (ventana variable) ────────────────────
