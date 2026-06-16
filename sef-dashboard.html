@@ -1030,27 +1030,41 @@ function mesLabel(mes) {
   return nn[parseInt(p[1])] + ' ' + p[0].slice(2);
 }
 function renderPendientes() {
-  var pend = (DATOS && DATOS.pendientes_por_vendedor) || [];
-  var card = document.getElementById('card-pendientes');
-  var tbl  = document.getElementById('tabla-pendientes');
+  var pend     = (DATOS && DATOS.pendientes_por_vendedor) || [];
+  var card     = document.getElementById('card-pendientes');
+  var tbl      = document.getElementById('tabla-pendientes');
   if (!pend.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
-  var hoy = new Date();
+
+  var totalPend = pend.reduce(function(s, p) { return s + p.count; }, 0);
+  var totalInf  = DATOS.total_informados || 0;
+  var pctGlobal = totalInf ? Math.round(totalPend / totalInf * 100) : 0;
+
+  var badge = '<span style="background:#fff1f2;color:#e11d48;font-weight:700;font-size:13px;' +
+    'padding:2px 10px;border-radius:12px;margin-left:8px">' + totalPend + ' pendientes</span>' +
+    '<span style="font-size:11px;color:#aaa;margin-left:8px">' + pctGlobal + '% del total informado</span>';
+  document.querySelector('#card-pendientes .chart-title').innerHTML =
+    'Por confirmar por vendedor ' +
+    '<span style="font-size:11px;font-weight:400;color:#aaa">consumos informados sin confirmacion del prosumidor</span>' +
+    badge;
+
+  var hoy  = new Date();
   var rows = pend.map(function(p) {
-    var dias = p.oldest
-      ? Math.floor((hoy - new Date(p.oldest)) / 86400000)
-      : null;
+    var dias   = p.oldest ? Math.floor((hoy - new Date(p.oldest)) / 86400000) : null;
     var diasCls = dias === null ? '' : dias > 30 ? 'danger' : dias > 14 ? 'warn' : 'ok';
     var diasTxt = dias !== null ? dias + 'd' : '—';
+    var pctEmp  = p.total ? Math.round(p.count / p.total * 100) : 0;
     return '<tr>' +
       '<td class="pend-emp">' + p.emprendimiento + '</td>' +
-      '<td style="text-align:center">' + p.count + '</td>' +
+      '<td style="text-align:center">' + p.count + ' <span style="color:#aaa;font-size:10px">/ ' + p.total + '</span></td>' +
+      '<td style="text-align:center;font-weight:700;color:#e11d48">' + pctEmp + '%</td>' +
       '<td class="pend-monto">$' + moneyFmt(p.monto) + '</td>' +
       '<td><span class="pend-dias ' + diasCls + '">' + diasTxt + '</span></td>' +
       '</tr>';
   }).join('');
   tbl.innerHTML = '<table class="pend-table">' +
-    '<thead><tr><th>Emprendimiento</th><th style="text-align:center">Consumos</th><th>Monto</th><th>Antiguedad</th></tr></thead>' +
+    '<thead><tr><th>Emprendimiento</th><th style="text-align:center">Pendientes</th>' +
+    '<th style="text-align:center">%</th><th>Monto</th><th>Antiguedad</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
