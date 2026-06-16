@@ -1065,31 +1065,51 @@ function renderPendientes() {
 
   var hoy  = new Date();
   var rows = pend.map(function(p, i) {
-    var dias    = p.oldest ? Math.floor((hoy - new Date(p.oldest)) / 86400000) : null;
-    var diasCls = dias === null ? '' : dias > 30 ? 'danger' : dias > 14 ? 'warn' : 'ok';
-    var diasTxt = dias !== null ? dias + 'd' : '—';
-    var pctEmp  = p.total ? Math.round(p.count / p.total * 100) : 0;
+    var pctEmp   = p.total ? Math.round(p.count / p.total * 100) : 0;
     var detailId = 'pend-orders-' + i;
-    var orderChips = (p.orders || []).map(function(o) {
-      return '<span style="display:inline-block;background:#fff7ed;color:#c2410c;font-size:10px;' +
-        'font-weight:600;padding:1px 6px;border-radius:4px;margin:2px 2px 2px 0">#' + o + '</span>';
-    }).join('');
+
+    var orderRows = (p.orders || [])
+      .slice().sort(function(a, b) { return (b.fecha || '').localeCompare(a.fecha || ''); })
+      .map(function(o) {
+        var d      = o.fecha ? Math.floor((hoy - new Date(o.fecha)) / 86400000) : null;
+        var dCls   = d === null ? '' : d > 30 ? 'danger' : d > 14 ? 'warn' : 'ok';
+        var dTxt   = d !== null ? d + 'd' : '—';
+        return '<tr style="background:#fafafa">' +
+          '<td style="padding:3px 8px 3px 28px;color:#666;font-size:11px">#' + o.id + '</td>' +
+          '<td style="font-size:10px;color:#aaa;text-align:center">' + (o.fecha || '—') + '</td>' +
+          '<td></td>' +
+          '<td class="pend-monto" style="font-size:11px">$' + moneyFmt(o.monto) + '</td>' +
+          '<td style="text-align:center"><span class="pend-dias ' + dCls + '">' + dTxt + '</span></td>' +
+          '</tr>';
+      }).join('');
+
+    var totalRow = p.orders && p.orders.length
+      ? '<tr style="background:#f3f4f6;border-top:1px solid #e5e7eb">' +
+          '<td colspan="3" style="padding:4px 8px 6px 28px;font-size:10px;color:#aaa;font-style:italic">total pendiente</td>' +
+          '<td class="pend-monto" style="font-weight:700;font-size:12px">$' + moneyFmt(p.monto) + '</td>' +
+          '<td></td></tr>'
+      : '';
+
     var mainRow = '<tr style="cursor:pointer" onclick="toggleOrderDetail(\'' + detailId + '\', this)">' +
       '<td class="pend-emp">' + p.emprendimiento +
         ' <span style="font-size:9px;color:#ccc" class="pend-chevron">▶</span></td>' +
       '<td style="text-align:center">' + p.count + ' <span style="color:#aaa;font-size:10px">/ ' + p.total + '</span></td>' +
       '<td style="text-align:center;font-weight:700;color:#e11d48">' + pctEmp + '%</td>' +
       '<td class="pend-monto">$' + moneyFmt(p.monto) + '</td>' +
-      '<td><span class="pend-dias ' + diasCls + '">' + diasTxt + '</span></td>' +
+      '<td></td>' +
       '</tr>';
+
     var detailRow = '<tr id="' + detailId + '" style="display:none">' +
-      '<td colspan="5" style="padding:6px 12px 10px 20px;background:#fafafa;border-top:none">' +
-      orderChips + '</td></tr>';
+      '<td colspan="5" style="padding:0;border-top:none">' +
+        '<table style="width:100%;border-collapse:collapse">' + orderRows + totalRow + '</table>' +
+      '</td></tr>';
+
     return mainRow + detailRow;
   }).join('');
+
   tbl.innerHTML = '<table class="pend-table">' +
     '<thead><tr><th>Emprendimiento</th><th style="text-align:center">Pendientes</th>' +
-    '<th style="text-align:center">%</th><th>Monto</th><th>Antiguedad</th></tr></thead>' +
+    '<th style="text-align:center">%</th><th>Monto</th><th style="text-align:center">Antiguedad</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 

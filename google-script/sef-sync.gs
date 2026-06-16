@@ -424,7 +424,7 @@ function agregarDatos() {
         if (!pendientesPorEmp[emp]) pendientesPorEmp[emp] = { count: 0, monto: 0, oldest: dFecha, orders: [] };
         pendientesPorEmp[emp].count++;
         pendientesPorEmp[emp].monto += monto;
-        pendientesPorEmp[emp].orders.push(dId);
+        pendientesPorEmp[emp].orders.push({ id: dId, monto: monto, fecha: dFecha });
         if (dFecha && (!pendientesPorEmp[emp].oldest || dFecha < pendientesPorEmp[emp].oldest))
           pendientesPorEmp[emp].oldest = dFecha;
       }
