@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiki del Dashboard SEF · Comisión de Recursos</title>
+<style>
+  :root {
+    --blue:         #0f4c75;
+    --blue-light:   #e8f4fd;
+    --blue-mid:     #b8d4e8;
+    --teal:         #0f766e;
+    --teal-light:   #f0fdfa;
+    --green:        #059669;
+    --green-light:  #f0fdf4;
+    --amber:        #d97706;
+    --amber-light:  #fffbeb;
+    --indigo:       #4f46e5;
+    --indigo-light: #eef2ff;
+    --purple:       #7e22ce;
+    --purple-light: #faf5ff;
+    --rose:         #e11d48;
+    --rose-light:   #fff1f2;
+    --gray:         #6b7280;
+    --gray-light:   #f9fafb;
+    --text:         #1a1a2e;
+    --muted:        #6b7280;
+    --border:       #e5e7eb;
+    --card:         #ffffff;
+    --bg:           #f4f6f9;
+    --sidebar-w:    250px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); line-height: 1.65; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w);
+    height: 100vh; background: var(--card); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; display: flex; flex-direction: column;
+  }
+  .sidebar-header {
+    padding: 20px 16px 14px; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo { font-size: 24px; margin-bottom: 6px; }
+  .sidebar-title { font-size: 13px; font-weight: 800; color: var(--blue); line-height: 1.3; }
+  .sidebar-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sidebar-section { padding: 14px 16px 4px; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .sidebar a {
+    display: block; padding: 6px 16px 6px 20px; font-size: 12.5px; color: var(--text);
+    text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar a:hover  { background: var(--blue-light); color: var(--blue); border-left-color: var(--blue); }
+  .sidebar a.sub    { padding-left: 32px; font-size: 12px; color: var(--muted); }
+  .sidebar a.sub:hover { color: var(--blue); background: var(--blue-light); border-left-color: var(--blue); }
+  .sidebar-back {
+    margin: auto 12px 16px; padding: 8px 12px;
+    border: 1px solid var(--border); border-radius: 8px; color: var(--muted);
+    font-size: 12px; text-decoration: none; display: block; text-align: center;
+    transition: background .15s;
+  }
+  .sidebar-back:hover { background: var(--blue-light); color: var(--blue); border-color: var(--blue); }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 40px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar a { color: var(--muted); text-decoration: none; }
+  .topbar a:hover { color: var(--blue); }
+  .topbar .sep { color: #ccc; }
+  .content { max-width: 860px; padding: 36px 40px 100px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+  .badge-blue { background: var(--blue-light); color: var(--blue); }
+  .page-title { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.25; margin-bottom: 8px; }
+  .page-tagline { font-size: 15px; color: var(--blue); font-style: italic; margin-bottom: 16px; }
+  .page-meta { font-size: 12px; color: var(--muted); }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 44px; scroll-margin-top: 64px; }
+  h2 {
+    font-size: 17px; font-weight: 700; color: var(--text);
+    margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--blue-mid);
+    display: flex; align-items: center; gap: 8px;
+  }
+  h3 { font-size: 14px; font-weight: 700; color: var(--blue); margin: 22px 0 8px; }
+  p  { margin-bottom: 10px; color: #374151; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 5px; color: #374151; }
+  strong { color: var(--text); }
+
+  /* ── METRIC CARDS ── */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 14px; margin: 16px 0; }
+  .metric-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; border-left: 4px solid var(--blue);
+  }
+  .metric-card.teal   { border-left-color: var(--teal); }
+  .metric-card.green  { border-left-color: var(--green); }
+  .metric-card.amber  { border-left-color: var(--amber); }
+  .metric-card.indigo { border-left-color: var(--indigo); }
+  .metric-card.purple { border-left-color: var(--purple); }
+  .metric-card.rose   { border-left-color: var(--rose); }
+  .metric-card.gray   { border-left-color: var(--gray); }
+  .metric-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 4px; }
+  .metric-def  { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .metric-why  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── CALLOUTS ── */
+  .callout { border-radius: 8px; padding: 14px 16px; margin: 16px 0; display: flex; gap: 12px; }
+  .callout .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-blue   { background: var(--blue-light);   border-left: 4px solid var(--blue); }
+  .callout-teal   { background: var(--teal-light);   border-left: 4px solid var(--teal); }
+  .callout-amber  { background: var(--amber-light);  border-left: 4px solid var(--amber); }
+  .callout-purple { background: var(--purple-light); border-left: 4px solid var(--purple); }
+  .callout-title  { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+  .callout p { margin-bottom: 0; font-size: 13px; }
+
+  /* ── COMPARE TABLE ── */
+  .compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  .compare-table th {
+    background: var(--blue); color: #fff; font-weight: 700;
+    padding: 10px 14px; text-align: left;
+  }
+  .compare-table th:first-child { border-radius: 8px 0 0 0; }
+  .compare-table th:last-child  { border-radius: 0 8px 0 0; }
+  .compare-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: var(--blue-light); }
+  .compare-table td:first-child { font-weight: 700; white-space: nowrap; }
+  .compare-table td.dash { color: var(--blue); font-weight: 600; }
+  .compare-table td.why { color: #374151; font-size: 12px; line-height: 1.5; }
+
+  /* ── FILTER DIAGRAM ── */
+  .filter-diagram { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+  .filter-box {
+    flex: 1; min-width: 240px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .filter-box.active { border-color: var(--blue); border-top: 3px solid var(--blue); }
+  .filter-box.inactive { border-color: var(--gray); border-top: 3px solid var(--gray); opacity: .85; }
+  .filter-box-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
+  .filter-box.active   .filter-box-title { color: var(--blue); }
+  .filter-box.inactive .filter-box-title { color: var(--gray); }
+  .filter-box ul { margin-left: 16px; }
+  .filter-box li { font-size: 12.5px; margin-bottom: 5px; color: #374151; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); transition: transform .25s; }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .content { padding: 24px 20px 80px; }
+    .topbar { padding: 10px 20px; }
+    .menu-btn { display: block !important; }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90; }
+    .overlay.show { display: block; }
+  }
+  .menu-btn {
+    display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+    background: var(--blue); color: #fff; border: none; border-radius: 6px;
+    width: 28px; height: 28px; font-size: 14px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">🤝</div>
+    <div class="sidebar-title">Wiki · Dashboard SEF</div>
+    <div class="sidebar-sub">Comisión de Recursos · Dandelion</div>
+  </div>
+
+  <div class="sidebar-section">Introducción</div>
+  <a href="#que-es">¿Qué es el dashboard?</a>
+  <a href="#periodo-variable">Período variable</a>
+
+  <div class="sidebar-section">Métricas</div>
+  <a href="#operaciones">Operaciones</a>
+  <a href="#prosumidores" class="sub">Prosumidores</a>
+  <a href="#usuarios" class="sub">Usuarios</a>
+
+  <div class="sidebar-section">Referencia</div>
+  <a href="#tabla-comparativa">Sheet vs Dashboard</a>
+  <a href="#glosario">Glosario</a>
+
+  <a href="sef-dashboard.html" class="sidebar-back">← Ir al dashboard</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <a href="index.html">Comisión de Recursos</a>
+    <span class="sep">›</span>
+    <a href="sef-dashboard.html">Dashboard SEF</a>
+    <span class="sep">›</span>
+    <span>Wiki de métricas</span>
+  </div>
+
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="badge badge-blue">Documentación</div>
+      <div class="page-title">Wiki del Dashboard SEF</div>
+      <div class="page-tagline">Cómo se calcula cada métrica y por qué la definimos así</div>
+      <div class="page-meta">
+        Comisión de Recursos · Escuela Dandelion · Última actualización: junio 2026
+      </div>
+    </div>
+
+    <!-- QUÉ ES -->
+    <div class="section" id="que-es">
+      <h2>¿Qué es el dashboard?</h2>
+      <p>El dashboard SEF es una herramienta de lectura de la actividad económica del sistema. No reemplaza los registros operativos de la plataforma proyectosef.com — los complementa con una <strong>mirada analítica</strong> orientada a preguntas concretas: ¿cuánto circuló? ¿quiénes compraron? ¿se están convirtiendo en compradores recurrentes?</p>
+      <p>Algunas métricas del dashboard difieren intencionalmente de lo que muestra la plataforma SEF o el Google Sheet de seguimiento. Esas diferencias no son errores: responden a decisiones conceptuales sobre qué es lo más útil medir para una comunidad del tamaño actual del SEF.</p>
+      <div class="callout callout-blue">
+        <span class="icon">💡</span>
+        <div>
+          <div class="callout-title">Principio general</div>
+          <p>El dashboard mide <strong>actividad real en un período</strong>, no estado acumulado. Registrarse en la plataforma, publicar un emprendimiento o tener el rol de prosumidor no cuenta — lo que cuenta es haber participado económicamente en el período analizado.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERÍODO VARIABLE -->
+    <div class="section" id="periodo-variable">
+      <h2>El concepto clave: período variable</h2>
+      <p>El dashboard permite analizar <strong>ventanas de tiempo flexibles</strong>: todo 2026, un mes específico, o una combinación de meses. Esto cambia el significado de varias métricas de usuarios.</p>
+
+      <div class="filter-diagram">
+        <div class="filter-box active">
+          <div class="filter-box-title">Con filtro activo (período seleccionado)</div>
+          <ul>
+            <li><strong>MAU</strong> = compradores únicos en todo el período</li>
+            <li><strong>Eventuales</strong> = compraron exactamente 1 vez en el período completo</li>
+            <li><strong>Recurrentes</strong> = compraron más de 1 vez en el período completo</li>
+            <li><strong>Curiosos</strong> = se registraron y nunca compraron en ese período</li>
+            <li><strong>Registrados</strong> = nuevos registros en el período</li>
+          </ul>
+        </div>
+        <div class="filter-box inactive">
+          <div class="filter-box-title">Sin filtro (histórico acumulado)</div>
+          <ul>
+            <li><strong>MAU</strong> = promedio mensual histórico</li>
+            <li><strong>Eventuales / Recurrentes</strong> = promedios mensuales</li>
+            <li><strong>Curiosos</strong> = total histórico acumulado</li>
+            <li><strong>Registrados</strong> = total histórico</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>¿Por qué no usar el promedio mensual siempre?</h3>
+      <p>Con tan pocos usuarios, el promedio mensual tiene mucho ruido. Decir <strong>"35 personas distintas compraron en 2026"</strong> transmite mucho más que <strong>"MAU promedio: 12/mes"</strong> — especialmente si en abril hubo un pico por un evento y los otros meses fueron más bajos.</p>
+      <p>La ventana variable también hace que la definición de <em>eventual</em> sea más rica y honesta: alguien que compró <strong>1 sola vez en 6 meses</strong> es claramente ocasional. En cambio, alguien que compró 1 vez en enero y 1 vez en febrero no lo es, aunque el sheet de la plataforma los contaría como "eventual" dos veces (una por mes).</p>
+
+      <div class="callout callout-amber">
+        <span class="icon">⚠️</span>
+        <div>
+          <div class="callout-title">Excepción: Zombies</div>
+          <p><strong>Zombies no respeta el filtro.</strong> Es un estado de hoy, no un evento histórico. Alguien es zombie si no compró en los últimos 6 meses — ese estado existe hoy, independientemente del período que se esté analizando. Filtrarlos por mes no tendría sentido.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPERACIONES -->
+    <div class="section" id="operaciones">
+      <h2>Métricas de Operaciones</h2>
+      <p>Esta sección muestra el flujo económico del SEF: cuánto se transaccionó, cómo se distribuyó la donación y qué quedó neto para la comunidad.</p>
+
+      <h3>Flujo de una transacción SEF</h3>
+      <p>Toda transacción tiene dos pasos: el comprador <strong>informa</strong> el consumo (paso 1) y el prosumidor lo <strong>confirma</strong> (paso 2). Solo los confirmados generan donación real.</p>
+
+      <div class="metric-grid">
+
+        <div class="metric-card">
+          <div class="metric-name">Consumos confirmados</div>
+          <div class="metric-def">Transacciones que el prosumidor confirmó</div>
+          <div class="metric-why">Son el único dato económico "firme". Hasta que el prosumidor no confirma, la transacción es una intención, no un hecho.</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-name">Consumos informados</div>
+          <div class="metric-def">Informados por el comprador (confirmados + pendientes)</div>
+          <div class="metric-why">Incluye todo lo que el comprador declaró, esté o no confirmado. La diferencia entre informados y confirmados muestra el "embudo pendiente" — cuánto está esperando acción del prosumidor.</div>
+        </div>
+
+        <div class="metric-card teal">
+          <div class="metric-name">Monto consumos</div>
+          <div class="metric-def">Valor total transaccionado en el período</div>
+          <div class="metric-why">Es la base de cálculo de todo lo demás. Todos los porcentajes (donación, sostenimiento, comisiones) se calculan sobre este número.</div>
+        </div>
+
+        <div class="metric-card green">
+          <div class="metric-name">Monto donación</div>
+          <div class="metric-def">Porcentaje del consumo destinado a donación</div>
+          <div class="metric-why">El comprador elige libremente qué porcentaje de su consumo dona. Este campo suma todas esas donaciones declaradas en el período.</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-name">Sostenimiento SEF</div>
+          <div class="metric-def">Porción de la donación para sostener la plataforma</div>
+          <div class="metric-why">Una fracción de lo donado se destina a los costos operativos del SEF (plataforma, coordinación). Es lo que permite que el sistema funcione.</div>
+        </div>
+
+        <div class="metric-card indigo">
+          <div class="metric-name">A comunidad / escuela</div>
+          <div class="metric-def">Donación que llega a la Escuela Dandelion</div>
+          <div class="metric-why">Del total donado, esta es la parte que se transfiere a la escuela. Es el objetivo central del SEF.</div>
+        </div>
+
+        <div class="metric-card gray">
+          <div class="metric-name">A destinos particulares</div>
+          <div class="metric-def">Donación dirigida a una persona o causa específica</div>
+          <div class="metric-why">El comprador puede elegir destinar parte de su donación a alguien en particular (ej: una familia de la comunidad). Este campo suma esos montos.</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-name">DNI destino</div>
+          <div class="metric-def">Cantidad de personas distintas que recibieron donación particular</div>
+          <div class="metric-why">Muestra la diversidad de la redistribución. No es el monto sino la cantidad de receptores únicos — mide alcance comunitario.</div>
+        </div>
+
+        <div class="metric-card rose">
+          <div class="metric-name">Comisión MELI</div>
+          <div class="metric-def">Fee real cobrado por Mercado Pago sobre los pagos</div>
+          <div class="metric-why">Mercado Pago cobra una comisión por procesar los pagos de donación. Se resta del neto. Aparece negativo porque es un costo, no un ingreso.</div>
+        </div>
+
+        <div class="metric-card teal">
+          <div class="metric-name">Neto a comunidad</div>
+          <div class="metric-def">A comunidad/escuela menos comisión MELI</div>
+          <div class="metric-why">Es el número real que llega a la escuela después de las comisiones. Es la métrica de impacto final del SEF.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PROSUMIDORES -->
+    <div class="section" id="prosumidores">
+      <h2>Métricas de Prosumidores</h2>
+      <p>Los prosumidores son quienes ofrecen y consumen dentro del SEF. La distinción entre "registrado" y "activo" es importante: el dashboard solo cuenta a quienes efectivamente vendieron en el período.</p>
+
+      <div class="metric-grid">
+
+        <div class="metric-card purple">
+          <div class="metric-name">Prosumidores</div>
+          <div class="metric-def">Vendedores únicos con al menos una transacción en el período</div>
+          <div class="metric-why">La plataforma tiene más de 250 usuarios con rol prosumidor. El dashboard muestra cuántos de ellos <em>vendieron de verdad</em> — número que ronda los 10 a 14. Tener el rol no implica actividad real.</div>
+        </div>
+
+        <div class="metric-card teal">
+          <div class="metric-name">Emprendimientos</div>
+          <div class="metric-def">Emprendimientos con al menos una venta en el período</div>
+          <div class="metric-why">Publicado ≠ activo. Un emprendimiento puede estar en la plataforma hace meses sin haber vendido nunca. El dashboard mide cuántos generaron economía real en el período seleccionado.</div>
+        </div>
+
+        <div class="metric-card green">
+          <div class="metric-name">Nuevos emprendimientos</div>
+          <div class="metric-def">Primera transacción de un emprendimiento en el período</div>
+          <div class="metric-why">La primera <em>publicación</em> en la plataforma es un dato de catálogo. La primera <em>venta</em> es el hito económico relevante — el momento en que el emprendimiento entra realmente al circuito SEF.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- USUARIOS -->
+    <div class="section" id="usuarios">
+      <h2>Métricas de Usuarios</h2>
+      <p>Esta sección describe la base de usuarios del SEF: quiénes se registraron, quiénes compraron, con qué frecuencia, y quiénes se perdieron en el camino.</p>
+
+      <div class="metric-grid">
+
+        <div class="metric-card">
+          <div class="metric-name">Registrados</div>
+          <div class="metric-def">Con filtro: nuevos registros en el período. Sin filtro: total histórico acumulado</div>
+          <div class="metric-why">El total acumulado crece siempre — es interesante para ver la base total. Con filtro, muestra incorporación neta en el período analizado.</div>
+        </div>
+
+        <div class="metric-card teal">
+          <div class="metric-name">MAU (compradores activos)</div>
+          <div class="metric-def">Con filtro: compradores únicos en el período. Sin filtro: promedio mensual histórico</div>
+          <div class="metric-why">Con filtro activado, "35 personas distintas compraron en 2026" es mucho más informativo que un promedio. Sin filtro, el promedio da una referencia histórica general.</div>
+        </div>
+
+        <div class="metric-card indigo">
+          <div class="metric-name">Eventuales</div>
+          <div class="metric-def">Compraron exactamente 1 vez en todo el período seleccionado</div>
+          <div class="metric-why">Con ventana variable, la definición es más honesta: solo es eventual quien compró una sola vez en todo el rango analizado. Alguien que compró en enero y en marzo no es eventual, aunque haya comprado una vez por mes.</div>
+        </div>
+
+        <div class="metric-card purple">
+          <div class="metric-name">Recurrentes</div>
+          <div class="metric-def">Compraron más de 1 vez en todo el período seleccionado</div>
+          <div class="metric-why">El indicador de fidelidad central del SEF. El porcentaje que aparece junto al número (ej: 79%) es recurrentes ÷ MAU — muestra qué proporción de compradores volvió a comprar.</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-name">Curiosos</div>
+          <div class="metric-def">Con filtro: se registraron y nunca compraron en el período. Sin filtro: total histórico</div>
+          <div class="metric-why">El acumulado siempre crece y no dice mucho. Con filtro, la pregunta útil es "¿cuántos se registraron en este período y no compraron?" — esa es la señal de conversión fallida, el embudo que no se cerró.</div>
+        </div>
+
+        <div class="metric-card rose">
+          <div class="metric-name">Zombies</div>
+          <div class="metric-def">Compradores que llevan más de 6 meses sin comprar (estado actual, siempre global)</div>
+          <div class="metric-why">Los zombies son un <strong>estado de hoy</strong>, no un evento del pasado. Alguien es zombie si no compró en los últimos 6 meses — eso es cierto hoy, independientemente del período que se esté analizando. Por eso no se filtra y siempre muestra el total actual.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TABLA COMPARATIVA -->
+    <div class="section" id="tabla-comparativa">
+      <h2>Referencia: Sheet vs Dashboard</h2>
+      <p>Esta tabla resume por qué el dashboard muestra números distintos a los del Google Sheet o la plataforma SEF. Cada diferencia es intencional.</p>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Sheet / Plataforma</th>
+            <th>Dashboard</th>
+            <th>Por qué cambia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Prosumidores</td>
+            <td>Usuarios con rol prosumidor registrados (acumulado: 253–265)</td>
+            <td class="dash">Vendedores activos en transacciones del período (~10–14)</td>
+            <td class="why">El dashboard mide <strong>actividad real</strong>, no potencial. Tener el rol no implica haber vendido. La pregunta relevante es cuántos emprendimientos efectivamente circularon.</td>
+          </tr>
+          <tr>
+            <td>Emprendimientos</td>
+            <td>Emprendimientos publicados en plataforma (104–110)</td>
+            <td class="dash">Emprendimientos con transacciones en el período</td>
+            <td class="why">Publicado ≠ activo. El dashboard muestra cuántos emprendimientos generaron economía real en el período seleccionado.</td>
+          </tr>
+          <tr>
+            <td>Curiosos</td>
+            <td>Snapshot acumulado (crece: 32→46→50→51)</td>
+            <td class="dash">Con filtro: nuevos curiosos en el período</td>
+            <td class="why">El acumulado siempre crece y no es útil para análisis de períodos. El dashboard responde "¿cuántos se registraron y nunca compraron en este período?": la señal de conversión fallida.</td>
+          </tr>
+          <tr>
+            <td>Eventuales</td>
+            <td>1 consumo por mes (ventana mensual fija)</td>
+            <td class="dash">1 compra en todo el período seleccionado</td>
+            <td class="why">Con ventana variable la definición es más rica: 1 vez en 6 meses es claramente ocasional. Alguien que compró en enero y en febrero no es eventual — el sheet los contaría como eventual dos veces.</td>
+          </tr>
+          <tr>
+            <td>Activos / Recurrentes</td>
+            <td>&gt;1 consumo en últimas 4 semanas</td>
+            <td class="dash">&gt;1 compra en todo el período seleccionado</td>
+            <td class="why">La ventana variable es más robusta para comunidades pequeñas: "35 personas compraron en 2026" dice más que "MAU promedio: 12/mes". Además es consistente con el filtro de período del resto del dashboard.</td>
+          </tr>
+          <tr>
+            <td>Zombies</td>
+            <td>Snapshot en distintas fechas</td>
+            <td class="dash">Siempre el estado actual (global, sin filtro)</td>
+            <td class="why">Los zombies son un <strong>estado de hoy</strong>, no un evento del pasado. Filtrarlos por mes no tiene sentido: alguien que no compró en 6 meses lo es hoy, independientemente del período analizado.</td>
+          </tr>
+          <tr>
+            <td>Nuevos Emprendimientos</td>
+            <td>Primera publicación en plataforma</td>
+            <td class="dash">Primera transacción en el período</td>
+            <td class="why">La publicación es un dato de catálogo. La primera venta es el hito económico relevante. Un emprendimiento puede publicarse meses antes de vender por primera vez.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- GLOSARIO -->
+    <div class="section" id="glosario">
+      <h2>Glosario</h2>
+
+      <table class="compare-table">
+        <thead>
+          <tr><th>Término</th><th>Definición</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>MAU</td><td class="why">Monthly Active Users. En el SEF: compradores únicos en el período analizado (con filtro) o promedio mensual histórico (sin filtro). MAU = Eventuales + Recurrentes.</td></tr>
+          <tr><td>Período variable</td><td class="why">Ventana de tiempo seleccionada en los filtros del dashboard (ej: "2026" o "marzo + abril"). Cambia el significado de las métricas de usuarios.</td></tr>
+          <tr><td>Consumo informado</td><td class="why">Transacción declarada por el comprador (paso 1 del flujo SEF). Puede estar pendiente de confirmación.</td></tr>
+          <tr><td>Consumo confirmado</td><td class="why">Transacción que el prosumidor confirmó (paso 2). Es la que genera donación real.</td></tr>
+          <tr><td>Prosumidor</td><td class="why">Persona que participa en el SEF tanto como vendedor como comprador. En el dashboard, solo cuenta quien vendió en el período.</td></tr>
+          <tr><td>Curioso</td><td class="why">Usuario registrado en el SEF que nunca compró (o no compró en el período analizado).</td></tr>
+          <tr><td>Zombie</td><td class="why">Comprador que lleva más de 6 meses sin comprar. Estado actual, no histórico.</td></tr>
+          <tr><td>Neto a comunidad</td><td class="why">Monto que efectivamente llega a la Escuela Dandelion: A Comunidad/Escuela menos comisión Mercado Pago.</td></tr>
+          <tr><td>DNI destino</td><td class="why">Cantidad de personas distintas que recibieron una donación a destino particular en el período.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+// Smooth scroll para links internos
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    if (window.innerWidth <= 768) toggleSidebar();
+  });
+});
+</script>
+</body>
+</html>
