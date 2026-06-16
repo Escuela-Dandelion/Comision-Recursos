@@ -138,6 +138,19 @@
     .chart-wrap.med  { height:180px; }
     .chart-wrap.low  { height:130px; }
 
+    /* ── TABLA PENDIENTES ── */
+    .pend-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
+    .pend-table th { text-align:left; font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.6px; padding:6px 10px; border-bottom:1px solid #eee; }
+    .pend-table td { padding:7px 10px; border-bottom:1px solid #f4f4f4; vertical-align:middle; }
+    .pend-table tr:last-child td { border-bottom:none; }
+    .pend-table tr:hover td { background:#fafafa; }
+    .pend-emp   { font-weight:600; color:#333; }
+    .pend-monto { font-weight:700; color:#e11d48; }
+    .pend-dias  { display:inline-block; padding:2px 7px; border-radius:12px; font-size:10px; font-weight:700; }
+    .pend-dias.ok     { background:#f0fdf4; color:#059669; }
+    .pend-dias.warn   { background:#fffbeb; color:#d97706; }
+    .pend-dias.danger { background:#fff1f2; color:#e11d48; }
+
     /* ── TABS ── */
     .tab-bar {
       display:flex; gap:4px; padding:12px 24px 0; border-bottom:1px solid #e8eaed;
@@ -315,6 +328,10 @@
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">transacciones SEF</span></div>
         <div class="cards" id="cards-economia"></div>
+        <div class="section-card" id="card-pendientes" style="display:none">
+          <div class="chart-title">Por confirmar por vendedor <span style="font-size:11px;font-weight:400;color:#aaa">consumos informados sin confirmacion del prosumidor</span></div>
+          <div id="tabla-pendientes"></div>
+        </div>
         <div class="section-card">
           <div class="chart-title">Evolucion mensual — Distribucion de montos y consumos</div>
           <div class="chart-wrap tall"><canvas id="chart-ops"></canvas></div>
@@ -977,6 +994,9 @@ function renderTodo(meses) {
       value: '$' + moneyFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
   ]);
 
+  // ── Pendientes por vendedor
+  renderPendientes();
+
   // ── Sidebar
   document.getElementById('sidebar-info').innerHTML =
     '<strong>' + meses.length + '</strong> meses<br>' +
@@ -1009,6 +1029,31 @@ function mesLabel(mes) {
   var p  = mes.split('-');
   return nn[parseInt(p[1])] + ' ' + p[0].slice(2);
 }
+function renderPendientes() {
+  var pend = (DATOS && DATOS.pendientes_por_vendedor) || [];
+  var card = document.getElementById('card-pendientes');
+  var tbl  = document.getElementById('tabla-pendientes');
+  if (!pend.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  var hoy = new Date();
+  var rows = pend.map(function(p) {
+    var dias = p.oldest
+      ? Math.floor((hoy - new Date(p.oldest)) / 86400000)
+      : null;
+    var diasCls = dias === null ? '' : dias > 30 ? 'danger' : dias > 14 ? 'warn' : 'ok';
+    var diasTxt = dias !== null ? dias + 'd' : '—';
+    return '<tr>' +
+      '<td class="pend-emp">' + p.emprendimiento + '</td>' +
+      '<td style="text-align:center">' + p.count + '</td>' +
+      '<td class="pend-monto">$' + moneyFmt(p.monto) + '</td>' +
+      '<td><span class="pend-dias ' + diasCls + '">' + diasTxt + '</span></td>' +
+      '</tr>';
+  }).join('');
+  tbl.innerHTML = '<table class="pend-table">' +
+    '<thead><tr><th>Emprendimiento</th><th style="text-align:center">Consumos</th><th>Monto</th><th>Antiguedad</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table>';
+}
+
 function cardsHtml(cards) {
   return cards.map(function(c){
     return '<div class="card '+(c.color||'')+'">'+

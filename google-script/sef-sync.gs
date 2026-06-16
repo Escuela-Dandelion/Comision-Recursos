@@ -315,7 +315,8 @@ function obtenerSet(sheet, col) {
 // ── API PARA EL DASHBOARD ──────────────────────────────────
 var EMAILS_PERMITIDOS = [
   'robertson.ine@gmail.com',
-  'martinimaria39@gmail.com'
+  'martinimaria39@gmail.com',
+  'andyest@gmail.com'
   // agregar más emails acá
 ];
 
@@ -377,20 +378,41 @@ function agregarDatos() {
     }
   }
 
-  // devengadas por mes: mes → cantidad informada (paso 1, con o sin confirmación)
-  var devByMes = {};
-  if (sheetDev && sheetDev.getLastRow() > 1) {
-    var devData = sheetDev.getRange(2, 1, sheetDev.getLastRow() - 1, HEADERS_DEV.length).getValues();
-    for (var di = 0; di < devData.length; di++) {
-      var dMes = toMes(devData[di][0]);
-      if (!dMes) continue;
-      devByMes[dMes] = (devByMes[dMes] || 0) + 1;
-    }
-  }
-
   var trxRows = sheetTrx && sheetTrx.getLastRow() > 1
     ? sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, HEADERS_TRX.length).getValues()
     : [];
+
+  // Set de orden_original confirmadas (para detectar pendientes)
+  var confirmados = {};
+  for (var ci = 0; ci < trxRows.length; ci++) {
+    var oid = String(trxRows[ci][2]);
+    if (oid) confirmados[oid] = true;
+  }
+
+  // devengadas por mes + pendientes por emprendimiento
+  var devByMes = {};
+  var pendientesPorEmp = {};
+  if (sheetDev && sheetDev.getLastRow() > 1) {
+    var devData = sheetDev.getRange(2, 1, sheetDev.getLastRow() - 1, HEADERS_DEV.length).getValues();
+    for (var di = 0; di < devData.length; di++) {
+      var dRow  = devData[di];
+      var dMes  = toMes(dRow[0]);
+      if (dMes) devByMes[dMes] = (devByMes[dMes] || 0) + 1;
+
+      var dId = String(dRow[1]);
+      if (!confirmados[dId]) {
+        var emp   = String(dRow[5]) || 'Sin emprendimiento';
+        var monto = parseFloat(dRow[7]) || 0;
+        var dFecha = dRow[0] ? (Object.prototype.toString.call(dRow[0]) === '[object Date]'
+          ? dRow[0].toISOString().substring(0, 10)
+          : String(dRow[0]).substring(0, 10)) : '';
+        if (!pendientesPorEmp[emp]) pendientesPorEmp[emp] = { count: 0, monto: 0, oldest: dFecha };
+        pendientesPorEmp[emp].count++;
+        pendientesPorEmp[emp].monto += monto;
+        if (dFecha && dFecha < pendientesPorEmp[emp].oldest) pendientesPorEmp[emp].oldest = dFecha;
+      }
+    }
+  }
   var usrRows = sheetUsr && sheetUsr.getLastRow() > 1
     ? sheetUsr.getRange(2, 1, sheetUsr.getLastRow() - 1, HEADERS_USR.length).getValues()
     : [];
@@ -517,13 +539,23 @@ function agregarDatos() {
     vendedoresPorMes[m] = Object.keys(vendedoresByMes[m]);
   });
 
+  var pendientesArr = Object.keys(pendientesPorEmp).map(function(emp) {
+    return {
+      emprendimiento: emp,
+      count:          pendientesPorEmp[emp].count,
+      monto:          Math.round(pendientesPorEmp[emp].monto),
+      oldest:         pendientesPorEmp[emp].oldest
+    };
+  }).sort(function(a, b) { return b.monto - a.monto; });
+
   return {
-    generado:             Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy HH:mm'),
-    usuarios:             { total: usrRows.length, curiosos: curiosos, zombies: zombies },
-    transacciones:        { total: trxRows.length },
-    por_mes:              porMes,
-    compradores_por_mes:  compradoresPorMes,
-    vendedores_por_mes:   vendedoresPorMes
+    generado:               Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy HH:mm'),
+    usuarios:               { total: usrRows.length, curiosos: curiosos, zombies: zombies },
+    transacciones:          { total: trxRows.length },
+    por_mes:                porMes,
+    compradores_por_mes:    compradoresPorMes,
+    vendedores_por_mes:     vendedoresPorMes,
+    pendientes_por_vendedor: pendientesArr
   };
 }
 
