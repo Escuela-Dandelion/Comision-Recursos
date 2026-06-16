@@ -684,6 +684,51 @@ function resetearFees() {
   Logger.log('Sync fees reseteado.');
 }
 
+// ── RESALTAR PENDIENTES ────────────────────────────────────
+// Correr manualmente desde el editor para pintar las filas
+// de Devengadas que aún no fueron confirmadas por el vendedor.
+function resaltarPendientes() {
+  var ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
+  var sheetDev = ss.getSheetByName('Devengadas');
+  var sheetTrx = ss.getSheetByName('Transacciones');
+
+  if (!sheetDev) { Logger.log('Hoja Devengadas no encontrada.'); return; }
+
+  // Set de orden_original confirmadas
+  var confirmados = {};
+  if (sheetTrx && sheetTrx.getLastRow() > 1) {
+    var trxIds = sheetTrx.getRange(2, 3, sheetTrx.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < trxIds.length; i++) {
+      var oid = String(trxIds[i][0]);
+      if (oid) confirmados[oid] = true;
+    }
+  }
+
+  var lastRow = sheetDev.getLastRow();
+  if (lastRow < 2) { Logger.log('Devengadas vacía.'); return; }
+
+  var ids   = sheetDev.getRange(2, 2, lastRow - 1, 1).getValues(); // col B = wc_orden_id
+  var range = sheetDev.getRange(2, 1, lastRow - 1, HEADERS_DEV.length);
+  var bgs   = range.getBackgrounds();
+
+  var PENDIENTE = '#FFE0B2'; // naranja claro
+  var NORMAL    = '#FFFFFF';
+
+  var pendientes = 0;
+  for (var r = 0; r < ids.length; r++) {
+    var dId      = String(ids[r][0]);
+    var isPend   = dId && !confirmados[dId];
+    var color    = isPend ? PENDIENTE : NORMAL;
+    for (var c = 0; c < HEADERS_DEV.length; c++) {
+      bgs[r][c] = color;
+    }
+    if (isPend) pendientes++;
+  }
+
+  range.setBackgrounds(bgs);
+  Logger.log('Listo. ' + pendientes + ' filas resaltadas como pendientes de confirmacion.');
+}
+
 // ── TRIGGER ────────────────────────────────────────────────
 function crearTrigger() {
   ScriptApp.newTrigger('sincronizarTodo').timeBased().everyHours(6).create();
