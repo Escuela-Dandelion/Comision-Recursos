@@ -799,11 +799,6 @@ function initCharts() {
     options: Object.assign({}, CHART_BASE, { plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } }, datalabels:noLabels }, scales:lineScales })
   });
 
-  function kFmt(v) {
-    if (v >= 1000000) return '$' + (v/1000000).toLocaleString('es-AR', {maximumFractionDigits:1}) + 'M';
-    if (v >= 1000)    return '$' + Math.round(v/1000) + 'k';
-    return '$' + Math.round(v);
-  }
   var barLabels = {
     color:'#fff', font:{ size:9, weight:'bold' }, anchor:'center', align:'center',
     display:function(ctx){ return ctx.dataset.data[ctx.dataIndex] > 5000; },
@@ -999,21 +994,21 @@ function renderTodo(meses) {
       id: 'kpi-informados',
       onclick: totalPendiente > 0 ? 'togglePendientes()' : '' },
     { label: 'Monto Consumos',
-      value: '$' + moneyFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
+      value: kFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
     { label: 'Monto Donacion',
-      value: '$' + moneyFmt(totalDonacion), sub: pct(totalDonacion, totalMonto) + '% del consumo', color: 'green' },
+      value: kFmt(totalDonacion), sub: pct(totalDonacion, totalMonto) + '% del consumo', color: 'green' },
     { label: 'Sostenimiento SEF',
-      value: '$' + moneyFmt(totalSef), sub: pct(totalSef, totalMonto) + '% del consumo', color: 'amber' },
+      value: kFmt(totalSef), sub: pct(totalSef, totalMonto) + '% del consumo', color: 'amber' },
     { label: 'A Comunidad/Escuela',
-      value: '$' + moneyFmt(totalComunidad), sub: pct(totalComunidad, totalDonacion + totalSef) + '% de lo donado', color: 'indigo' },
+      value: kFmt(totalComunidad), sub: pct(totalComunidad, totalDonacion + totalSef) + '% de lo donado', color: 'indigo' },
     { label: 'A Destinos Part.',
-      value: '$' + moneyFmt(totalDestinos), sub: pct(totalDestinos, totalDonacion + totalSef) + '% de lo donado', color: 'gray' },
+      value: kFmt(totalDestinos), sub: pct(totalDestinos, totalDonacion + totalSef) + '% de lo donado', color: 'gray' },
     { label: 'DNI Destino <span class="info-tip" data-tip="Cantidad de personas distintas que recibieron donacion a destino particular.">&#9432;</span>',
       value: numFmt(totalDniDest), sub: 'receptores unicos', color: 'orange' },
     { label: 'Comision MELI <span class="info-tip" data-tip="Fee real cobrado por Mercado Pago sobre los pagos de donacion del periodo.">&#9432;</span>',
-      value: totalFeeMeli ? '-$' + moneyFmt(totalFeeMeli) : '—', sub: totalFeeMeli ? pct(totalFeeMeli, totalMonto) + '% del consumo' : 'sin datos', color: 'rose' },
+      value: totalFeeMeli ? '-' + kFmt(totalFeeMeli) : '—', sub: totalFeeMeli ? pct(totalFeeMeli, totalMonto) + '% del consumo' : 'sin datos', color: 'rose' },
     { label: 'Neto a Comunidad <span class="info-tip" data-tip="A Comunidad/Escuela menos la comision de Mercado Pago.">&#9432;</span>',
-      value: '$' + moneyFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
+      value: kFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
   ]);
 
   // ── Pendientes por vendedor
@@ -1041,6 +1036,11 @@ function renderTodo(meses) {
 function sumar(arr, key) { return arr.reduce(function(a,m){ return a+(m[key]||0); },0); }
 function numFmt(n)    { return Number(n).toLocaleString('es-AR'); }
 function moneyFmt(n)  { return Math.round(n).toLocaleString('es-AR'); }
+function kFmt(v) {
+  if (v >= 1000000) return '$' + (v/1000000).toLocaleString('es-AR', {maximumFractionDigits:1}) + 'M';
+  if (v >= 1000)    return '$' + Math.round(v/1000) + 'k';
+  return '$' + Math.round(v);
+}
 function pct(p, t)    { return t ? Math.round(p/t*100) : 0; }
 function pctBadge(p, t) {
   if (!t) return '';
