@@ -138,6 +138,80 @@
     .chart-wrap.med  { height:180px; }
     .chart-wrap.low  { height:130px; }
 
+    /* ── TABS ── */
+    .tab-bar {
+      display:flex; gap:4px; padding:12px 24px 0; border-bottom:1px solid #e8eaed;
+      background:#fff; flex-shrink:0;
+    }
+    .tab-btn {
+      padding:8px 16px; border:none; background:none; font-size:13px; font-weight:600;
+      color:#888; cursor:pointer; border-bottom:2px solid transparent;
+      margin-bottom:-1px; border-radius:4px 4px 0 0; transition:color .15s;
+    }
+    .tab-btn:hover { color:#0f4c75; }
+    .tab-btn.active { color:#0f4c75; border-bottom-color:#0f4c75; }
+    #tab-datos { display:block; }
+    #tab-wiki  { display:none; overflow-y:auto; padding:24px; height:100%; }
+    .sidebar.wiki-mode { display:none; }
+
+    /* ── WIKI CONTENT ── */
+    .wiki-section { max-width:780px; margin-bottom:36px; scroll-margin-top:20px; }
+    .wiki-section h2 {
+      font-size:15px; font-weight:700; color:#0f4c75; margin-bottom:12px;
+      padding-bottom:8px; border-bottom:2px solid #b8d4e8;
+    }
+    .wiki-section h3 { font-size:13px; font-weight:700; color:#0f766e; margin:18px 0 8px; }
+    .wiki-section p  { font-size:13px; color:#374151; margin-bottom:9px; line-height:1.65; }
+    .wiki-section ul { margin:6px 0 10px 18px; }
+    .wiki-section li { font-size:13px; color:#374151; margin-bottom:4px; line-height:1.55; }
+
+    .wiki-callout {
+      border-radius:8px; padding:12px 14px; margin:12px 0;
+      display:flex; gap:10px; font-size:13px;
+    }
+    .wiki-callout .cico { font-size:16px; flex-shrink:0; margin-top:1px; }
+    .wiki-callout-blue   { background:#e8f4fd; border-left:4px solid #0f4c75; }
+    .wiki-callout-amber  { background:#fffbeb; border-left:4px solid #d97706; }
+    .wiki-callout .ctitle { font-weight:700; font-size:12px; margin-bottom:3px; color:#1a1a1a; }
+    .wiki-callout p { margin-bottom:0; }
+
+    .wiki-filter-diagram { display:flex; gap:12px; margin:12px 0; flex-wrap:wrap; }
+    .wiki-fbox {
+      flex:1; min-width:220px; background:#fff; border:1px solid #e8eaed;
+      border-radius:8px; padding:14px 16px;
+    }
+    .wiki-fbox.on  { border-top:3px solid #0f4c75; }
+    .wiki-fbox.off { border-top:3px solid #9ca3af; opacity:.8; }
+    .wiki-fbox-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; }
+    .wiki-fbox.on  .wiki-fbox-title { color:#0f4c75; }
+    .wiki-fbox.off .wiki-fbox-title { color:#6b7280; }
+    .wiki-fbox li { font-size:12px; }
+
+    .wiki-metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; margin:12px 0; }
+    .wiki-mc {
+      background:#fff; border-radius:8px; padding:12px 14px;
+      border:1px solid #e8eaed; border-left:3px solid #0f4c75;
+    }
+    .wiki-mc.teal   { border-left-color:#0f766e; }
+    .wiki-mc.green  { border-left-color:#059669; }
+    .wiki-mc.amber  { border-left-color:#d97706; }
+    .wiki-mc.indigo { border-left-color:#4f46e5; }
+    .wiki-mc.purple { border-left-color:#7e22ce; }
+    .wiki-mc.rose   { border-left-color:#e11d48; }
+    .wiki-mc.gray   { border-left-color:#6b7280; }
+    .wiki-mc-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#888; margin-bottom:3px; }
+    .wiki-mc-def  { font-size:12.5px; font-weight:600; color:#1a1a1a; margin-bottom:5px; }
+    .wiki-mc-why  { font-size:11.5px; color:#6b7280; line-height:1.5; }
+
+    .wiki-table { width:100%; border-collapse:collapse; margin:12px 0; font-size:12.5px; }
+    .wiki-table th { background:#0f4c75; color:#fff; padding:9px 12px; text-align:left; font-weight:700; }
+    .wiki-table td { padding:9px 12px; border-bottom:1px solid #e8eaed; vertical-align:top; }
+    .wiki-table tr:last-child td { border-bottom:none; }
+    .wiki-table tr:hover td { background:#f4f6f9; }
+    .wiki-table td:first-child { font-weight:700; white-space:nowrap; }
+    .wiki-table .dash { color:#0f4c75; font-weight:600; }
+    .wiki-table .why  { color:#374151; line-height:1.5; }
+
     /* ── MOBILE ── */
     @media (max-width:700px) {
       .topbar-brand p, .topbar-fecha { display:none; }
@@ -227,9 +301,16 @@
 
     <!-- MAIN -->
     <div class="main">
+
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-btn-datos"  onclick="switchTab('datos')">Datos</button>
+        <button class="tab-btn"        id="tab-btn-wiki"   onclick="switchTab('wiki')">¿Cómo interpretar los datos?</button>
+      </div>
+
+      <div id="tab-datos">
       <div id="loading-dash">Cargando datos del SEF…</div>
 
-      <div id="contenido">
+      <div id="contenido" style="padding:20px 0">
 
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">transacciones SEF</span></div>
@@ -256,6 +337,222 @@
         </div>
 
       </div><!-- /contenido -->
+      </div><!-- /tab-datos -->
+
+      <!-- ── TAB WIKI ─────────────────────────────────── -->
+      <div id="tab-wiki">
+
+        <div class="wiki-section" id="w-intro">
+          <h2>¿Qué mide el dashboard?</h2>
+          <p>El dashboard SEF muestra la <strong>actividad económica real</strong> del sistema en el período seleccionado. No reemplaza los registros de la plataforma proyectosef.com — los complementa con una mirada analítica orientada a preguntas concretas: ¿cuánto circuló? ¿quiénes compraron? ¿volvieron a comprar?</p>
+          <p>Algunos números del dashboard difieren intencionalmente de los del Google Sheet o la plataforma. Esas diferencias no son errores: responden a decisiones sobre qué es lo más útil medir para una comunidad del tamaño actual del SEF.</p>
+          <div class="wiki-callout wiki-callout-blue">
+            <span class="cico">💡</span>
+            <div>
+              <div class="ctitle">Principio general</div>
+              <p>El dashboard mide <strong>actividad real en un período</strong>, no estado acumulado. Registrarse, publicar un emprendimiento o tener el rol de prosumidor no cuenta — lo que cuenta es haber participado económicamente en el período analizado.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="wiki-section" id="w-periodo">
+          <h2>El concepto clave: período variable</h2>
+          <p>Los filtros del dashboard permiten analizar ventanas de tiempo flexibles: todo 2026, un mes específico, o una combinación de meses. Esto cambia el significado de varias métricas.</p>
+          <div class="wiki-filter-diagram">
+            <div class="wiki-fbox on">
+              <div class="wiki-fbox-title">Con filtro activo</div>
+              <ul>
+                <li><strong>MAU</strong> = compradores únicos en todo el período</li>
+                <li><strong>Eventuales</strong> = compraron exactamente 1 vez en el período completo</li>
+                <li><strong>Recurrentes</strong> = compraron más de 1 vez en el período completo</li>
+                <li><strong>Curiosos</strong> = se registraron y no compraron en ese período</li>
+              </ul>
+            </div>
+            <div class="wiki-fbox off">
+              <div class="wiki-fbox-title">Sin filtro (histórico)</div>
+              <ul>
+                <li><strong>MAU</strong> = promedio mensual histórico</li>
+                <li><strong>Eventuales / Recurrentes</strong> = promedios mensuales</li>
+                <li><strong>Curiosos / Registrados</strong> = totales históricos acumulados</li>
+              </ul>
+            </div>
+          </div>
+          <h3>¿Por qué no usar el promedio mensual siempre?</h3>
+          <p>Con tan pocos usuarios, el promedio mensual tiene mucho ruido. <strong>"35 personas distintas compraron en 2026"</strong> dice mucho más que <strong>"MAU promedio: 12/mes"</strong> — especialmente si abril tuvo un pico y los demás meses fueron más tranquilos.</p>
+          <p>La ventana variable también hace que <em>eventual</em> sea más honesto: alguien que compró <strong>1 sola vez en 6 meses</strong> es claramente ocasional. Alguien que compró en enero y en marzo no lo es, aunque el sheet los contaría como "eventual" dos veces (una por mes).</p>
+          <div class="wiki-callout wiki-callout-amber">
+            <span class="cico">⚠️</span>
+            <div>
+              <div class="ctitle">Excepción: Zombies</div>
+              <p><strong>Zombies no respeta el filtro de período.</strong> Es un estado de hoy: alguien es zombie si no compró en los últimos 6 meses. Ese estado existe ahora, independientemente del período que se esté analizando. Por eso siempre muestra el total actual.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="wiki-section" id="w-operaciones">
+          <h2>Métricas de Operaciones</h2>
+          <p>Muestra el flujo económico del SEF. Toda transacción tiene dos pasos: el comprador <strong>informa</strong> el consumo y el prosumidor lo <strong>confirma</strong>. Solo los confirmados generan donación real.</p>
+          <div class="wiki-metric-grid">
+            <div class="wiki-mc">
+              <div class="wiki-mc-name">Consumos confirmados</div>
+              <div class="wiki-mc-def">Transacciones que el prosumidor confirmó</div>
+              <div class="wiki-mc-why">El único dato económico "firme". Hasta que el prosumidor no confirma, la transacción es una intención, no un hecho.</div>
+            </div>
+            <div class="wiki-mc amber">
+              <div class="wiki-mc-name">Consumos informados</div>
+              <div class="wiki-mc-def">Informados por el comprador (confirmados + pendientes)</div>
+              <div class="wiki-mc-why">La diferencia con los confirmados muestra el "embudo pendiente": cuánto está esperando acción del prosumidor.</div>
+            </div>
+            <div class="wiki-mc teal">
+              <div class="wiki-mc-name">Monto consumos</div>
+              <div class="wiki-mc-def">Valor total transaccionado en el período</div>
+              <div class="wiki-mc-why">La base de cálculo de todo lo demás. Todos los porcentajes se calculan sobre este número.</div>
+            </div>
+            <div class="wiki-mc green">
+              <div class="wiki-mc-name">Monto donación</div>
+              <div class="wiki-mc-def">Porcentaje del consumo destinado a donación</div>
+              <div class="wiki-mc-why">El comprador elige libremente qué porcentaje de su consumo dona. Este campo suma todas esas donaciones del período.</div>
+            </div>
+            <div class="wiki-mc amber">
+              <div class="wiki-mc-name">Sostenimiento SEF</div>
+              <div class="wiki-mc-def">Porción de la donación para sostener la plataforma</div>
+              <div class="wiki-mc-why">Una fracción de lo donado cubre los costos operativos del SEF. Es lo que permite que el sistema funcione.</div>
+            </div>
+            <div class="wiki-mc indigo">
+              <div class="wiki-mc-name">A comunidad / escuela</div>
+              <div class="wiki-mc-def">Donación que llega a la Escuela Dandelion</div>
+              <div class="wiki-mc-why">Del total donado, esta es la parte que se transfiere a la escuela. El objetivo central del SEF.</div>
+            </div>
+            <div class="wiki-mc gray">
+              <div class="wiki-mc-name">A destinos particulares</div>
+              <div class="wiki-mc-def">Donación dirigida a una persona o causa específica</div>
+              <div class="wiki-mc-why">El comprador puede elegir destinar parte de su donación a alguien en particular (ej: una familia de la comunidad).</div>
+            </div>
+            <div class="wiki-mc rose">
+              <div class="wiki-mc-name">Comisión MELI</div>
+              <div class="wiki-mc-def">Fee real cobrado por Mercado Pago sobre los pagos</div>
+              <div class="wiki-mc-why">Aparece negativo porque es un costo. Se resta para calcular el neto que realmente llega a la escuela.</div>
+            </div>
+            <div class="wiki-mc teal">
+              <div class="wiki-mc-name">Neto a comunidad</div>
+              <div class="wiki-mc-def">A comunidad/escuela menos comisión MELI</div>
+              <div class="wiki-mc-why">El número real que llega a la escuela después de comisiones. La métrica de impacto final del SEF.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wiki-section" id="w-prosumidores">
+          <h2>Métricas de Prosumidores</h2>
+          <div class="wiki-metric-grid">
+            <div class="wiki-mc purple">
+              <div class="wiki-mc-name">Prosumidores</div>
+              <div class="wiki-mc-def">Vendedores únicos con al menos una transacción en el período</div>
+              <div class="wiki-mc-why">La plataforma tiene más de 250 usuarios con rol prosumidor. El dashboard muestra cuántos <em>vendieron de verdad</em> (~10–14). Tener el rol no implica actividad real.</div>
+            </div>
+            <div class="wiki-mc teal">
+              <div class="wiki-mc-name">Emprendimientos</div>
+              <div class="wiki-mc-def">Emprendimientos con al menos una venta en el período</div>
+              <div class="wiki-mc-why">Publicado ≠ activo. El dashboard mide cuántos generaron economía real, no cuántos están en catálogo.</div>
+            </div>
+            <div class="wiki-mc green">
+              <div class="wiki-mc-name">Nuevos emprendimientos</div>
+              <div class="wiki-mc-def">Primera transacción de un emprendimiento en el período</div>
+              <div class="wiki-mc-why">La primera publicación es un dato de catálogo. La primera <em>venta</em> es el hito económico relevante: el momento en que entra al circuito SEF.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wiki-section" id="w-usuarios">
+          <h2>Métricas de Usuarios</h2>
+          <div class="wiki-metric-grid">
+            <div class="wiki-mc">
+              <div class="wiki-mc-name">Registrados</div>
+              <div class="wiki-mc-def">Con filtro: nuevos registros en el período. Sin filtro: total histórico</div>
+              <div class="wiki-mc-why">El total acumulado crece siempre. Con filtro muestra la incorporación neta en el período analizado.</div>
+            </div>
+            <div class="wiki-mc teal">
+              <div class="wiki-mc-name">MAU</div>
+              <div class="wiki-mc-def">Con filtro: compradores únicos en el período. Sin filtro: promedio mensual</div>
+              <div class="wiki-mc-why">"35 personas compraron en 2026" es más informativo que un promedio. MAU = Eventuales + Recurrentes.</div>
+            </div>
+            <div class="wiki-mc indigo">
+              <div class="wiki-mc-name">Eventuales</div>
+              <div class="wiki-mc-def">Compraron exactamente 1 vez en todo el período seleccionado</div>
+              <div class="wiki-mc-why">Con ventana variable, solo es eventual quien compró una sola vez en todo el rango. Alguien que compró en enero y en marzo no es eventual.</div>
+            </div>
+            <div class="wiki-mc purple">
+              <div class="wiki-mc-name">Recurrentes</div>
+              <div class="wiki-mc-def">Compraron más de 1 vez en todo el período seleccionado</div>
+              <div class="wiki-mc-why">El indicador de fidelidad central del SEF. El porcentaje junto al número (ej: 79%) es Recurrentes ÷ MAU.</div>
+            </div>
+            <div class="wiki-mc amber">
+              <div class="wiki-mc-name">Curiosos</div>
+              <div class="wiki-mc-def">Se registraron y no compraron en el período analizado</div>
+              <div class="wiki-mc-why">Con filtro, responde "¿cuántos se registraron y no compraron?": la señal de conversión fallida, el embudo que no se cerró.</div>
+            </div>
+            <div class="wiki-mc rose">
+              <div class="wiki-mc-name">Zombies</div>
+              <div class="wiki-mc-def">Compradores sin actividad en los últimos 6 meses (estado actual, siempre global)</div>
+              <div class="wiki-mc-why">Es un <strong>estado de hoy</strong>, no un evento histórico. No se filtra: alguien es zombie ahora, independientemente del período que se analice.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wiki-section" id="w-tabla">
+          <h2>Sheet vs Dashboard: ¿por qué los números difieren?</h2>
+          <table class="wiki-table">
+            <thead>
+              <tr><th>Métrica</th><th>Sheet / Plataforma</th><th>Dashboard</th><th>Por qué cambia</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Prosumidores</td>
+                <td>Usuarios con rol (253–265)</td>
+                <td class="dash">Vendedores activos en el período (~10–14)</td>
+                <td class="why">Tener el rol no implica haber vendido. El dashboard mide actividad real.</td>
+              </tr>
+              <tr>
+                <td>Emprendimientos</td>
+                <td>Publicados en plataforma (104–110)</td>
+                <td class="dash">Con transacciones en el período</td>
+                <td class="why">Publicado ≠ activo. Solo cuentan los que generaron economía.</td>
+              </tr>
+              <tr>
+                <td>Curiosos</td>
+                <td>Snapshot acumulado (32→46→50→51)</td>
+                <td class="dash">Nuevos curiosos en el período (con filtro)</td>
+                <td class="why">El acumulado siempre crece. El dashboard mide la señal de conversión fallida en el período.</td>
+              </tr>
+              <tr>
+                <td>Eventuales</td>
+                <td>1 consumo por mes (ventana fija)</td>
+                <td class="dash">1 compra en todo el período seleccionado</td>
+                <td class="why">Alguien que compró en enero y en febrero no es eventual — el sheet los contaría así dos veces.</td>
+              </tr>
+              <tr>
+                <td>Recurrentes</td>
+                <td>&gt;1 consumo en últimas 4 semanas</td>
+                <td class="dash">&gt;1 compra en todo el período seleccionado</td>
+                <td class="why">"35 personas compraron en 2026" dice más que "MAU promedio: 12/mes". Más robusto para comunidades pequeñas.</td>
+              </tr>
+              <tr>
+                <td>Zombies</td>
+                <td>Snapshot en distintas fechas</td>
+                <td class="dash">Estado actual, siempre global</td>
+                <td class="why">Es un estado de hoy, no un evento del pasado. No tiene sentido filtrarlo por mes.</td>
+              </tr>
+              <tr>
+                <td>Nuevos emprendimientos</td>
+                <td>Primera publicación en plataforma</td>
+                <td class="dash">Primera transacción en el período</td>
+                <td class="why">La publicación es un dato de catálogo. La primera venta es el hito económico relevante.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /tab-wiki -->
+
     </div><!-- /main -->
   </div><!-- /body-layout -->
 </div><!-- /dashboard -->
@@ -277,6 +574,16 @@ function leerSesion() {
   } catch(e) { return null; }
 }
 function borrarSesion() { localStorage.removeItem(SESSION_KEY); }
+
+// ── TABS ────────────────────────────────────────────────────
+function switchTab(tab) {
+  var isWiki = tab === 'wiki';
+  document.getElementById('tab-datos').style.display  = isWiki ? 'none'  : 'block';
+  document.getElementById('tab-wiki').style.display   = isWiki ? 'block' : 'none';
+  document.getElementById('tab-btn-datos').classList.toggle('active', !isWiki);
+  document.getElementById('tab-btn-wiki').classList.toggle('active',  isWiki);
+  document.querySelector('.sidebar').classList.toggle('wiki-mode', isWiki);
+}
 
 function cerrarSesion() {
   borrarSesion();
