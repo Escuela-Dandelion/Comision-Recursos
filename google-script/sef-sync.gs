@@ -134,7 +134,7 @@ function resetearDevengadas() {
 // ── TRANSACCIONES ──────────────────────────────────────────
 function sincronizarTransacciones() {
   const ss    = SpreadsheetApp.openById(CFG.SHEET_ID);
-  const sheet = obtenerHoja(ss, 'Transacciones', HEADERS_TRX);
+  const sheet = obtenerHoja(ss, 'Transacciones Confirmadas', HEADERS_TRX);
 
   const idsExistentes = obtenerSet(sheet, 2); // col 2 = wc_orden_id
   const props   = PropertiesService.getScriptProperties();
@@ -211,7 +211,7 @@ function sincronizarTransacciones() {
 // ── USUARIOS ───────────────────────────────────────────────
 function sincronizarUsuarios() {
   const ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
-  const sheetTrx = ss.getSheetByName('Transacciones');
+  const sheetTrx = ss.getSheetByName('Transacciones Confirmadas');
   const sheet    = obtenerHoja(ss, 'Usuarios', HEADERS_USR);
 
   // Snapshot completo — limpiar antes de reescribir
@@ -362,7 +362,7 @@ function toMes(val) {
 
 function agregarDatos() {
   var ss        = SpreadsheetApp.openById(CFG.SHEET_ID);
-  var sheetTrx  = ss.getSheetByName('Transacciones');
+  var sheetTrx  = ss.getSheetByName('Transacciones Confirmadas');
   var sheetUsr  = ss.getSheetByName('Usuarios');
   var sheetFees = ss.getSheetByName('FeesMeli');
   var sheetDev  = ss.getSheetByName('Devengadas');
@@ -692,7 +692,7 @@ function resetearFees() {
 function resaltarPendientes() {
   var ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
   var sheetDev = ss.getSheetByName('Devengadas');
-  var sheetTrx = ss.getSheetByName('Transacciones');
+  var sheetTrx = ss.getSheetByName('Transacciones Confirmadas');
 
   if (!sheetDev) { Logger.log('Hoja Devengadas no encontrada.'); return; }
 
