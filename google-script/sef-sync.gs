@@ -421,9 +421,10 @@ function agregarDatos() {
         var dFecha = dRow[0] ? (Object.prototype.toString.call(dRow[0]) === '[object Date]'
           ? dRow[0].toISOString().substring(0, 10)
           : String(dRow[0]).substring(0, 10)) : '';
-        if (!pendientesPorEmp[emp]) pendientesPorEmp[emp] = { count: 0, monto: 0, oldest: dFecha };
+        if (!pendientesPorEmp[emp]) pendientesPorEmp[emp] = { count: 0, monto: 0, oldest: dFecha, orders: [] };
         pendientesPorEmp[emp].count++;
         pendientesPorEmp[emp].monto += monto;
+        pendientesPorEmp[emp].orders.push(dId);
         if (dFecha && (!pendientesPorEmp[emp].oldest || dFecha < pendientesPorEmp[emp].oldest))
           pendientesPorEmp[emp].oldest = dFecha;
       }
@@ -559,7 +560,8 @@ function agregarDatos() {
       count:          pendientesPorEmp[emp].count,
       total:          empTotales[emp] || 0,
       monto:          Math.round(pendientesPorEmp[emp].monto),
-      oldest:         pendientesPorEmp[emp].oldest
+      oldest:         pendientesPorEmp[emp].oldest,
+      orders:         pendientesPorEmp[emp].orders
     };
   }).sort(function(a, b) { return b.monto - a.monto; });
 

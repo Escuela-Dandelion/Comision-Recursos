@@ -1064,18 +1064,28 @@ function renderPendientes() {
     badge;
 
   var hoy  = new Date();
-  var rows = pend.map(function(p) {
-    var dias   = p.oldest ? Math.floor((hoy - new Date(p.oldest)) / 86400000) : null;
+  var rows = pend.map(function(p, i) {
+    var dias    = p.oldest ? Math.floor((hoy - new Date(p.oldest)) / 86400000) : null;
     var diasCls = dias === null ? '' : dias > 30 ? 'danger' : dias > 14 ? 'warn' : 'ok';
     var diasTxt = dias !== null ? dias + 'd' : '—';
     var pctEmp  = p.total ? Math.round(p.count / p.total * 100) : 0;
-    return '<tr>' +
-      '<td class="pend-emp">' + p.emprendimiento + '</td>' +
+    var detailId = 'pend-orders-' + i;
+    var orderChips = (p.orders || []).map(function(o) {
+      return '<span style="display:inline-block;background:#fff7ed;color:#c2410c;font-size:10px;' +
+        'font-weight:600;padding:1px 6px;border-radius:4px;margin:2px 2px 2px 0">#' + o + '</span>';
+    }).join('');
+    var mainRow = '<tr style="cursor:pointer" onclick="toggleOrderDetail(\'' + detailId + '\', this)">' +
+      '<td class="pend-emp">' + p.emprendimiento +
+        ' <span style="font-size:9px;color:#ccc" class="pend-chevron">▶</span></td>' +
       '<td style="text-align:center">' + p.count + ' <span style="color:#aaa;font-size:10px">/ ' + p.total + '</span></td>' +
       '<td style="text-align:center;font-weight:700;color:#e11d48">' + pctEmp + '%</td>' +
       '<td class="pend-monto">$' + moneyFmt(p.monto) + '</td>' +
       '<td><span class="pend-dias ' + diasCls + '">' + diasTxt + '</span></td>' +
       '</tr>';
+    var detailRow = '<tr id="' + detailId + '" style="display:none">' +
+      '<td colspan="5" style="padding:6px 12px 10px 20px;background:#fafafa;border-top:none">' +
+      orderChips + '</td></tr>';
+    return mainRow + detailRow;
   }).join('');
   tbl.innerHTML = '<table class="pend-table">' +
     '<thead><tr><th>Emprendimiento</th><th style="text-align:center">Pendientes</th>' +
@@ -1101,6 +1111,14 @@ function togglePendientes() {
   var kpi  = document.getElementById('kpi-informados');
   var open = card.classList.toggle('visible');
   if (kpi) kpi.classList.toggle('open', open);
+}
+
+function toggleOrderDetail(id, row) {
+  var detail  = document.getElementById(id);
+  var chevron = row.querySelector('.pend-chevron');
+  var open    = detail.style.display === 'none';
+  detail.style.display = open ? 'table-row' : 'none';
+  if (chevron) chevron.textContent = open ? '▼' : '▶';
 }
 </script>
 </body>
