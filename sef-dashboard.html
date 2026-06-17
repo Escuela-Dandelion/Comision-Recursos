@@ -349,12 +349,8 @@
       <div id="contenido" style="padding:20px 0">
 
         <!-- OPERACIONES -->
-        <div class="section-title">Operaciones <span class="sub">transacciones confirmadas SEF</span></div>
+        <div class="section-title">Operaciones <span class="sub">flujo de consumos SEF</span></div>
         <div class="cards" id="cards-economia"></div>
-        <div class="section-card" style="padding:14px 16px">
-          <div class="chart-title" style="margin-bottom:12px">Funnel SEF <span style="font-size:11px;font-weight:400;color:#aaa">flujo de operaciones por etapa</span></div>
-          <div class="funnel-wrap" id="funnel-sef"></div>
-        </div>
         <div class="section-card" id="card-pendientes" style="padding-top:0;padding-bottom:0;margin-top:0">
           <div style="padding:14px 16px">
             <div class="chart-title" id="pend-title"></div>
@@ -914,8 +910,11 @@ function renderTodo(meses) {
   var totalDniDest   = sumar(meses, 'dni_destino');
   var totalFeeMeli   = sumar(meses, 'fee_meli');
   var totalNeto      = totalComunidad - totalFeeMeli;
-  var totalInformada = sumar(meses, 'cantidad_informada');
-  var totalPendiente = totalInformada > 0 ? totalInformada - totalCantidad : 0;
+  var totalInformada   = sumar(meses, 'cantidad_informada');
+  var totalConfirmada  = sumar(meses, 'cantidad_confirmada');
+  var totalMontoInf    = sumar(meses, 'monto_informada');
+  var totalMontoConf   = sumar(meses, 'monto_confirmada');
+  var totalPendiente   = totalInformada > 0 ? totalInformada - totalConfirmada : 0;
 
   var uamPromedio       = meses.length ? Math.round(sumar(meses,'uam')         / meses.length) : 0;
   var eventualesPromedio= meses.length ? Math.round(sumar(meses,'eventuales')  / meses.length) : 0;
@@ -999,18 +998,24 @@ function renderTodo(meses) {
 
   // ── Cards economia
   document.getElementById('cards-economia').innerHTML = cardsHtml([
-    { label: 'Consumos informados <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1). Incluye los ya confirmados mas los pendientes de confirmacion por el prosumidor.">&#9432;</span>',
+    { label: 'Informadas <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1 del flujo SEF).">&#9432;</span>',
       value: totalInformada ? numFmt(totalInformada) : '—',
       sub: totalInformada
         ? (totalPendiente > 0
-            ? numFmt(totalPendiente) + ' pendientes &nbsp;<span style="font-size:9px;opacity:.6">▼ ver detalle</span>'
-            : 'todos confirmados')
-        : 'sin datos (ejecutar sincronizarDevengadas)',
+            ? numFmt(totalPendiente) + ' sin confirmar &nbsp;<span style="font-size:9px;opacity:.6">▼ ver</span>'
+            : kFmt(totalMontoInf))
+        : 'sin datos',
       color: totalPendiente > 0 ? 'amber' : 'teal',
       id: 'kpi-informados',
       onclick: totalPendiente > 0 ? 'togglePendientes()' : '' },
-    { label: 'Monto Consumos',
-      value: kFmt(totalMonto), sub: 'valor total transaccionado', color: 'teal' },
+    { label: 'Confirmadas <span class="info-tip" data-tip="Confirmadas por el prosumidor (paso 2). Incluye pagadas y pendientes de pago.">&#9432;</span>',
+      value: totalConfirmada ? numFmt(totalConfirmada) : '—',
+      sub: totalConfirmada ? kFmt(totalMontoConf) : 'sin datos',
+      color: 'blue' },
+    { label: 'Pagadas <span class="info-tip" data-tip="Pago procesado por Mercado Pago (paso 3). Generan donacion real.">&#9432;</span>',
+      value: numFmt(totalCantidad),
+      sub: kFmt(totalMonto),
+      color: 'teal' },
     { label: 'Monto Donacion',
       value: kFmt(totalDonacion), sub: pct(totalDonacion, totalMonto) + '% del consumo', color: 'green' },
     { label: 'Sostenimiento SEF',
@@ -1026,9 +1031,6 @@ function renderTodo(meses) {
     { label: 'Neto a Comunidad <span class="info-tip" data-tip="A Comunidad/Escuela menos la comision de Mercado Pago.">&#9432;</span>',
       value: kFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
   ]);
-
-  // ── Funnel
-  renderFunnel(meses);
 
   // ── Pendientes por vendedor
   renderPendientes();
