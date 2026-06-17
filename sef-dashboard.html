@@ -104,6 +104,7 @@
     .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; line-height:1.4; min-height:2.8em; display:flex; align-items:flex-start; }
     .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
     .card-sub   { font-size:10px; color:#aaa; margin-top:4px; min-height:2.4em; }
+    .cards-group-label { font-size:9px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:1px; margin:14px 0 4px; }
     .funnel-wrap { display:flex; align-items:stretch; gap:0; margin-bottom:18px; }
     .funnel-stage { flex:1; background:#fff; border:1px solid #e8eaed; padding:14px 16px; position:relative; }
     .funnel-stage:first-child { border-radius:10px 0 0 10px; border-left:3px solid #6366f1; }
@@ -351,6 +352,10 @@
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">flujo de consumos SEF</span></div>
         <div class="cards" id="cards-economia"></div>
+        <div class="cards-group-label">Distribución de la donación</div>
+        <div class="cards" id="cards-donacion"></div>
+        <div class="cards-group-label">Métricas adicionales</div>
+        <div class="cards" id="cards-extra"></div>
         <div class="section-card" id="card-pendientes" style="padding-top:0;padding-bottom:0;margin-top:0">
           <div style="padding:14px 16px">
             <div class="chart-title" id="pend-title"></div>
@@ -997,6 +1002,10 @@ function renderTodo(meses) {
   ]);
 
   // ── Cards economia
+  var convConf = totalInformada  ? Math.round(totalConfirmada / totalInformada  * 100) + '%' : '—';
+  var convPag  = totalConfirmada ? Math.round(totalCantidad   / totalConfirmada * 100) + '%' : '—';
+
+  // ── Grupo 1: flujo de operaciones
   document.getElementById('cards-economia').innerHTML = cardsHtml([
     { label: 'Informadas <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1 del flujo SEF).">&#9432;</span>',
       value: totalInformada ? numFmt(totalInformada) : '—',
@@ -1005,25 +1014,34 @@ function renderTodo(meses) {
             ? numFmt(totalPendiente) + ' sin confirmar &nbsp;<span style="font-size:9px;opacity:.6">▼ ver</span>'
             : kFmt(totalMontoInf))
         : 'sin datos',
-      color: totalPendiente > 0 ? 'amber' : 'teal',
+      color: totalPendiente > 0 ? 'amber' : 'indigo',
       id: 'kpi-informados',
       onclick: totalPendiente > 0 ? 'togglePendientes()' : '' },
     { label: 'Confirmadas <span class="info-tip" data-tip="Confirmadas por el prosumidor (paso 2). Incluye pagadas y pendientes de pago.">&#9432;</span>',
       value: totalConfirmada ? numFmt(totalConfirmada) : '—',
-      sub: totalConfirmada ? kFmt(totalMontoConf) : 'sin datos',
+      sub: (totalConfirmada ? kFmt(totalMontoConf) : 'sin datos') + ' &nbsp;·&nbsp; conv. ' + convConf,
       color: 'blue' },
     { label: 'Pagadas <span class="info-tip" data-tip="Pago procesado por Mercado Pago (paso 3). Generan donacion real.">&#9432;</span>',
       value: numFmt(totalCantidad),
-      sub: kFmt(totalMonto),
-      color: 'teal' },
+      sub: kFmt(totalMonto) + ' &nbsp;·&nbsp; conv. ' + convPag,
+      color: 'teal' }
+  ]);
+
+  // ── Grupo 2: distribución de la donación
+  var totalDonYSef = totalDonacion + totalSef;
+  document.getElementById('cards-donacion').innerHTML = cardsHtml([
     { label: 'Monto Donacion',
       value: kFmt(totalDonacion), sub: pct(totalDonacion, totalMonto) + '% del consumo', color: 'green' },
     { label: 'Sostenimiento SEF',
-      value: kFmt(totalSef), sub: pct(totalSef, totalMonto) + '% del consumo', color: 'amber' },
+      value: kFmt(totalSef), sub: pct(totalSef, totalDonYSef) + '% de lo donado', color: 'amber' },
     { label: 'A Comunidad/Escuela',
-      value: kFmt(totalComunidad), sub: pct(totalComunidad, totalDonacion + totalSef) + '% de lo donado', color: 'indigo' },
+      value: kFmt(totalComunidad), sub: pct(totalComunidad, totalDonYSef) + '% de lo donado', color: 'indigo' },
     { label: 'A Destinos Part.',
-      value: kFmt(totalDestinos), sub: pct(totalDestinos, totalDonacion + totalSef) + '% de lo donado', color: 'gray' },
+      value: kFmt(totalDestinos), sub: pct(totalDestinos, totalDonYSef) + '% de lo donado', color: 'gray' }
+  ]);
+
+  // ── Grupo 3: métricas adicionales
+  document.getElementById('cards-extra').innerHTML = cardsHtml([
     { label: 'DNI Destino <span class="info-tip" data-tip="Cantidad de personas distintas que recibieron donacion a destino particular.">&#9432;</span>',
       value: numFmt(totalDniDest), sub: 'receptores unicos', color: 'orange' },
     { label: 'Comision MELI <span class="info-tip" data-tip="Fee real cobrado por Mercado Pago sobre los pagos de donacion del periodo.">&#9432;</span>',
