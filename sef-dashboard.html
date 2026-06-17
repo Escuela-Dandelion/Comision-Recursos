@@ -999,8 +999,6 @@ function renderTodo(meses) {
 
   // ── Cards economia
   document.getElementById('cards-economia').innerHTML = cardsHtml([
-    { label: 'Consumos confirmados <span class="info-tip" data-tip="Transacciones confirmadas por el prosumidor (paso 2 del flujo SEF). Son las que generan donacion real.">&#9432;</span>',
-      value: numFmt(totalCantidad), sub: 'transacciones SEF confirmadas', color: 'blue' },
     { label: 'Consumos informados <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1). Incluye los ya confirmados mas los pendientes de confirmacion por el prosumidor.">&#9432;</span>',
       value: totalInformada ? numFmt(totalInformada) : '—',
       sub: totalInformada
@@ -1095,7 +1093,7 @@ function renderFunnel(meses) {
     return '<div class="funnel-stage ' + cls + '">' +
       '<div class="funnel-label">' + label + '</div>' +
       '<div class="funnel-value">' + numFmt(cnt) + '</div>' +
-      '<div class="funnel-monto">$' + kFmt(mto) + '</div>' +
+      '<div class="funnel-monto">' + kFmt(mto) + '</div>' +
       (convLabel ? '<div class="funnel-pct">' + convLabel + ': ' + convVal + '</div>' : '<div class="funnel-pct">&nbsp;</div>') +
       '</div>';
   }

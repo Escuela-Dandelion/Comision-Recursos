@@ -450,11 +450,15 @@ function agregarDatos() {
     cpendMontoByMes[cMes] = (cpendMontoByMes[cMes] || 0) + (parseFloat(cpendRows[cpi][7]) || 0);
   }
 
-  // Set de orden_original confirmadas (para detectar pendientes)
+  // Set de orden_original confirmadas (trx pagadas + confirmaciones pendientes de pago)
   var confirmados = {};
   for (var ci = 0; ci < trxRows.length; ci++) {
     var oid = String(trxRows[ci][2]);
     if (oid) confirmados[oid] = true;
+  }
+  for (var cpi0 = 0; cpi0 < cpendRows.length; cpi0++) {
+    var oid0 = String(cpendRows[cpi0][2]); // orden_original col 2
+    if (oid0) confirmados[oid0] = true;
   }
 
   var usrRowsEarly = sheetUsr && sheetUsr.getLastRow() > 1
@@ -468,6 +472,7 @@ function agregarDatos() {
 
   // devengadas por mes + pendientes por emprendimiento
   var devByMes = {}, devMontoByMes = {};
+  var devConfByMes = {}, devConfMontoByMes = {}; // confirmadas, agrupadas por fecha de la devengada
   var pendientesPorEmp = {};
   var totalInformados = 0;
   var empTotales = {}; // total informados por emprendimiento (todos, confirmados o no)
@@ -476,9 +481,15 @@ function agregarDatos() {
     for (var di = 0; di < devData.length; di++) {
       var dRow  = devData[di];
       var dMes  = toMes(dRow[0]);
+      var dMonto = parseFloat(dRow[7]) || 0;
       if (dMes) {
         devByMes[dMes]      = (devByMes[dMes]      || 0) + 1;
-        devMontoByMes[dMes] = (devMontoByMes[dMes] || 0) + (parseFloat(dRow[7]) || 0);
+        devMontoByMes[dMes] = (devMontoByMes[dMes] || 0) + dMonto;
+        var dIdConf = String(dRow[1]);
+        if (confirmados[dIdConf]) {
+          devConfByMes[dMes]      = (devConfByMes[dMes]      || 0) + 1;
+          devConfMontoByMes[dMes] = (devConfMontoByMes[dMes] || 0) + dMonto;
+        }
       }
 
       var empRaw = String(dRow[5]).trim();
@@ -568,9 +579,9 @@ function agregarDatos() {
 
   var fechaMinMes = CFG.FECHA_MIN.substring(0, 7); // "2024-01"
   var allMeses = {};
-  Object.keys(trxByMes).forEach(function(m)    { if (m >= fechaMinMes) allMeses[m] = true; });
-  Object.keys(nuevosByMes).forEach(function(m)  { if (m >= fechaMinMes) allMeses[m] = true; });
-  Object.keys(cpendByMes).forEach(function(m)   { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(trxByMes).forEach(function(m)   { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(nuevosByMes).forEach(function(m) { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(devByMes).forEach(function(m)    { if (m >= fechaMinMes) allMeses[m] = true; });
   var meses = Object.keys(allMeses).sort();
 
   var porMes = meses.map(function(mes) {
@@ -612,10 +623,10 @@ function agregarDatos() {
       donacion_total:         Math.round(t.donacion_comprador + t.donacion_vendedor),
       dni_destino:            Object.keys(dni).length,
       fee_meli:               Math.round(feesByMes[mes] || 0),
-      cantidad_informada:     devByMes[mes]      || 0,
-      monto_informada:        Math.round(devMontoByMes[mes] || 0),
-      cantidad_confirmada:    t.cantidad + (cpendByMes[mes] || 0),
-      monto_confirmada:       Math.round(t.monto_total + (cpendMontoByMes[mes] || 0))
+      cantidad_informada:     devByMes[mes]          || 0,
+      monto_informada:        Math.round(devMontoByMes[mes]     || 0),
+      cantidad_confirmada:    devConfByMes[mes]      || 0,
+      monto_confirmada:       Math.round(devConfMontoByMes[mes] || 0)
     };
   });
 
