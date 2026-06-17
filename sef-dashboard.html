@@ -104,6 +104,20 @@
     .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; line-height:1.4; min-height:2.8em; display:flex; align-items:flex-start; }
     .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
     .card-sub   { font-size:10px; color:#aaa; margin-top:4px; min-height:2.4em; }
+    .funnel-wrap { display:flex; align-items:stretch; gap:0; margin-bottom:18px; }
+    .funnel-stage { flex:1; background:#fff; border:1px solid #e8eaed; padding:14px 16px; position:relative; }
+    .funnel-stage:first-child { border-radius:10px 0 0 10px; border-left:3px solid #6366f1; }
+    .funnel-stage:last-child  { border-radius:0 10px 10px 0; }
+    .funnel-arrow { display:flex; align-items:center; justify-content:center;
+      background:#f8f9fa; border-top:1px solid #e8eaed; border-bottom:1px solid #e8eaed;
+      width:36px; flex-shrink:0; color:#d1d5db; font-size:18px; }
+    .funnel-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+    .funnel-value { font-size:22px; font-weight:700; line-height:1; margin-bottom:4px; }
+    .funnel-monto { font-size:12px; font-weight:600; margin-bottom:4px; }
+    .funnel-pct   { font-size:10px; color:#aaa; }
+    .funnel-stage.inf  { border-left:3px solid #6366f1; } .funnel-stage.inf  .funnel-value, .funnel-stage.inf  .funnel-monto { color:#4f46e5; }
+    .funnel-stage.conf { border-left:3px solid #0891b2; } .funnel-stage.conf .funnel-value, .funnel-stage.conf .funnel-monto { color:#0891b2; }
+    .funnel-stage.pag  { border-left:3px solid #059669; } .funnel-stage.pag  .funnel-value, .funnel-stage.pag  .funnel-monto { color:#059669; }
     .card.clickable { cursor:pointer; transition:box-shadow .15s, border-left-width .15s; }
     .card.clickable:hover { box-shadow:0 3px 10px rgba(0,0,0,.1); border-left-width:4px; }
     .card.clickable.open  { border-left-width:4px; }
@@ -337,6 +351,10 @@
         <!-- OPERACIONES -->
         <div class="section-title">Operaciones <span class="sub">transacciones confirmadas SEF</span></div>
         <div class="cards" id="cards-economia"></div>
+        <div class="section-card" style="padding:14px 16px">
+          <div class="chart-title" style="margin-bottom:12px">Funnel SEF <span style="font-size:11px;font-weight:400;color:#aaa">flujo de operaciones por etapa</span></div>
+          <div class="funnel-wrap" id="funnel-sef"></div>
+        </div>
         <div class="section-card" id="card-pendientes" style="padding-top:0;padding-bottom:0;margin-top:0">
           <div style="padding:14px 16px">
             <div class="chart-title" id="pend-title"></div>
@@ -1011,6 +1029,9 @@ function renderTodo(meses) {
       value: kFmt(totalNeto), sub: totalFeeMeli ? 'comunidad - comision MELI' : 'sin fee MELI aun', color: totalNeto >= 0 ? 'teal' : 'rose' }
   ]);
 
+  // ── Funnel
+  renderFunnel(meses);
+
   // ── Pendientes por vendedor
   renderPendientes();
 
@@ -1051,6 +1072,45 @@ function mesLabel(mes) {
   var p  = mes.split('-');
   return nn[parseInt(p[1])] + ' ' + p[0].slice(2);
 }
+function renderFunnel(meses) {
+  var el = document.getElementById('funnel-sef');
+  if (!el) return;
+
+  var cntInf  = sumar(meses, 'cantidad_informada');
+  var cntConf = sumar(meses, 'cantidad_confirmada');
+  var cntPag  = sumar(meses, 'cantidad');
+  var mtoInf  = sumar(meses, 'monto_informada');
+  var mtoConf = sumar(meses, 'monto_confirmada');
+  var mtoPag  = sumar(meses, 'monto_total');
+
+  // If no funnel data yet (GAS not redeployed), show a placeholder
+  if (!cntInf && !cntConf) {
+    el.innerHTML = '<p style="color:#aaa;font-size:12px;font-style:italic">Sin datos de funnel — ejecutar sincronizarTodo() en Apps Script y redesplegar.</p>';
+    return;
+  }
+
+  function pct(a, b) { return b > 0 ? Math.round(a / b * 100) + '%' : '—'; }
+
+  function stage(cls, label, cnt, mto, convLabel, convVal) {
+    return '<div class="funnel-stage ' + cls + '">' +
+      '<div class="funnel-label">' + label + '</div>' +
+      '<div class="funnel-value">' + numFmt(cnt) + '</div>' +
+      '<div class="funnel-monto">$' + kFmt(mto) + '</div>' +
+      (convLabel ? '<div class="funnel-pct">' + convLabel + ': ' + convVal + '</div>' : '<div class="funnel-pct">&nbsp;</div>') +
+      '</div>';
+  }
+
+  var pctConf = pct(cntConf, cntInf);
+  var pctPag  = pct(cntPag,  cntConf);
+
+  el.innerHTML =
+    stage('inf',  'Informadas',  cntInf,  mtoInf,  null,       null) +
+    '<div class="funnel-arrow">›</div>' +
+    stage('conf', 'Confirmadas', cntConf, mtoConf, 'conv.', pctConf) +
+    '<div class="funnel-arrow">›</div>' +
+    stage('pag',  'Pagadas',     cntPag,  mtoPag,  'conv.', pctPag);
+}
+
 function renderPendientes() {
   var pend = (DATOS && DATOS.pendientes_por_vendedor) || [];
   var tbl  = document.getElementById('tabla-pendientes');

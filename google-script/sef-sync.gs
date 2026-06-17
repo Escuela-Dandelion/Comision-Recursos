@@ -27,6 +27,8 @@ const HEADERS_TRX = [
   'destino_particular', 'calif_comprador', 'calif_vendedor'
 ];
 
+const HEADERS_CPEND = HEADERS_TRX; // misma estructura, distinta hoja
+
 const HEADERS_USR = [
   'customer_id', 'email', 'nombre', 'fecha_registro',
   'is_paying', 'ultima_compra', 'total_compras', 'curioso', 'zombi'
@@ -44,6 +46,7 @@ function wcHeaders() {
 function sincronizarTodo() {
   sincronizarDevengadas();
   sincronizarTransacciones();
+  sincronizarConfirmadasPendientes();
   sincronizarFeesMeli();
   sincronizarUsuarios();
 }
@@ -208,6 +211,57 @@ function sincronizarTransacciones() {
   Logger.log('Transacciones: ' + nuevas + ' nuevas registradas.');
 }
 
+// ── CONFIRMACIONES PENDIENTES DE PAGO ──────────────────────
+// Órdenes de paso 2 (confirmación del vendedor) con status pending/on-hold.
+// Se reconstruye completo en cada sync porque el volumen es pequeño.
+function sincronizarConfirmadasPendientes() {
+  const ss    = SpreadsheetApp.openById(CFG.SHEET_ID);
+  const sheet = obtenerHoja(ss, 'Confirmaciones Pendientes', HEADERS_CPEND);
+
+  if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+
+  const rows = [];
+  var statuses = ['pending', 'on-hold'];
+  for (var si = 0; si < statuses.length; si++) {
+    var page = 1;
+    while (true) {
+      var url  = CFG.WC_URL + '/orders?status=' + statuses[si] + '&per_page=100&page=' + page + '&orderby=id&order=desc';
+      var resp = UrlFetchApp.fetch(url, wcHeaders());
+      if (resp.getResponseCode() !== 200) break;
+      var orders = JSON.parse(resp.getContentText());
+      if (!orders.length) break;
+
+      for (var i = 0; i < orders.length; i++) {
+        var order = orders[i];
+        var meta  = metaMap(order.meta_data);
+        if (!meta.orden_original || !meta.quien_informo) continue;
+        var fechaOp = meta.fecha_operacion || (order.date_created ? order.date_created.substring(0, 10) : '');
+        rows.push([
+          fechaOp, order.id, meta.orden_original || '',
+          meta.comprador || '', meta.vendedor || '', meta.emprendimiento || '',
+          meta.comunidad_beneficiaria || meta.comunidad_comprador || '',
+          parseFloat(meta.monto_total              || 0),
+          parseFloat(meta.monto_donacion_comprador || 0),
+          parseFloat(meta.monto_donacion_vendedor  || 0),
+          parseFloat(meta.monto_retencion_sef      || 0),
+          parseFloat(meta.porcentaje_donacion      || 0),
+          (meta.dni_destino_comprador && meta.dni_destino_comprador !== '0') ? meta.dni_destino_comprador : '',
+          meta.calificacion_comprador || '', meta.calificacion_vendedor || ''
+        ]);
+      }
+      var totalPages = parseInt(resp.getHeaders()['x-wp-totalpages'] || '1');
+      if (page >= totalPages) break;
+      page++;
+      Utilities.sleep(1000);
+    }
+  }
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, HEADERS_CPEND.length).setValues(rows);
+  }
+  Logger.log('Confirmaciones Pendientes: ' + rows.length + ' registradas.');
+}
+
 // ── USUARIOS ───────────────────────────────────────────────
 function sincronizarUsuarios() {
   const ss       = SpreadsheetApp.openById(CFG.SHEET_ID);
@@ -361,11 +415,12 @@ function toMes(val) {
 }
 
 function agregarDatos() {
-  var ss        = SpreadsheetApp.openById(CFG.SHEET_ID);
-  var sheetTrx  = ss.getSheetByName('Transacciones Confirmadas');
-  var sheetUsr  = ss.getSheetByName('Usuarios');
-  var sheetFees = ss.getSheetByName('FeesMeli');
-  var sheetDev  = ss.getSheetByName('Devengadas');
+  var ss         = SpreadsheetApp.openById(CFG.SHEET_ID);
+  var sheetTrx   = ss.getSheetByName('Transacciones Confirmadas');
+  var sheetCpend = ss.getSheetByName('Confirmaciones Pendientes');
+  var sheetUsr   = ss.getSheetByName('Usuarios');
+  var sheetFees  = ss.getSheetByName('FeesMeli');
+  var sheetDev   = ss.getSheetByName('Devengadas');
 
   // fees por mes: mes → total fee
   var feesByMes = {};
@@ -381,6 +436,19 @@ function agregarDatos() {
   var trxRows = sheetTrx && sheetTrx.getLastRow() > 1
     ? sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, HEADERS_TRX.length).getValues()
     : [];
+
+  var cpendRows = sheetCpend && sheetCpend.getLastRow() > 1
+    ? sheetCpend.getRange(2, 1, sheetCpend.getLastRow() - 1, HEADERS_CPEND.length).getValues()
+    : [];
+
+  // confirmadas pendientes de pago: por mes
+  var cpendByMes = {}, cpendMontoByMes = {};
+  for (var cpi = 0; cpi < cpendRows.length; cpi++) {
+    var cMes = toMes(cpendRows[cpi][0]);
+    if (!cMes) continue;
+    cpendByMes[cMes]      = (cpendByMes[cMes]      || 0) + 1;
+    cpendMontoByMes[cMes] = (cpendMontoByMes[cMes] || 0) + (parseFloat(cpendRows[cpi][7]) || 0);
+  }
 
   // Set de orden_original confirmadas (para detectar pendientes)
   var confirmados = {};
@@ -399,7 +467,7 @@ function agregarDatos() {
   }
 
   // devengadas por mes + pendientes por emprendimiento
-  var devByMes = {};
+  var devByMes = {}, devMontoByMes = {};
   var pendientesPorEmp = {};
   var totalInformados = 0;
   var empTotales = {}; // total informados por emprendimiento (todos, confirmados o no)
@@ -408,7 +476,10 @@ function agregarDatos() {
     for (var di = 0; di < devData.length; di++) {
       var dRow  = devData[di];
       var dMes  = toMes(dRow[0]);
-      if (dMes) devByMes[dMes] = (devByMes[dMes] || 0) + 1;
+      if (dMes) {
+        devByMes[dMes]      = (devByMes[dMes]      || 0) + 1;
+        devMontoByMes[dMes] = (devMontoByMes[dMes] || 0) + (parseFloat(dRow[7]) || 0);
+      }
 
       var empRaw = String(dRow[5]).trim();
       var emp    = empRaw || vidToNombre[String(dRow[4])] || 'Sin nombre';
@@ -497,8 +568,9 @@ function agregarDatos() {
 
   var fechaMinMes = CFG.FECHA_MIN.substring(0, 7); // "2024-01"
   var allMeses = {};
-  Object.keys(trxByMes).forEach(function(m) { if (m >= fechaMinMes) allMeses[m] = true; });
-  Object.keys(nuevosByMes).forEach(function(m) { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(trxByMes).forEach(function(m)    { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(nuevosByMes).forEach(function(m)  { if (m >= fechaMinMes) allMeses[m] = true; });
+  Object.keys(cpendByMes).forEach(function(m)   { if (m >= fechaMinMes) allMeses[m] = true; });
   var meses = Object.keys(allMeses).sort();
 
   var porMes = meses.map(function(mes) {
@@ -540,7 +612,10 @@ function agregarDatos() {
       donacion_total:         Math.round(t.donacion_comprador + t.donacion_vendedor),
       dni_destino:            Object.keys(dni).length,
       fee_meli:               Math.round(feesByMes[mes] || 0),
-      cantidad_informada:     devByMes[mes] || 0
+      cantidad_informada:     devByMes[mes]      || 0,
+      monto_informada:        Math.round(devMontoByMes[mes] || 0),
+      cantidad_confirmada:    t.cantidad + (cpendByMes[mes] || 0),
+      monto_confirmada:       Math.round(t.monto_total + (cpendMontoByMes[mes] || 0))
     };
   });
 
