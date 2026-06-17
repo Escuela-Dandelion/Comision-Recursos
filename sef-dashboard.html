@@ -101,9 +101,10 @@
       border:1px solid #e8eaed; border-left:3px solid #c0c4cc;
       box-shadow:0 1px 3px rgba(0,0,0,.04);
     }
-    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; line-height:1.4; min-height:2.8em; display:flex; align-items:flex-start; }
-    .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
-    .card-sub   { font-size:10px; color:#aaa; margin-top:4px; min-height:2.4em; }
+    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px; line-height:1.3; }
+    .card-value { font-size:20px; font-weight:700; color:#333; line-height:1.1; }
+    .card-monto { font-size:14px; font-weight:600; margin-top:3px; }
+    .card-sub   { font-size:10px; color:#aaa; margin-top:3px; }
     .cards-group-label { font-size:9px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:1px; margin:14px 0 4px; }
     .funnel-wrap { display:flex; align-items:stretch; gap:0; margin-bottom:18px; }
     .funnel-stage { flex:1; background:#fff; border:1px solid #e8eaed; padding:14px 16px; position:relative; }
@@ -134,23 +135,23 @@
       font-size:11px; padding:6px 10px; border-radius:8px; white-space:normal; width:220px; z-index:10; line-height:1.4;
     }
     .card.blue    { border-left-color:#2563eb; background:#eff6ff; }
-    .card.blue    .card-label, .card.blue    .card-value { color:#1d4ed8; }
+    .card.blue    .card-label, .card.blue    .card-value, .card.blue    .card-monto { color:#1d4ed8; }
     .card.teal    { border-left-color:#0f766e; background:#f0fdfa; }
-    .card.teal    .card-label, .card.teal    .card-value { color:#0f766e; }
+    .card.teal    .card-label, .card.teal    .card-value, .card.teal    .card-monto { color:#0f766e; }
     .card.green   { border-left-color:#059669; background:#f0fdf4; }
-    .card.green   .card-label, .card.green   .card-value { color:#059669; }
+    .card.green   .card-label, .card.green   .card-value, .card.green   .card-monto { color:#059669; }
     .card.amber   { border-left-color:#d97706; background:#fffbeb; }
-    .card.amber   .card-label, .card.amber   .card-value { color:#d97706; }
+    .card.amber   .card-label, .card.amber   .card-value, .card.amber   .card-monto { color:#d97706; }
     .card.rose    { border-left-color:#e11d48; background:#fff1f2; }
-    .card.rose    .card-label, .card.rose    .card-value { color:#e11d48; }
+    .card.rose    .card-label, .card.rose    .card-value, .card.rose    .card-monto { color:#e11d48; }
     .card.indigo  { border-left-color:#6366f1; background:#eef2ff; }
-    .card.indigo  .card-label, .card.indigo  .card-value { color:#4f46e5; }
+    .card.indigo  .card-label, .card.indigo  .card-value, .card.indigo  .card-monto { color:#4f46e5; }
     .card.gray    { border-left-color:#6b7280; background:#f9fafb; }
-    .card.gray    .card-label, .card.gray    .card-value { color:#6b7280; }
+    .card.gray    .card-label, .card.gray    .card-value, .card.gray    .card-monto { color:#6b7280; }
     .card.purple  { border-left-color:#9333ea; background:#faf5ff; }
-    .card.purple  .card-label, .card.purple  .card-value { color:#7e22ce; }
+    .card.purple  .card-label, .card.purple  .card-value, .card.purple  .card-monto { color:#7e22ce; }
     .card.orange  { border-left-color:#ea580c; background:#fff7ed; }
-    .card.orange  .card-label, .card.orange  .card-value { color:#c2410c; }
+    .card.orange  .card-label, .card.orange  .card-value, .card.orange  .card-monto { color:#c2410c; }
 
     /* ── CHARTS ── */
     .section-card  { background:#fff; border-radius:12px; border:1px solid #eee; padding:20px; margin-bottom:20px; }
@@ -1009,21 +1010,22 @@ function renderTodo(meses) {
   document.getElementById('cards-economia').innerHTML = cardsHtml([
     { label: 'Informadas <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1 del flujo SEF).">&#9432;</span>',
       value: totalInformada ? numFmt(totalInformada) : '—',
-      sub: totalInformada
-        ? (totalPendiente > 0
-            ? numFmt(totalPendiente) + ' sin confirmar &nbsp;<span style="font-size:9px;opacity:.6">▼ ver</span>'
-            : kFmt(totalMontoInf))
-        : 'sin datos',
+      monto: totalInformada ? kFmt(totalMontoInf) : null,
+      sub:   totalInformada && totalPendiente > 0
+               ? numFmt(totalPendiente) + ' sin confirmar &nbsp;<span style="font-size:9px;opacity:.6">▼ ver</span>'
+               : null,
       color: totalPendiente > 0 ? 'amber' : 'indigo',
       id: 'kpi-informados',
       onclick: totalPendiente > 0 ? 'togglePendientes()' : '' },
     { label: 'Confirmadas <span class="info-tip" data-tip="Confirmadas por el prosumidor (paso 2). Incluye pagadas y pendientes de pago.">&#9432;</span>',
       value: totalConfirmada ? numFmt(totalConfirmada) : '—',
-      sub: (totalConfirmada ? kFmt(totalMontoConf) : 'sin datos') + ' &nbsp;·&nbsp; conv. ' + convConf,
+      monto: totalConfirmada ? kFmt(totalMontoConf) : null,
+      sub:   totalConfirmada ? 'conv. ' + convConf : 'sin datos',
       color: 'blue' },
     { label: 'Pagadas <span class="info-tip" data-tip="Pago procesado por Mercado Pago (paso 3). Generan donacion real.">&#9432;</span>',
       value: numFmt(totalCantidad),
-      sub: kFmt(totalMonto) + ' &nbsp;·&nbsp; conv. ' + convPag,
+      monto: kFmt(totalMonto),
+      sub:   'conv. ' + convPag,
       color: 'teal' }
   ]);
 
@@ -1202,9 +1204,10 @@ function cardsHtml(cards) {
     var attrs = (c.id      ? ' id="'     + c.id      + '"' : '') +
                 (c.onclick ? ' onclick="' + c.onclick + '"' : '');
     return '<div class="' + cls + '"' + attrs + '>' +
-      '<div class="card-label">' + c.label        + '</div>' +
-      '<div class="card-value">' + c.value        + '</div>' +
-      '<div class="card-sub">'   + (c.sub || '')  + '</div>' +
+      '<div class="card-label">' + c.label + '</div>' +
+      '<div class="card-value">' + c.value + '</div>' +
+      (c.monto ? '<div class="card-monto">' + c.monto + '</div>' : '') +
+      (c.sub   ? '<div class="card-sub">'   + c.sub   + '</div>' : '') +
       '</div>';
   }).join('');
 }
