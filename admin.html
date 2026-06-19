@@ -893,24 +893,20 @@ function guardarNotasVenta() {
 function abrirModalEntregar(i) {
   _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
+  document.getElementById('v-entregar-quien').textContent = currentUser ? currentUser.name : '—';
   document.getElementById('v-entregar-notas').value = '';
   document.getElementById('v-entregar-feedback').style.display = 'none';
-  var sel = document.getElementById('v-entregar-staff');
-  if (sel.options.length <= 1) QR_STAFF_NAMES.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
-  if (currentUser && currentUser.name) {
-    for (var j=0; j<sel.options.length; j++) { if (sel.options[j].value.toLowerCase().indexOf(currentUser.name.split(' ')[0].toLowerCase()) !== -1) { sel.selectedIndex=j; break; } }
-  }
   document.getElementById('v-entregar-btn').disabled = false;
   document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega';
   document.getElementById('v-modal-entregar').classList.add('open');
 }
 
 function confirmarEntregaDesdeListado() {
-  var staff = document.getElementById('v-entregar-staff').value;
+  var staff = currentUser ? currentUser.name : '';
   var notas = document.getElementById('v-entregar-notas').value.trim();
   var btn   = document.getElementById('v-entregar-btn');
   var fb    = document.getElementById('v-entregar-feedback');
-  if (!staff) { fb.textContent='⚠️ Seleccioná tu nombre.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
+  if (!staff) { fb.textContent='⚠️ No se pudo identificar tu usuario.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
   btn.disabled = true;
   btn.innerHTML = '<div style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></div> Confirmando…';
   fb.style.display = 'none';
@@ -925,7 +921,7 @@ function confirmarEntregaDesdeListado() {
     .then(function(d){
       btn.disabled = false; btn.textContent = 'Confirmar entrega';
       if (d.ok) {
-        _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = staff;
+        _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = currentUser ? currentUser.name : staff;
         _ventasCargadoEstado = {};
         cerrarVModal('entregar');
         aplicarFiltrosVentas();
@@ -1538,10 +1534,8 @@ function reiniciarQR() {
   <div class="v-modal">
     <h3>✅ Marcar como entregado</h3>
     <div style="font-size:12px;color:#6b7280;margin-bottom:12px" id="v-entregar-pedido-info"></div>
-    <label>¿Quién entrega?</label>
-    <select id="v-entregar-staff">
-      <option value="">— Seleccioná tu nombre —</option>
-    </select>
+    <label>Quién entrega</label>
+    <div id="v-entregar-quien" style="padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:12px"></div>
     <label>Notas (opcional)</label>
     <textarea id="v-entregar-notas" rows="2" placeholder="Ej: entrega parcial, faltaba stock…"></textarea>
     <div id="v-entregar-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
