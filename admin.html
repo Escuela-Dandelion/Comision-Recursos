@@ -893,7 +893,6 @@ function guardarNotasVenta() {
 function abrirModalEntregar(i) {
   _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
-  document.getElementById('v-entregar-pin').value = '';
   document.getElementById('v-entregar-notas').value = '';
   document.getElementById('v-entregar-feedback').style.display = 'none';
   var sel = document.getElementById('v-entregar-staff');
@@ -908,17 +907,15 @@ function abrirModalEntregar(i) {
 
 function confirmarEntregaDesdeListado() {
   var staff = document.getElementById('v-entregar-staff').value;
-  var pin   = document.getElementById('v-entregar-pin').value.trim();
   var notas = document.getElementById('v-entregar-notas').value.trim();
   var btn   = document.getElementById('v-entregar-btn');
   var fb    = document.getElementById('v-entregar-feedback');
   if (!staff) { fb.textContent='⚠️ Seleccioná tu nombre.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
-  if (!pin)   { fb.textContent='⚠️ Ingresá tu PIN.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
   btn.disabled = true;
   btn.innerHTML = '<div style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></div> Confirmando…';
   fb.style.display = 'none';
   var staffKey = staff.replace(' ', '.') + ' ';
-  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
+  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
   if (notas) url += '&notas=' + encodeURIComponent(notas);
   if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
   var controller = new AbortController();
@@ -1545,8 +1542,6 @@ function reiniciarQR() {
     <select id="v-entregar-staff">
       <option value="">— Seleccioná tu nombre —</option>
     </select>
-    <label>Tu PIN personal</label>
-    <input id="v-entregar-pin" type="password" maxlength="8" placeholder="••••••" style="letter-spacing:4px;text-align:center">
     <label>Notas (opcional)</label>
     <textarea id="v-entregar-notas" rows="2" placeholder="Ej: entrega parcial, faltaba stock…"></textarea>
     <div id="v-entregar-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
