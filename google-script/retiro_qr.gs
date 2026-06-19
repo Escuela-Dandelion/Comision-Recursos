@@ -326,7 +326,7 @@ function enviarEmail(email, nombre, order, qrUrl, productos) {
 // ──────────────────────────────────────────────────────────
 
 function getSheet() {
-  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
   var sheet = ss.getSheetByName('Retiros');
   if (!sheet) {
     sheet = ss.insertSheet('Retiros');

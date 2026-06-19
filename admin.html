@@ -840,6 +840,7 @@ function ocultarMensajes() {
 // ══════════════════════════════════════
 var _ventas = [];
 var _ventasFiltroEstado = 'Pendiente';
+var _ventasFiltradasActuales = [];  // filas actualmente renderizadas (todos los filtros aplicados)
 
 // ── VENTAS DOTS MENU ─────────────────────────────────────────
 var _vRowActual = null;
@@ -860,8 +861,7 @@ function cerrarVModal(tipo) {
 }
 
 function abrirModalNotas(i) {
-  var rows = _ventasFiltroEstado === 'Todos' ? _ventas : _ventas.filter(function(v){ return v.estado === _ventasFiltroEstado; });
-  _vRowActual = rows[i];
+  _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-notas-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
   document.getElementById('v-notas-input').value = _vRowActual.notas || '';
   document.getElementById('v-notas-feedback').style.display = 'none';
@@ -891,8 +891,7 @@ function guardarNotasVenta() {
 }
 
 function abrirModalEntregar(i) {
-  var rows = _ventasFiltroEstado === 'Todos' ? _ventas : _ventas.filter(function(v){ return v.estado === _ventasFiltroEstado; });
-  _vRowActual = rows[i];
+  _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
   document.getElementById('v-entregar-pin').value = '';
   document.getElementById('v-entregar-notas').value = '';
@@ -919,12 +918,13 @@ function confirmarEntregaDesdeListado() {
   btn.innerHTML = '<div style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></div> Confirmando…';
   fb.style.display = 'none';
   var staffKey = staff.replace(' ', '.') + ' ';
-  var token = _vRowActual.id ? btoa(_vRowActual.id + 'retiro2026').substring(0,12) : '';
   var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
   if (notas) url += '&notas=' + encodeURIComponent(notas);
   if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
-  fetch(url, {redirect:'follow'})
-    .then(function(r){ return r.json(); })
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function(){ controller.abort(); }, 35000);
+  fetch(url, {redirect:'follow', signal: controller.signal})
+    .then(function(r){ clearTimeout(timeoutId); return r.json(); })
     .then(function(d){
       btn.disabled = false; btn.textContent = 'Confirmar entrega';
       if (d.ok) {
@@ -934,7 +934,12 @@ function confirmarEntregaDesdeListado() {
         aplicarFiltrosVentas();
       } else { fb.textContent='❌ ' + (d.error||'Error.'); fb.style.color='#dc2626'; fb.style.display='block'; }
     })
-    .catch(function(){ btn.disabled=false; btn.textContent='Confirmar entrega'; fb.textContent='❌ Error de conexión.'; fb.style.color='#dc2626'; fb.style.display='block'; });
+    .catch(function(err){
+      clearTimeout(timeoutId);
+      btn.disabled=false; btn.textContent='Confirmar entrega';
+      fb.textContent = (err && err.name === 'AbortError') ? '❌ Tiempo de espera agotado. Revisá el sheet y volvé a intentar.' : '❌ Error de conexión.';
+      fb.style.color='#dc2626'; fb.style.display='block';
+    });
 }
 
 function fmtPesosAR(val) {
@@ -1160,6 +1165,7 @@ function aplicarFiltrosVentas() {
 
 function renderVentas(rows) {
   if (!rows) rows = _ventas;
+  _ventasFiltradasActuales = rows;  // guardar para que los modales usen el mismo índice
   var cont = document.getElementById('ventas-tabla');
   if (!rows.length) {
     cont.innerHTML = '<p style="color:#9ca3af;font-size:14px;padding:20px 0">Sin registros.</p>';
