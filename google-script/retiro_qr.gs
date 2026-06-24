@@ -1448,10 +1448,11 @@ function apiDashboard(pin, email) {
 
   if (!pinValido) return { ok: false, error: 'PIN incorrecto.' };
 
-  var sheet = getVentasSheet();
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
   var data  = sheet.getDataRange().getValues();
   if (data.length <= 1) {
-    return { ok: true, rows: [], meses_todos: [], total_pedidos: 0, total_pesos: 0, total_costo: 0, actualizado: new Date().toLocaleString('es-AR') };
+    return { ok: true, rows: [], retiros_map: {}, meses_todos: [], total_pedidos: 0, total_pesos: 0, total_costo: 0, actualizado: new Date().toLocaleString('es-AR') };
   }
 
   // Columnas: 0=Fecha,1=Pedido#,2=IDInt,3=Nombre,4=Email,5=Producto,6=SKU,7=Cantidad,8=PrecioU,9=SubtotalBruto,10=TotPedido,11=Comentarios,12=Marca,13=CostoUnitario,14=TotalPagadoLinea,15=NetoLinea
@@ -1509,10 +1510,25 @@ function apiDashboard(pin, email) {
     });
   }
 
+  // Mapa pedido# → estado de entrega (leemos el mismo SS que ya abrimos)
+  var retirosMap = {};
+  try {
+    var rSheet = ss.getSheetByName('Retiros');
+    if (rSheet) {
+      var rData = rSheet.getDataRange().getValues();
+      for (var ri = 1; ri < rData.length; ri++) {
+        var rNum = String(rData[ri][1] || '');
+        var rEst = String(rData[ri][7] || '');
+        if (rNum) retirosMap[rNum] = rEst.indexOf('ENTREGADO') !== -1 ? 'Entregado' : 'Pendiente';
+      }
+    }
+  } catch(e) { Logger.log('Error leyendo Retiros en apiDashboard: ' + e); }
+
   return {
     ok:            true,
     role:          userRole,
     rows:          rows,
+    retiros_map:   retirosMap,
     meses_todos:   Object.keys(mesesSet).sort(),
     total_pedidos: Object.keys(pedidosSet).length,
     total_pesos:   Math.round(totalPesos * 100) / 100,

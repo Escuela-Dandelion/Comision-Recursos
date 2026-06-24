@@ -415,10 +415,7 @@ var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMp
 var ALL_ROWS  = [];
 var ALL_MESES = [];
 var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Pendiente'
-// Se dispara inmediatamente al cargar — en paralelo con el fetch de auth
-var _retirosFetch = fetch(APPS_URL + '?action=getRetiros', { redirect:'follow' })
-  .then(function(r){ return r.json(); })
-  .catch(function(){ return { retiros:[] }; });
+var DASH_CACHE_KEY  = 'dandelion_dash_v2';
 var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
@@ -540,10 +537,22 @@ function hideErr()   { document.getElementById('login-error').style.display='non
 window.addEventListener('load', function(){
   var email = leerSesionGoogle();
   if (email) {
+    // Mostrar cache inmediatamente si existe (< 30 min)
+    try {
+      var cached = JSON.parse(localStorage.getItem(DASH_CACHE_KEY)||'null');
+      if (cached && cached.ok && (Date.now() - (cached._ts||0)) < 30*60*1000) {
+        document.getElementById('login').style.display='none';
+        document.getElementById('dashboard').style.display='flex';
+        initDashboard(cached);
+        document.getElementById('txt-actualizado').textContent='Actualizado: '+(cached.actualizado||'')+' (cache)';
+      }
+    } catch(e){}
+    // Siempre actualizar en background
     fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(email), { redirect:'follow' })
       .then(function(r){ return r.json(); })
       .then(function(d){
         if(d.ok){
+          d._ts = Date.now();
           document.getElementById('login').style.display='none';
           document.getElementById('dashboard').style.display='flex';
           initDashboard(d);
@@ -594,10 +603,12 @@ function onGoogleLoginRef(response) {
 
 // ── INIT ──
 function initDashboard(d){
+  try { localStorage.setItem(DASH_CACHE_KEY, JSON.stringify(d)); } catch(e){}
   document.getElementById('loading-dash').style.display='none';
   document.getElementById('txt-actualizado').textContent='Actualizado: '+(d.actualizado||'');
-  ALL_ROWS  = (d.rows||[]).map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
-  ALL_MESES = d.meses_todos||[];
+  ALL_ROWS        = (d.rows||[]).map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
+  ALL_MESES       = d.meses_todos||[];
+  ALL_RETIROS_MAP = d.retiros_map||{};
 
   var sel=document.getElementById('filtro-mes');
   while(sel.options.length > 1) sel.remove(1); // limpiar opciones previas (evita duplicados)
@@ -642,13 +653,6 @@ function initDashboard(d){
 
   document.getElementById('contenido').style.display='block';
   render();
-
-  // Cuando llegan los retiros (ya estaban viajando en paralelo), solo actualiza los chips
-  _retirosFetch.then(function(d){
-    ALL_RETIROS_MAP = {};
-    (d.retiros||[]).forEach(function(r){ ALL_RETIROS_MAP[String(r.numero)] = r.estado; });
-    actualizarChipsEntrega();
-  });
 }
 
 function toggleGrado(g){
@@ -754,7 +758,7 @@ function render(){
   }
 
   cont.innerHTML=html;
-  if(Object.keys(ALL_RETIROS_MAP).length) actualizarChipsEntrega();
+  actualizarChipsEntrega();
 }
 
 function actualizarChipsEntrega(){
