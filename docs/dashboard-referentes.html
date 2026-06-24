@@ -415,6 +415,10 @@ var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMp
 var ALL_ROWS  = [];
 var ALL_MESES = [];
 var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Pendiente'
+// Se dispara inmediatamente al cargar — en paralelo con el fetch de auth
+var _retirosFetch = fetch(APPS_URL + '?action=getRetiros', { redirect:'follow' })
+  .then(function(r){ return r.json(); })
+  .catch(function(){ return { retiros:[] }; });
 var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
@@ -637,17 +641,14 @@ function initDashboard(d){
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   document.getElementById('contenido').style.display='block';
+  render();
 
-  // Fetch retiros en paralelo para el resumen de entregas
-  fetch(APPS_URL + '?action=getRetiros', { redirect:'follow' })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      ALL_RETIROS_MAP = {};
-      (d.retiros||[]).forEach(function(r){
-        ALL_RETIROS_MAP[String(r.numero)] = r.estado;
-      });
-      render();
-    }).catch(function(){ render(); });
+  // Cuando llegan los retiros (ya estaban viajando en paralelo), solo actualiza los chips
+  _retirosFetch.then(function(d){
+    ALL_RETIROS_MAP = {};
+    (d.retiros||[]).forEach(function(r){ ALL_RETIROS_MAP[String(r.numero)] = r.estado; });
+    actualizarChipsEntrega();
+  });
 }
 
 function toggleGrado(g){
@@ -737,7 +738,29 @@ function render(){
     '<div class="card purple"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
 
-  // Resumen de entregas
+  // Placeholder para chips de entrega (se llenan cuando llega _retirosFetch)
+  html+='<div id="entrega-chips" style="margin-bottom:14px"></div>';
+
+  // Toggle de vista
+  html+='<div class="view-toggle">'+
+    '<button class="view-btn'+(currentVista==='familia'?' active':'')+'" onclick="setVista(\'familia\')">Por Familia</button>'+
+    '<button class="view-btn'+(currentVista==='producto'?' active':'')+'" onclick="setVista(\'producto\')">Por Producto</button>'+
+  '</div>';
+
+  if(currentVista==='familia'){
+    html+=renderFamilias(rows);
+  } else {
+    html+=renderProductos(rows);
+  }
+
+  cont.innerHTML=html;
+  if(Object.keys(ALL_RETIROS_MAP).length) actualizarChipsEntrega();
+}
+
+function actualizarChipsEntrega(){
+  var el=document.getElementById('entrega-chips');
+  if(!el) return;
+  var rows=getRows();
   var pedidosVistos={}, nEntregados=0, nPendientes=0;
   rows.forEach(function(r){
     if(!r.pedido||pedidosVistos[r.pedido]) return;
@@ -746,8 +769,9 @@ function render(){
     if(estado==='Entregado') nEntregados++; else nPendientes++;
   });
   var nTotalPed=nEntregados+nPendientes;
-  if(nTotalPed>0){
-    html+='<div style="display:flex;gap:10px;margin-bottom:14px">'+
+  if(!nTotalPed){ el.innerHTML=''; return; }
+  el.innerHTML=
+    '<div style="display:flex;gap:10px">'+
       '<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
         '<div style="font-size:10px;font-weight:700;color:#854d0e;letter-spacing:.5px;margin-bottom:2px">⏳ PENDIENTES</div>'+
         '<div style="font-size:22px;font-weight:800;color:#92400e;line-height:1">'+nPendientes+'</div>'+
@@ -764,21 +788,6 @@ function render(){
         '<div style="font-size:12px;color:#6b7280;margin-top:3px">pedido'+(nTotalPed!==1?'s':'')+' totales</div>'+
       '</div>'+
     '</div>';
-  }
-
-  // Toggle de vista
-  html+='<div class="view-toggle">'+
-    '<button class="view-btn'+(currentVista==='familia'?' active':'')+'" onclick="setVista(\'familia\')">Por Familia</button>'+
-    '<button class="view-btn'+(currentVista==='producto'?' active':'')+'" onclick="setVista(\'producto\')">Por Producto</button>'+
-  '</div>';
-
-  if(currentVista==='familia'){
-    html+=renderFamilias(rows);
-  } else {
-    html+=renderProductos(rows);
-  }
-
-  cont.innerHTML=html;
 }
 
 // ── VISTA POR FAMILIA ──
