@@ -743,33 +743,18 @@ function render(){
     '<div class="card purple"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
 
-  // Chips de entrega (calculados en el mismo render)
+  // Resumen compacto de entregas
   var _pVis={}, _nEntr=0, _nPend=0;
   rows.forEach(function(r){
     if(!r.pedido||_pVis[r.pedido]) return;
     _pVis[r.pedido]=true;
     if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') _nEntr++; else _nPend++;
   });
-  var _nTot=_nEntr+_nPend;
-  if(_nTot>0){
-    html+=
-      '<div style="display:flex;gap:10px;margin-bottom:16px">'+
-        '<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-          '<div style="font-size:10px;font-weight:700;color:#854d0e;letter-spacing:.5px;margin-bottom:2px">⏳ PENDIENTES</div>'+
-          '<div style="font-size:22px;font-weight:800;color:#92400e;line-height:1">'+_nPend+'</div>'+
-          '<div style="font-size:12px;color:#a16207;margin-top:3px">pedido'+(_nPend!==1?'s':'')+' sin entregar</div>'+
-        '</div>'+
-        '<div style="background:#f0fdf4;border:1px solid #4ade80;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-          '<div style="font-size:10px;font-weight:700;color:#15803d;letter-spacing:.5px;margin-bottom:2px">✅ ENTREGADOS</div>'+
-          '<div style="font-size:22px;font-weight:800;color:#166534;line-height:1">'+_nEntr+'</div>'+
-          '<div style="font-size:12px;color:#16a34a;margin-top:3px">pedido'+(_nEntr!==1?'s':'')+' entregado'+(_nEntr!==1?'s':'')+' </div>'+
-        '</div>'+
-        '<div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-          '<div style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;margin-bottom:2px">📦 TOTAL</div>'+
-          '<div style="font-size:22px;font-weight:800;color:#374151;line-height:1">'+_nTot+'</div>'+
-          '<div style="font-size:12px;color:#6b7280;margin-top:3px">pedido'+(_nTot!==1?'s':'')+' totales</div>'+
-        '</div>'+
-      '</div>';
+  if(Object.keys(ALL_RETIROS_MAP).length>0){
+    html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:13px;font-weight:600">'+
+      '<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:20px;padding:4px 12px">✅ '+_nEntr+' pedido'+(_nEntr!==1?'s':'')+' entregado'+(_nEntr!==1?'s':'')+'</span>'+
+      '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:20px;padding:4px 12px">⏳ '+_nPend+' pendiente'+(_nPend!==1?'s':'')+'</span>'+
+    '</div>';
   }
 
   // Toggle de vista
@@ -792,10 +777,11 @@ function renderFamilias(rows){
   var familias={};
   rows.forEach(function(r){
     var f=r.familia||'Sin nombre';
-    if(!familias[f]) familias[f]={email:r.email||'',total:0,unidades:0,items:[]};
+    if(!familias[f]) familias[f]={email:r.email||'',total:0,unidades:0,items:[],_ped:{}};
     familias[f].total+=(r.total_pagado_linea||r.total_linea||0);
     familias[f].unidades+=(r.cantidad||0);
     familias[f].items.push(r);
+    if(r.pedido&&!familias[f]._ped[r.pedido]) familias[f]._ped[r.pedido]=ALL_RETIROS_MAP[String(r.pedido)]||'Pendiente';
   });
   var famArr=Object.keys(familias).sort(function(a,b){ return familias[b].total-familias[a].total; });
   var totalUnidadesFam=famArr.reduce(function(s,f){ return s+familias[f].unidades; },0);
@@ -806,12 +792,22 @@ function renderFamilias(rows){
       '<span class="section-count">'+famArr.length+' familias · '+Math.round(totalUnidadesFam)+' unidades</span>'+
     '</div>';
 
+  var _hasRet=Object.keys(ALL_RETIROS_MAP).length>0;
   famArr.forEach(function(fname,fi){
     var fam=familias[fname];
+    var _peds=Object.values(fam._ped||{});
+    var _fEntr=_peds.filter(function(e){return e==='Entregado';}).length;
+    var _fPend=_peds.filter(function(e){return e==='Pendiente';}).length;
+    var _retBadge=_hasRet?
+      '<div style="font-size:11px;margin-top:3px">'+
+        (_fEntr?'<span style="color:#15803d;font-weight:700">✅ '+_fEntr+' entr.</span>':'')+
+        (_fEntr&&_fPend?' · ':'')+
+        (_fPend?'<span style="color:#92400e;font-weight:700">⏳ '+_fPend+' pend.</span>':'')+
+      '</div>':'';
     html+='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
         '<span class="arrow" id="arr-fam-'+fi+'">▶</span>'+
-        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+'</div>':'')+' </div>'+
+        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+'</div>':'')+_retBadge+'</div>'+
       '</div>'+
       '<div class="fam-right">'+
         '<span class="badge-units">'+Math.round(fam.unidades)+' u.</span>'+
@@ -876,9 +872,11 @@ function renderProductos(rows){
   var productos={};
   rows.forEach(function(r){
     var p=r.producto||'Sin nombre';
-    if(!productos[p]) productos[p]={nombre:p,marca:r.marca||'',total:0,unidades:0,familias:{}};
+    if(!productos[p]) productos[p]={nombre:p,marca:r.marca||'',total:0,unidades:0,u_entr:0,u_pend:0,familias:{}};
     productos[p].total+=(r.total_pagado_linea||r.total_linea||0);
     productos[p].unidades+=(r.cantidad||0);
+    if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') productos[p].u_entr+=(r.cantidad||0);
+    else productos[p].u_pend+=(r.cantidad||0);
     var f=r.familia||'Sin nombre';
     if(!productos[p].familias[f]) productos[p].familias[f]={email:r.email||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedidos:[]};
     productos[p].familias[f].cantidad+=(r.cantidad||0);
@@ -889,6 +887,7 @@ function renderProductos(rows){
   });
   var prodArr=Object.values(productos).sort(function(a,b){ return b.unidades-a.unidades; });
   var totalUnidadesRetiro=prodArr.reduce(function(s,p){ return s+p.unidades; },0);
+  var _hasRet=Object.keys(ALL_RETIROS_MAP).length>0;
 
   var html='<div class="section-card">'+
     '<div class="section-head">'+
@@ -904,6 +903,11 @@ function renderProductos(rows){
         '<div>'+
           '<div class="prod-name">'+esc(prod.nombre)+'</div>'+
           (prod.marca?'<div class="prod-marca">'+esc(prod.marca)+'</div>':'')+
+          (_hasRet?'<div style="font-size:11px;margin-top:3px">'+
+            (prod.u_entr>0?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(prod.u_entr)+' u.</span>':'')+
+            (prod.u_entr>0&&prod.u_pend>0?' · ':'')+
+            (prod.u_pend>0?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(prod.u_pend)+' u.</span>':'')+
+          '</div>':'')+
         '</div>'+
       '</div>'+
       '<div class="prod-right">'+
