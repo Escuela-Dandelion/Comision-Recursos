@@ -544,7 +544,7 @@ window.addEventListener('load', function(){
         document.getElementById('login').style.display='none';
         document.getElementById('dashboard').style.display='flex';
         initDashboard(cached);
-        document.getElementById('txt-actualizado').textContent='Actualizado: '+(cached.actualizado||'')+' (cache)';
+        document.getElementById('txt-actualizado').textContent='Versión: '+(cached.actualizado||'')+' (guardada)';
       }
     } catch(e){}
     // Siempre actualizar en background
@@ -605,7 +605,8 @@ function onGoogleLoginRef(response) {
 function initDashboard(d){
   try { localStorage.setItem(DASH_CACHE_KEY, JSON.stringify(d)); } catch(e){}
   document.getElementById('loading-dash').style.display='none';
-  document.getElementById('txt-actualizado').textContent='Actualizado: '+(d.actualizado||'');
+  var _ahora=new Date(); var _fmtFecha=_ahora.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+_ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha;
   ALL_ROWS        = (d.rows||[]).map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
   ALL_MESES       = d.meses_todos||[];
   ALL_RETIROS_MAP = d.retiros_map||{};
@@ -742,8 +743,34 @@ function render(){
     '<div class="card purple"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
 
-  // Placeholder para chips de entrega (se llenan cuando llega _retirosFetch)
-  html+='<div id="entrega-chips" style="margin-bottom:14px"></div>';
+  // Chips de entrega (calculados en el mismo render)
+  var _pVis={}, _nEntr=0, _nPend=0;
+  rows.forEach(function(r){
+    if(!r.pedido||_pVis[r.pedido]) return;
+    _pVis[r.pedido]=true;
+    if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') _nEntr++; else _nPend++;
+  });
+  var _nTot=_nEntr+_nPend;
+  if(_nTot>0){
+    html+=
+      '<div style="display:flex;gap:10px;margin-bottom:16px">'+
+        '<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+          '<div style="font-size:10px;font-weight:700;color:#854d0e;letter-spacing:.5px;margin-bottom:2px">⏳ PENDIENTES</div>'+
+          '<div style="font-size:22px;font-weight:800;color:#92400e;line-height:1">'+_nPend+'</div>'+
+          '<div style="font-size:12px;color:#a16207;margin-top:3px">pedido'+(_nPend!==1?'s':'')+' sin entregar</div>'+
+        '</div>'+
+        '<div style="background:#f0fdf4;border:1px solid #4ade80;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+          '<div style="font-size:10px;font-weight:700;color:#15803d;letter-spacing:.5px;margin-bottom:2px">✅ ENTREGADOS</div>'+
+          '<div style="font-size:22px;font-weight:800;color:#166534;line-height:1">'+_nEntr+'</div>'+
+          '<div style="font-size:12px;color:#16a34a;margin-top:3px">pedido'+(_nEntr!==1?'s':'')+' entregado'+(_nEntr!==1?'s':'')+' </div>'+
+        '</div>'+
+        '<div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+          '<div style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;margin-bottom:2px">📦 TOTAL</div>'+
+          '<div style="font-size:22px;font-weight:800;color:#374151;line-height:1">'+_nTot+'</div>'+
+          '<div style="font-size:12px;color:#6b7280;margin-top:3px">pedido'+(_nTot!==1?'s':'')+' totales</div>'+
+        '</div>'+
+      '</div>';
+  }
 
   // Toggle de vista
   html+='<div class="view-toggle">'+
@@ -758,40 +785,6 @@ function render(){
   }
 
   cont.innerHTML=html;
-  actualizarChipsEntrega();
-}
-
-function actualizarChipsEntrega(){
-  var el=document.getElementById('entrega-chips');
-  if(!el) return;
-  var rows=getRows();
-  var pedidosVistos={}, nEntregados=0, nPendientes=0;
-  rows.forEach(function(r){
-    if(!r.pedido||pedidosVistos[r.pedido]) return;
-    pedidosVistos[r.pedido]=true;
-    var estado=ALL_RETIROS_MAP[String(r.pedido)];
-    if(estado==='Entregado') nEntregados++; else nPendientes++;
-  });
-  var nTotalPed=nEntregados+nPendientes;
-  if(!nTotalPed){ el.innerHTML=''; return; }
-  el.innerHTML=
-    '<div style="display:flex;gap:10px">'+
-      '<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-        '<div style="font-size:10px;font-weight:700;color:#854d0e;letter-spacing:.5px;margin-bottom:2px">⏳ PENDIENTES</div>'+
-        '<div style="font-size:22px;font-weight:800;color:#92400e;line-height:1">'+nPendientes+'</div>'+
-        '<div style="font-size:12px;color:#a16207;margin-top:3px">pedido'+(nPendientes!==1?'s':'')+' sin entregar</div>'+
-      '</div>'+
-      '<div style="background:#f0fdf4;border:1px solid #4ade80;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-        '<div style="font-size:10px;font-weight:700;color:#15803d;letter-spacing:.5px;margin-bottom:2px">✅ ENTREGADOS</div>'+
-        '<div style="font-size:22px;font-weight:800;color:#166534;line-height:1">'+nEntregados+'</div>'+
-        '<div style="font-size:12px;color:#16a34a;margin-top:3px">pedido'+(nEntregados!==1?'s':'')+' entregado'+(nEntregados!==1?'s':'')+' </div>'+
-      '</div>'+
-      '<div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
-        '<div style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;margin-bottom:2px">📦 TOTAL</div>'+
-        '<div style="font-size:22px;font-weight:800;color:#374151;line-height:1">'+nTotalPed+'</div>'+
-        '<div style="font-size:12px;color:#6b7280;margin-top:3px">pedido'+(nTotalPed!==1?'s':'')+' totales</div>'+
-      '</div>'+
-    '</div>';
 }
 
 // ── VISTA POR FAMILIA ──
