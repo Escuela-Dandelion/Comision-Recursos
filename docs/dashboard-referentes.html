@@ -414,6 +414,7 @@
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var ALL_ROWS  = [];
 var ALL_MESES = [];
+var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Pendiente'
 var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
@@ -636,7 +637,17 @@ function initDashboard(d){
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   document.getElementById('contenido').style.display='block';
-  render();
+
+  // Fetch retiros en paralelo para el resumen de entregas
+  fetch(APPS_URL + '?action=getRetiros', { redirect:'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      ALL_RETIROS_MAP = {};
+      (d.retiros||[]).forEach(function(r){
+        ALL_RETIROS_MAP[String(r.numero)] = r.estado;
+      });
+      render();
+    }).catch(function(){ render(); });
 }
 
 function toggleGrado(g){
@@ -725,6 +736,35 @@ function render(){
     '<div class="card teal"><div class="card-label">Familias</div><div class="card-value">'+nFam+'</div></div>'+
     '<div class="card purple"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
+
+  // Resumen de entregas
+  var pedidosVistos={}, nEntregados=0, nPendientes=0;
+  rows.forEach(function(r){
+    if(!r.pedido||pedidosVistos[r.pedido]) return;
+    pedidosVistos[r.pedido]=true;
+    var estado=ALL_RETIROS_MAP[String(r.pedido)];
+    if(estado==='Entregado') nEntregados++; else nPendientes++;
+  });
+  var nTotalPed=nEntregados+nPendientes;
+  if(nTotalPed>0){
+    html+='<div style="display:flex;gap:10px;margin-bottom:14px">'+
+      '<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+        '<div style="font-size:10px;font-weight:700;color:#854d0e;letter-spacing:.5px;margin-bottom:2px">⏳ PENDIENTES</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#92400e;line-height:1">'+nPendientes+'</div>'+
+        '<div style="font-size:12px;color:#a16207;margin-top:3px">pedido'+(nPendientes!==1?'s':'')+' sin entregar</div>'+
+      '</div>'+
+      '<div style="background:#f0fdf4;border:1px solid #4ade80;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+        '<div style="font-size:10px;font-weight:700;color:#15803d;letter-spacing:.5px;margin-bottom:2px">✅ ENTREGADOS</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#166534;line-height:1">'+nEntregados+'</div>'+
+        '<div style="font-size:12px;color:#16a34a;margin-top:3px">pedido'+(nEntregados!==1?'s':'')+' entregado'+(nEntregados!==1?'s':'')+' </div>'+
+      '</div>'+
+      '<div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;flex:1;min-width:0">'+
+        '<div style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.5px;margin-bottom:2px">📦 TOTAL</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#374151;line-height:1">'+nTotalPed+'</div>'+
+        '<div style="font-size:12px;color:#6b7280;margin-top:3px">pedido'+(nTotalPed!==1?'s':'')+' totales</div>'+
+      '</div>'+
+    '</div>';
+  }
 
   // Toggle de vista
   html+='<div class="view-toggle">'+
