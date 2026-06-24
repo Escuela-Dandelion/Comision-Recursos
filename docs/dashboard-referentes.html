@@ -794,14 +794,16 @@ function renderFamilias(rows){
   var _hasRet=Object.keys(ALL_RETIROS_MAP).length>0;
   famArr.forEach(function(fname,fi){
     var fam=familias[fname];
-    var _peds=Object.values(fam._ped||{});
-    var _fEntr=_peds.filter(function(e){return e==='Entregado';}).length;
-    var _fPend=_peds.filter(function(e){return e==='Pendiente';}).length;
+    var _fUEntr=0, _fUPend=0;
+    fam.items.forEach(function(it){
+      if(ALL_RETIROS_MAP[String(it.pedido)]==='Entregado') _fUEntr+=(it.cantidad||0);
+      else _fUPend+=(it.cantidad||0);
+    });
     var _retBadge=_hasRet?
       '<div style="font-size:11px;margin-top:3px">'+
-        (_fEntr?'<span style="color:#15803d;font-weight:700">✅ '+_fEntr+' entr.</span>':'')+
-        (_fEntr&&_fPend?' · ':'')+
-        (_fPend?'<span style="color:#92400e;font-weight:700">⏳ '+_fPend+' pend.</span>':'')+
+        (_fUEntr?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(_fUEntr)+' u.</span>':'')+
+        (_fUEntr&&_fUPend?' · ':'')+
+        (_fUPend?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(_fUPend)+' u.</span>':'')+
       '</div>':'';
     html+='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
@@ -827,7 +829,7 @@ function renderFamilias(rows){
 
     html+='<div class="fam-body" id="fam-'+fi+'">'+
       '<table class="tbl-inner"><thead><tr>'+
-        '<th>Producto</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th><th>Pedido</th><th>Fecha</th>'+
+        '<th>Producto</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th><th>Fecha</th><th></th>'+
       '</tr></thead><tbody>';
     // Agrupar por pedido para mostrar el descuento al final del grupo
     var pedidoGroups={};
@@ -837,6 +839,16 @@ function renderFamilias(rows){
     });
     Object.keys(pedidoGroups).forEach(function(ped){
       var grupo=pedidoGroups[ped];
+      var _est=ALL_RETIROS_MAP[String(ped)];
+      var _entr=_est==='Entregado';
+      var _icon=_entr?'✅':'⏳';
+      var _color=_entr?'#15803d':'#92400e';
+      var _bg=_entr?'#f0fdf4':'#fef9c3';
+      html+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
+        '<td colspan="7" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
+          _icon+' Pedido #'+esc(String(ped))+' — '+(_entr?'Entregado':'Pendiente de entrega')+
+        '</td>'+
+      '</tr>';
       grupo.forEach(function(p){
         html+='<tr>'+
           '<td>'+esc(p.nombre)+(p.marca?' <span class="chip">'+esc(p.marca)+'</span>':'')+' </td>'+
@@ -844,8 +856,8 @@ function renderFamilias(rows){
           '<td class="num" style="color:#999">'+pesos(p.subtotal_bruto)+'</td>'+
           '<td class="num"><strong>'+pesos(p.total_pagado)+'</strong></td>'+
           '<td class="num">'+pesos(p.neto)+'</td>'+
-          '<td style="white-space:nowrap"><span class="txt-sm">#'+esc(p.pedido||'—')+'</span></td>'+
-          '<td><span class="txt-sm">'+esc(p.fecha||'—')+'</span></td>'+
+          '<td style="white-space:nowrap"><span class="txt-sm">'+esc(p.fecha||'—')+'</span></td>'+
+          '<td></td>'+
         '</tr>';
       });
       var disc=grupo[0].order_discount||0;
@@ -921,13 +933,17 @@ function renderProductos(rows){
       '</tr></thead><tbody>';
     famArr.forEach(function(fname){
       var f=prod.familias[fname];
+      var _pedHtml=f.pedidos.map(function(pid){
+        var _e=ALL_RETIROS_MAP[String(pid)]==='Entregado';
+        return '<span style="white-space:nowrap">'+(_e?'✅':'⏳')+' #'+esc(String(pid))+'</span>';
+      }).join(' ');
       html+='<tr>'+
         '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
         '<td class="num">'+pesos(f.neto)+'</td>'+
-        '<td><span class="txt-sm">'+(f.pedidos.length===1?'#'+f.pedidos[0]:f.pedidos.length+' pedidos')+'</span></td>'+
+        '<td style="font-size:12px">'+(_hasRet?_pedHtml:'<span class="txt-sm">'+(f.pedidos.length===1?'#'+f.pedidos[0]:f.pedidos.length+' pedidos')+'</span>')+'</td>'+
         '<td></td>'+
       '</tr>';
     });
