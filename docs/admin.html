@@ -1405,7 +1405,7 @@ function onQRScanned(url) {
       document.getElementById('qr-loading').style.display = 'none';
       if (d.entregado) {
         document.getElementById('qr-ya-entregado').style.display = 'block';
-        document.getElementById('qr-entregado-msg').textContent = d.estado || 'Este pedido ya fue entregado.';
+        document.getElementById('qr-entregado-msg').textContent = d.estado ? d.estado.replace('ENTREGADO ✓', 'Ya entregado ✓') : 'Ya entregado.';
         return;
       }
       if (!d.ok) {
