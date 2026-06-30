@@ -257,14 +257,14 @@ function procesarPedido(order) {
     return p.quantity + 'x ' + p.name;
   }).join('\n');
 
-  var token      = generarToken(orderId);
-  // Usar el nuevo admin en lugar del HTML del GAS
-  var verifyUrl  = 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id='
-                   + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
-  var qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
-                   + encodeURIComponent(verifyUrl);
+  var token     = generarToken(orderId);
+  var verifyUrl = 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id='
+                  + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
+  var qrApiUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=L&margin=1&data='
+                  + encodeURIComponent(verifyUrl);
+  var qrBlob    = UrlFetchApp.fetch(qrApiUrl).getBlob().setName('qr.png').setContentType('image/png');
 
-  enviarEmail(buyerEmail, buyerName, order, qrImageUrl, productos);
+  enviarEmail(buyerEmail, buyerName, order, qrBlob, productos);
   registrarEnSheet(order, token);
   registrarEnVentas(order);
 
@@ -295,7 +295,7 @@ function fetchOrder(orderId) {
 // EMAIL AL COMPRADOR
 // ──────────────────────────────────────────────────────────
 
-function enviarEmail(email, nombre, order, qrUrl, productos) {
+function enviarEmail(email, nombre, order, qrBlob, productos) {
   var asunto = 'Diente de Leon - Tu QR para retirar el pedido #' + order.number;
 
   var html =
@@ -311,14 +311,18 @@ function enviarEmail(email, nombre, order, qrUrl, productos) {
     '<p style="margin:10px 0 0 0;color:#555"><strong>Total: ' + order.total + '</strong></p>' +
     '</div>' +
     '<div style="text-align:center;margin:28px 0">' +
-    '<img src="' + qrUrl + '" width="240" height="240"' +
+    '<img src="cid:qr_code" width="200" height="200"' +
     ' style="border:1px solid #eee;padding:10px;border-radius:8px" alt="QR Retiro"/>' +
     '<p style="color:#888;font-size:13px;margin-top:8px">Mostrá este QR en el punto de retiro</p>' +
     '</div>' +
     '<p style="font-size:13px;color:#aaa">¿Preguntas? Respondé este email.</p>' +
     '</div>';
 
-  GmailApp.sendEmail(email, asunto, '', { htmlBody: html, from: 'tiendavirtual.dientedeleon@gmail.com' });
+  GmailApp.sendEmail(email, asunto, '', {
+    htmlBody: html,
+    from: 'tiendavirtual.dientedeleon@gmail.com',
+    inlineImages: { qr_code: qrBlob }
+  });
 }
 
 // ──────────────────────────────────────────────────────────
