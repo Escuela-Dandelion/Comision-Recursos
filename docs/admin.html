@@ -792,6 +792,21 @@ window.addEventListener('popstate', function(e) {
   if (state.view) showView(state.view, null, { skipHistory: true, id: state.id });
 });
 
+// Cuando la página se restaura desde el bfcache (iOS Safari, Chrome), re-iniciar el QR
+window.addEventListener('pageshow', function(e) {
+  if (!e.persisted) return;
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('view') === 'qr' && params.get('id') && params.get('token')) {
+    _qrModoDirecto  = true;
+    _qrPendingId    = params.get('id');
+    _qrPendingToken = params.get('token');
+    document.getElementById('qr-loading').style.display = 'none';
+    document.getElementById('qr-pedido-wrap').style.display = 'none';
+    document.getElementById('qr-ya-entregado').style.display = 'none';
+    iniciarQRLogin();
+  }
+});
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebar-overlay').classList.toggle('visible');
@@ -1382,8 +1397,10 @@ function onQRScanned(url) {
     el.textContent = 'QR inválido — no es un pedido de Diente de León.'; el.style.display = 'block';
     setTimeout(function(){ reiniciarQR(); }, 2500); return;
   }
-  fetch(GAS_URL + '?action=api_verificar&id=' + id + '&token=' + token)
-    .then(function(r){ return r.json(); })
+  var _abortCtrl = new AbortController();
+  var _fetchTimeout = setTimeout(function(){ _abortCtrl.abort(); }, 15000);
+  fetch(GAS_URL + '?action=api_verificar&id=' + id + '&token=' + token, { signal: _abortCtrl.signal })
+    .then(function(r){ clearTimeout(_fetchTimeout); return r.json(); })
     .then(function(d){
       document.getElementById('qr-loading').style.display = 'none';
       if (d.entregado) {
@@ -1405,16 +1422,23 @@ function onQRScanned(url) {
         document.getElementById('qr-quien-label').textContent = _qrUser.name;
         document.getElementById('qr-pedido-wrap').style.display = 'block';
       } else {
-        // Sin usuario — pedir login antes de mostrar el pedido
         document.getElementById('qr-login-wrap').style.display = 'block';
       }
     })
     .catch(function(){
+      clearTimeout(_fetchTimeout);
       document.getElementById('qr-loading').style.display = 'none';
-      document.getElementById('qr-scanner-wrap').style.display = 'block';
-      var el = document.getElementById('qr-scan-error');
-      el.textContent = 'Error de conexión.'; el.style.display = 'block';
-      setTimeout(function(){ reiniciarQR(); }, 2500);
+      if (_qrModoDirecto && _qrPendingId) {
+        // Modo URL directa: mostrar botón de reintento en lugar de ir al scanner
+        document.getElementById('qr-scan-error').textContent = 'No se pudo cargar el pedido.';
+        document.getElementById('qr-scan-error').style.display = 'block';
+        document.getElementById('qr-scanner-wrap').style.display = 'block';
+      } else {
+        document.getElementById('qr-scanner-wrap').style.display = 'block';
+        var el = document.getElementById('qr-scan-error');
+        el.textContent = 'Error de conexión.'; el.style.display = 'block';
+        setTimeout(function(){ reiniciarQR(); }, 2500);
+      }
     });
 }
 
