@@ -859,7 +859,7 @@ function paginaPortalStaff(mostrarExito) {
       total:     row[5],
       fecha:     row[6] ? new Date(row[6]).toLocaleString('es-AR') : '',
       estado:    row[7],
-      urlVer:    webAppUrl + '?action=verificar&id=' + row[0] + '&token=' + generarToken(String(row[0])),
+      urlVer:    'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id=' + row[0] + '&token=' + generarToken(String(row[0])),
       urlAdmin:  webAppUrl + '?action=entregar_admin&id=' + row[0] + '&pass=' + CONFIG.STAFF_TOKEN
     };
     if (entregado) entregados.push(item); else pendientes.push(item);
