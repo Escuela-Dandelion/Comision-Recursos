@@ -785,7 +785,7 @@ function paginaVerificar(orderId, token) {
     '      :\'<span style="color:#E63946;font-weight:bold;font-size:18px">&#x26A0; PAGO NO CONFIRMADO</span>\';' +
     '    var items=o.products.map(function(p){return\'<li style="padding:4px 0">\'+p.quantity+\'x <strong>\'+esc(p.name)+\'</strong></li>\';}).join("");' +
     '    var formHtml=pagoOk' +
-    '      ?\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select><label>Tu PIN:</label><input type="password" id="pin" placeholder="&bull;&bull;&bull;&bull;"><button id="btn" class="btn" onclick="confirmar()">&#x2713; Confirmar entrega</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\'' +
+    '      ?\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select><button id="btn" class="btn" onclick="confirmar()">&#x2713; Confirmar entrega</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\'' +
     '      :\'<p style="color:#E63946;text-align:center">No se puede entregar: pago pendiente.</p>\';' +
     '    c.innerHTML=\'<h2>Pedido #\'+o.number+\'</h2><p>\'+est+\'</p>\'' +
     '      +\'<div class="card"><p style="margin:0 0 4px"><strong>\'+esc(o.contact_name)+\'</strong></p>\'' +
@@ -802,13 +802,12 @@ function paginaVerificar(orderId, token) {
     '  });' +
     'function confirmar(){' +
     '  var staff=document.getElementById("staff").value;' +
-    '  var pin=document.getElementById("pin").value;' +
-    '  if(!pin){var el=document.getElementById("err");el.textContent="Ingres\\u00e1 tu PIN.";el.style.color="red";el.style.display="block";return;}' +
+    '  if(!staff){var el=document.getElementById("err");el.textContent="Seleccion\\u00e1 tu nombre.";el.style.color="red";el.style.display="block";return;}' +
     '  var btn=document.getElementById("btn");' +
     '  btn.disabled=true;' +
     '  document.getElementById("sp-confirm").style.display="block";' +
     '  document.getElementById("err").style.display="none";' +
-    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+"&pin="+encodeURIComponent(pin)+EXTRA;' +
+    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+EXTRA;' +
     '  fetch(url,{redirect:"follow"})' +
     '    .then(function(r){return r.json();})' +
     '    .then(function(data){' +
@@ -963,8 +962,6 @@ function paginaConfirmar(orderId, token, errorMsg, adminPass) {
     '<p id="error">' + (errorMsg || '') + '</p>' +
     '<label>Tu nombre:</label>' +
     '<select id="staff">' + staffOptions + '</select>' +
-    '<label>Tu PIN:</label>' +
-    '<input type="password" id="pin" placeholder="••••">' +
     '<button id="btn" class="btn" onclick="confirmar()">&#x2713; Confirmar entrega</button>' +
     '<p id="loading">Registrando entrega...</p>' +
     '<script>' +
@@ -975,13 +972,12 @@ function paginaConfirmar(orderId, token, errorMsg, adminPass) {
     (errorMsg ? 'document.getElementById("error").style.display="block";' : '') +
     'function confirmar(){' +
     '  var staff=document.getElementById("staff").value;' +
-    '  var pin=document.getElementById("pin").value;' +
-    '  if(!pin){var el=document.getElementById("error");el.textContent="Ingres\\u00e1 tu PIN.";el.style.display="block";return;}' +
+    '  if(!staff){var el=document.getElementById("error");el.textContent="Seleccion\\u00e1 tu nombre.";el.style.display="block";return;}' +
     '  var btn=document.getElementById("btn");' +
     '  btn.disabled=true;' +
     '  document.getElementById("loading").style.display="block";' +
     '  document.getElementById("error").style.display="none";' +
-    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+"&pin="+encodeURIComponent(pin)+EXTRA;' +
+    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+EXTRA;' +
     '  fetch(url,{redirect:"follow"})' +
     '    .then(function(r){return r.json();})' +
     '    .then(function(data){' +
@@ -1068,24 +1064,9 @@ function apiEntregar(orderId, staffName, pin, adminPass, token, notas, email) {
   } else {
     if (!orderId || !verificarToken(orderId, token)) return { ok: false, error: 'QR inválido o expirado.' };
   }
-  // Validar identidad: email Google O PIN
-  var staffKey = staffName ? staffName.trim() : '';  // siempre inicializar
-  var emailValido = email && AUTH_EMAILS[email.toLowerCase().trim()];
-  if (!emailValido) {
-    // Validar por PIN
-    var pins = CONFIG.STAFF_PINS;
-    var pinEsperado = null;
-    var keys = Object.keys(pins);
-    for (var i = 0; i < keys.length; i++) {
-      if (keys[i].trim() === staffKey) { pinEsperado = pins[keys[i]]; break; }
-    }
-    if (!pinEsperado || pinEsperado !== pin) {
-      return { ok: false, error: 'PIN incorrecto. Intentá de nuevo.' };
-    }
-    if (CONFIG.RETIRO_PINS.indexOf(pin) === -1) {
-      return { ok: false, error: 'Sin permiso para confirmar entregas.' };
-    }
-  }
+  // El token QR o el adminPass ya garantizan el acceso — no se requiere PIN
+  var staffKey = staffName ? staffName.trim() : '';
+  if (!staffKey) return { ok: false, error: 'Seleccioná tu nombre.' };
   try {
     marcarEntregado(orderId, staffKey, notas || '');
   } catch(err) {
