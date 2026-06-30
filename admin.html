@@ -357,27 +357,13 @@
           <div style="text-align:center;margin-bottom:20px">
             <div style="font-size:32px;margin-bottom:8px">🔐</div>
             <div style="font-size:16px;font-weight:700;color:var(--text)">Identificate para continuar</div>
-            <div style="font-size:13px;color:var(--muted);margin-top:4px">Ingresá con Google o con tu PIN</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Ingresá con tu cuenta Google</div>
           </div>
           <div id="qr-google-btn" style="display:flex;justify-content:center;margin-bottom:12px"></div>
           <div id="qr-login-loading" style="display:none;text-align:center;padding:8px;color:var(--muted);font-size:13px">
             <div style="display:inline-block;width:16px;height:16px;border:2px solid #c8e6c9;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px"></div>
             Verificando…
           </div>
-          <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
-            <div style="flex:1;height:1px;background:#e5e7eb"></div>
-            <span style="font-size:11px;color:var(--muted)">o con PIN</span>
-            <div style="flex:1;height:1px;background:#e5e7eb"></div>
-          </div>
-          <select id="qr-login-staff" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;margin-bottom:10px">
-            <option value="">— Tu nombre —</option>
-          </select>
-          <input id="qr-login-pin" type="password" maxlength="8" placeholder="Tu PIN" onkeydown="if(event.key==='Enter')qrLoginPin()"
-            style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:16px;font-weight:700;letter-spacing:4px;text-align:center;margin-bottom:10px">
-          <button onclick="qrLoginPin()" id="qr-login-btn"
-            style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">
-            Ingresar
-          </button>
           <div id="qr-login-error" style="font-size:12px;color:var(--red);text-align:center;margin-top:8px;display:none"></div>
         </div>
       </div>
@@ -1264,7 +1250,7 @@ function iniciarQRLogin() {
             qrPostLogin();
           } else {
             document.getElementById('qr-google-btn').style.display = 'flex';
-            document.getElementById('qr-login-error').textContent = 'Sin acceso. Usá tu PIN.';
+            document.getElementById('qr-login-error').textContent = 'Esta cuenta no tiene acceso. Contactá a la administración.';
             document.getElementById('qr-login-error').style.display = 'block';
           }
         }).catch(function(){
@@ -1277,7 +1263,8 @@ function iniciarQRLogin() {
   }
 }
 
-function qrLoginPin() {
+function qrLoginPin() { return; // PIN eliminado — solo Google
+
   var staff = document.getElementById('qr-login-staff').value;
   var pin   = document.getElementById('qr-login-pin').value.trim();
   var errEl = document.getElementById('qr-login-error');

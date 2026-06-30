@@ -357,27 +357,13 @@
           <div style="text-align:center;margin-bottom:20px">
             <div style="font-size:32px;margin-bottom:8px">🔐</div>
             <div style="font-size:16px;font-weight:700;color:var(--text)">Identificate para continuar</div>
-            <div style="font-size:13px;color:var(--muted);margin-top:4px">Ingresá con Google o con tu PIN</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Ingresá con tu cuenta Google</div>
           </div>
           <div id="qr-google-btn" style="display:flex;justify-content:center;margin-bottom:12px"></div>
           <div id="qr-login-loading" style="display:none;text-align:center;padding:8px;color:var(--muted);font-size:13px">
             <div style="display:inline-block;width:16px;height:16px;border:2px solid #c8e6c9;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px"></div>
             Verificando…
           </div>
-          <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
-            <div style="flex:1;height:1px;background:#e5e7eb"></div>
-            <span style="font-size:11px;color:var(--muted)">o con PIN</span>
-            <div style="flex:1;height:1px;background:#e5e7eb"></div>
-          </div>
-          <select id="qr-login-staff" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;margin-bottom:10px">
-            <option value="">— Tu nombre —</option>
-          </select>
-          <input id="qr-login-pin" type="password" maxlength="8" placeholder="Tu PIN" onkeydown="if(event.key==='Enter')qrLoginPin()"
-            style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:16px;font-weight:700;letter-spacing:4px;text-align:center;margin-bottom:10px">
-          <button onclick="qrLoginPin()" id="qr-login-btn"
-            style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">
-            Ingresar
-          </button>
           <div id="qr-login-error" style="font-size:12px;color:var(--red);text-align:center;margin-top:8px;display:none"></div>
         </div>
       </div>
@@ -840,6 +826,7 @@ function ocultarMensajes() {
 // ══════════════════════════════════════
 var _ventas = [];
 var _ventasFiltroEstado = 'Pendiente';
+var _ventasFiltradasActuales = [];  // filas actualmente renderizadas (todos los filtros aplicados)
 
 // ── VENTAS DOTS MENU ─────────────────────────────────────────
 var _vRowActual = null;
@@ -860,8 +847,7 @@ function cerrarVModal(tipo) {
 }
 
 function abrirModalNotas(i) {
-  var rows = _ventasFiltroEstado === 'Todos' ? _ventas : _ventas.filter(function(v){ return v.estado === _ventasFiltroEstado; });
-  _vRowActual = rows[i];
+  _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-notas-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
   document.getElementById('v-notas-input').value = _vRowActual.notas || '';
   document.getElementById('v-notas-feedback').style.display = 'none';
@@ -891,50 +877,48 @@ function guardarNotasVenta() {
 }
 
 function abrirModalEntregar(i) {
-  var rows = _ventasFiltroEstado === 'Todos' ? _ventas : _ventas.filter(function(v){ return v.estado === _ventasFiltroEstado; });
-  _vRowActual = rows[i];
+  _vRowActual = _ventasFiltradasActuales[i];
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
-  document.getElementById('v-entregar-pin').value = '';
+  document.getElementById('v-entregar-quien').textContent = currentUser ? currentUser.name : '—';
   document.getElementById('v-entregar-notas').value = '';
   document.getElementById('v-entregar-feedback').style.display = 'none';
-  var sel = document.getElementById('v-entregar-staff');
-  if (sel.options.length <= 1) QR_STAFF_NAMES.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
-  if (currentUser && currentUser.name) {
-    for (var j=0; j<sel.options.length; j++) { if (sel.options[j].value.toLowerCase().indexOf(currentUser.name.split(' ')[0].toLowerCase()) !== -1) { sel.selectedIndex=j; break; } }
-  }
   document.getElementById('v-entregar-btn').disabled = false;
   document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega';
   document.getElementById('v-modal-entregar').classList.add('open');
 }
 
 function confirmarEntregaDesdeListado() {
-  var staff = document.getElementById('v-entregar-staff').value;
-  var pin   = document.getElementById('v-entregar-pin').value.trim();
+  var staff = currentUser ? currentUser.name : '';
   var notas = document.getElementById('v-entregar-notas').value.trim();
   var btn   = document.getElementById('v-entregar-btn');
   var fb    = document.getElementById('v-entregar-feedback');
-  if (!staff) { fb.textContent='⚠️ Seleccioná tu nombre.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
-  if (!pin)   { fb.textContent='⚠️ Ingresá tu PIN.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
+  if (!staff) { fb.textContent='⚠️ No se pudo identificar tu usuario.'; fb.style.color='#b45309'; fb.style.display='block'; return; }
   btn.disabled = true;
   btn.innerHTML = '<div style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></div> Confirmando…';
   fb.style.display = 'none';
   var staffKey = staff.replace(' ', '.') + ' ';
-  var token = _vRowActual.id ? btoa(_vRowActual.id + 'retiro2026').substring(0,12) : '';
-  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
+  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
   if (notas) url += '&notas=' + encodeURIComponent(notas);
   if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
-  fetch(url, {redirect:'follow'})
-    .then(function(r){ return r.json(); })
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function(){ controller.abort(); }, 35000);
+  fetch(url, {redirect:'follow', signal: controller.signal})
+    .then(function(r){ clearTimeout(timeoutId); return r.json(); })
     .then(function(d){
       btn.disabled = false; btn.textContent = 'Confirmar entrega';
       if (d.ok) {
-        _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = staff;
+        _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = currentUser ? currentUser.name : staff;
         _ventasCargadoEstado = {};
         cerrarVModal('entregar');
         aplicarFiltrosVentas();
       } else { fb.textContent='❌ ' + (d.error||'Error.'); fb.style.color='#dc2626'; fb.style.display='block'; }
     })
-    .catch(function(){ btn.disabled=false; btn.textContent='Confirmar entrega'; fb.textContent='❌ Error de conexión.'; fb.style.color='#dc2626'; fb.style.display='block'; });
+    .catch(function(err){
+      clearTimeout(timeoutId);
+      btn.disabled=false; btn.textContent='Confirmar entrega';
+      fb.textContent = (err && err.name === 'AbortError') ? '❌ Tiempo de espera agotado. Revisá el sheet y volvé a intentar.' : '❌ Error de conexión.';
+      fb.style.color='#dc2626'; fb.style.display='block';
+    });
 }
 
 function fmtPesosAR(val) {
@@ -1160,6 +1144,7 @@ function aplicarFiltrosVentas() {
 
 function renderVentas(rows) {
   if (!rows) rows = _ventas;
+  _ventasFiltradasActuales = rows;  // guardar para que los modales usen el mismo índice
   var cont = document.getElementById('ventas-tabla');
   if (!rows.length) {
     cont.innerHTML = '<p style="color:#9ca3af;font-size:14px;padding:20px 0">Sin registros.</p>';
@@ -1265,7 +1250,7 @@ function iniciarQRLogin() {
             qrPostLogin();
           } else {
             document.getElementById('qr-google-btn').style.display = 'flex';
-            document.getElementById('qr-login-error').textContent = 'Sin acceso. Usá tu PIN.';
+            document.getElementById('qr-login-error').textContent = 'Esta cuenta no tiene acceso. Contactá a la administración.';
             document.getElementById('qr-login-error').style.display = 'block';
           }
         }).catch(function(){
@@ -1278,7 +1263,8 @@ function iniciarQRLogin() {
   }
 }
 
-function qrLoginPin() {
+function qrLoginPin() { return; // PIN eliminado — solo Google
+
   var staff = document.getElementById('qr-login-staff').value;
   var pin   = document.getElementById('qr-login-pin').value.trim();
   var errEl = document.getElementById('qr-login-error');
@@ -1535,12 +1521,8 @@ function reiniciarQR() {
   <div class="v-modal">
     <h3>✅ Marcar como entregado</h3>
     <div style="font-size:12px;color:#6b7280;margin-bottom:12px" id="v-entregar-pedido-info"></div>
-    <label>¿Quién entrega?</label>
-    <select id="v-entregar-staff">
-      <option value="">— Seleccioná tu nombre —</option>
-    </select>
-    <label>Tu PIN personal</label>
-    <input id="v-entregar-pin" type="password" maxlength="8" placeholder="••••••" style="letter-spacing:4px;text-align:center">
+    <label>Quién entrega</label>
+    <div id="v-entregar-quien" style="padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:12px"></div>
     <label>Notas (opcional)</label>
     <textarea id="v-entregar-notas" rows="2" placeholder="Ej: entrega parcial, faltaba stock…"></textarea>
     <div id="v-entregar-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
