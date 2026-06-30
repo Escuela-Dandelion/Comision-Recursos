@@ -333,8 +333,16 @@
     nombres.forEach(function(nombre, i) {
       if (i >= filasProd.length) return;
       document.querySelectorAll('.p-nombre')[i].value = nombre || '';
-      document.querySelectorAll('.p-unid')[i].value   = unidades[i] || '';
-      document.querySelectorAll('.p-cant')[i].value   = '';  // FGP define la cantidad a pedir
+      document.querySelectorAll('.p-unid')[i].value   = unidades[i] || 'Unidades';
+      var cantInput = document.querySelectorAll('.p-cant')[i];
+      cantInput.value = '';
+      cantInput.style.outline    = '2px solid #dc2626';
+      cantInput.style.background = '#fef2f2';
+      cantInput.addEventListener('input', function() {
+        var ok = this.value.trim() && this.value.trim() !== '0';
+        this.style.outline    = ok ? '' : '2px solid #dc2626';
+        this.style.background = ok ? '' : '#fef2f2';
+      });
       document.querySelectorAll('.p-precio')[i].value = precios[i]  || '';
     });
     recalcularTotal();

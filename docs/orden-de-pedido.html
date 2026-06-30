@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Orden de Pedido — Escuela Dandelion / Diente de León</title>
-<script src="https://accounts.google.com/gsi/client" defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #2d2d2d; background: #f9fafb; padding: 20px 16px; max-width: 800px; margin: 0 auto; }
@@ -48,6 +47,8 @@
   .prod-table td input { width: 100%; border: none; background: transparent; padding: 8px 6px; font-size: 13px; font-family: inherit; color: #2d2d2d; white-space: normal; word-break: break-word; }
   .prod-table td.col-producto input { min-height: 38px; height: auto; word-break: break-word; }
   .prod-table td input:focus { outline: none; background: #f0fdf4; }
+  .prod-table td select.p-unid { width: 100%; border: none; background: transparent; padding: 8px 4px; font-size: 13px; font-family: inherit; color: #2d2d2d; cursor: pointer; appearance: none; -webkit-appearance: none; }
+  .prod-table td select.p-unid:focus { outline: none; background: #f0fdf4; }
   .prod-table tr:nth-child(even) td { background: #fafafa; }
 
   /* FIRMAS */
@@ -77,18 +78,6 @@
 </head>
 <body>
 
-<!-- ── AUTH OVERLAY ── -->
-<div id="auth-overlay" style="position:fixed;inset:0;background:#f9fafb;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
-  <div style="background:#fff;border-radius:20px;padding:40px 32px;max-width:360px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center">
-    <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" style="max-width:110px;margin-bottom:20px" alt="Diente de León">
-    <h2 style="font-size:17px;color:#1a1a2e;margin-bottom:6px">Orden de Pedido</h2>
-    <p style="font-size:13px;color:#888;margin-bottom:24px">Iniciá sesión con tu cuenta Google autorizada</p>
-    <div id="g_id_signin" style="display:flex;justify-content:center"></div>
-    <p id="auth-error" style="color:#e63946;font-size:13px;margin-top:14px;display:none"></p>
-    <p style="font-size:11px;color:#ccc;margin-top:20px">Solo Comisión de Recursos / FGP</p>
-  </div>
-</div>
-
   <a href="pedidos.html" style="display:inline-flex !important;align-items:center;gap:6px;font-size:13px !important;font-weight:700 !important;color:#3a7d44 !important;text-decoration:none !important;margin-bottom:10px;opacity:1 !important;visibility:visible !important">&larr; Pedidos</a>
 
   <!-- HEADER -->
@@ -117,9 +106,20 @@
   <div class="section">
     <div class="section-title">Proveedor y Responsable</div>
     <div class="grid grid-2">
-      <div class="field"><label>Proveedor</label><input id="f-proveedor" type="text"></div>
+      <div class="field">
+        <label>Proveedor</label>
+        <select id="f-proveedor-sel" onchange="onProveedorChange()" style="display:none">
+          <option value="">— Seleccioná un proveedor —</option>
+        </select>
+        <input id="f-proveedor" type="text" placeholder="Nombre del proveedor" style="display:none">
+        <div id="f-proveedor-loading" style="font-size:12px;color:#9ca3af;padding:10px 0">Cargando proveedores…</div>
+      </div>
       <div class="field"><label>Responsable (FGP)</label><input id="f-fgp" type="text"></div>
-      <div class="field"><label>Teléfono del proveedor</label><input id="f-tel" type="tel" inputmode="numeric"></div>
+      <div class="field">
+        <label>Teléfono del proveedor</label>
+        <input id="f-tel" type="tel" inputmode="numeric" placeholder="Ej: 3512112050">
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px">Sin guiones ni espacios. Ej: 3512112050</div>
+      </div>
       <div class="field"><label>Forma de pago acordada</label><input id="f-pago" type="text"></div>
     </div>
   </div>
@@ -137,15 +137,16 @@
           <th style="width:26%">Precio</th>
         </tr>
       </thead>
+      <datalist id="tn-productos-list"></datalist>
       <tbody id="tbody-productos">
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
-        <tr><td class="col-producto"><input class="p-nombre" type="text" placeholder="Producto"></td><td><input class="p-unid" type="text" placeholder="Unid."></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
+        <tr><td class="col-producto"><input class="p-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…"></td><td><select class="p-unid"><option value="Unidades">Unid.</option><option value="Kg">Kg</option><option value="Cajas">Cajas</option></select></td><td><input class="p-cant" type="text" placeholder="Cant." inputmode="numeric"></td><td><input class="p-precio" type="text" placeholder="$ precio"></td></tr>
       </tbody>
     </table>
     </div>
@@ -161,22 +162,31 @@
     <div class="field"><textarea id="f-obs" rows="3" placeholder="Notas, aclaraciones, condiciones especiales..."></textarea></div>
   </div>
 
-  <!-- BOTÓN WHATSAPP -->
-  <div style="margin: 20px 0 8px; display:flex; justify-content:center;">
-    <button onclick="enviarPedido()" style="
-      background: #25d366; color: #fff; border: none; border-radius: 12px;
-      padding: 16px 32px; font-size: 17px; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; gap: 10px; box-shadow: 0 3px 12px rgba(37,211,102,.35);
-      width: 100%; justify-content: center; max-width: 400px; margin: 0 auto;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Enviar pedido al proveedor
-    </button>
-  </div>
+  <!-- ACCIONES -->
+  <div style="margin: 20px 0 8px; display:flex; flex-direction:column; align-items:center; gap:12px; max-width:400px; margin-left:auto; margin-right:auto;">
 
-  <!-- FIRMAS -->
-  <div class="firmas">
-    <div class="firma-box">Firma Responsable (FGP)</div>
-    <div class="firma-box">Firma Proveedor</div>
+    <!-- 1. Registrar en Sheet -->
+    <button id="btn-registrar" onclick="registrarPedido()" style="
+      background: #2d5a27; color: #fff; border: none; border-radius: 12px;
+      padding: 16px 32px; font-size: 17px; font-weight: 700; cursor: pointer;
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 3px 12px rgba(45,90,39,.3);">
+      📋 Registrar Pedido
+    </button>
+
+    <!-- Feedback -->
+    <div id="feedback-registro" style="display:none; border-radius:10px; padding:14px 16px; font-size:14px; font-weight:600; text-align:center; width:100%;"></div>
+
+    <!-- 2. WhatsApp — aparece solo tras registro exitoso -->
+    <button id="btn-whatsapp" onclick="abrirWhatsapp()" style="
+      display:none; background: #25d366; color: #fff; border: none; border-radius: 12px;
+      padding: 16px 32px; font-size: 17px; font-weight: 700; cursor: pointer;
+      width: 100%; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 3px 12px rgba(37,211,102,.35);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Enviar pedido por WhatsApp
+    </button>
+
   </div>
 
   <!-- FOOTER -->
@@ -186,12 +196,99 @@
 
 <script>
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
+  const GAS_URL_RQ = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
+
+  var _proveedoresMap = {}; // nombre → tel
+  var _skuMap = {};         // nombre_upper → sku
+
+  // ── CARGAR SKUs DE TIENDANUBE ───────────────────────────────
+  fetch(SCRIPT_URL + '?action=getProductosTN', { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (!data.ok || !data.productos) return;
+      var list = document.getElementById('tn-productos-list');
+      data.productos.forEach(function(p) {
+        _skuMap[p.nombre.toUpperCase()] = p.sku;
+        if (list) {
+          var opt = document.createElement('option');
+          opt.value = p.nombre;
+          list.appendChild(opt);
+        }
+      });
+    }).catch(function(){});
+
+  // ── CARGAR PROVEEDORES ──────────────────────────────────────
+  (function cargarProveedores() {
+    fetch(GAS_URL_RQ + '?action=getProveedores')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        var sel = document.getElementById('f-proveedor-sel');
+        var loading = document.getElementById('f-proveedor-loading');
+        loading.style.display = 'none';
+        if (data.ok && data.proveedores && data.proveedores.length) {
+          data.proveedores.forEach(function(p) {
+            _proveedoresMap[p.nombre] = p.tel || '';
+            var opt = document.createElement('option');
+            opt.value = p.nombre; opt.textContent = p.nombre;
+            sel.appendChild(opt);
+          });
+        }
+        // Opción para ingresar uno nuevo
+        var optOtro = document.createElement('option');
+        optOtro.value = '__otro__'; optOtro.textContent = '➕ Otro proveedor…';
+        sel.appendChild(optOtro);
+        sel.style.display = '';
+        // Pre-seleccionar si viene por URL
+        var urlProveedor = new URLSearchParams(window.location.search).get('proveedor');
+        if (urlProveedor) {
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value.toUpperCase() === urlProveedor.toUpperCase()) {
+              sel.selectedIndex = i; onProveedorChange(); return;
+            }
+          }
+          // No encontrado en lista → modo libre
+          sel.style.display = 'none';
+          var inp = document.getElementById('f-proveedor');
+          inp.value = urlProveedor; inp.style.display = '';
+        }
+      })
+      .catch(function() {
+        // Sin conexión → modo texto libre
+        document.getElementById('f-proveedor-loading').style.display = 'none';
+        document.getElementById('f-proveedor').style.display = '';
+      });
+  })();
+
+  function onProveedorChange() {
+    var sel = document.getElementById('f-proveedor-sel');
+    var inp = document.getElementById('f-proveedor');
+    var val = sel.value;
+    if (val === '__otro__') {
+      sel.style.display = 'none';
+      inp.value = ''; inp.style.display = '';
+      inp.focus();
+      document.getElementById('f-tel').value = '';
+    } else if (val) {
+      inp.value = val;
+      var tel = _proveedoresMap[val] || '';
+      if (tel) document.getElementById('f-tel').value = tel;
+    }
+  }
 
   // ── TOTAL AUTO-CALCULADO ────────────────────────────────────────────────────
   function parsePrecio(str) {
-    // Formato argentino: 1.500 o 1.500,50 → punto = miles, coma = decimal
-    const limpio = str.replace(/[^\d.,]/g, '');
-    return parseFloat(limpio.replace(/\./g, '').replace(',', '.')) || 0;
+    var s = str.replace(/[^\d.,]/g, '');
+    if (!s) return 0;
+    // Si tiene coma: formato argentino (punto=miles, coma=decimal) → 1.500,50
+    if (s.indexOf(',') !== -1) return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+    // Solo punto: si tiene exactamente 3 dígitos después → miles (1.500); si no → decimal (850.00 de API)
+    var dotIdx = s.lastIndexOf('.');
+    if (dotIdx !== -1) {
+      return (s.length - dotIdx - 1 === 3)
+        ? parseFloat(s.replace(/\./g, '')) || 0   // 1.500 → 1500
+        : parseFloat(s) || 0;                      // 850.00 → 850
+    }
+    return parseFloat(s) || 0;
   }
 
   function recalcularTotal() {
@@ -219,7 +316,7 @@
     // Fecha de hoy por defecto
     document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
 
-    if (p.get('proveedor')) document.getElementById('f-proveedor').value = p.get('proveedor');
+    // proveedor se maneja en cargarProveedores() con el select
     if (p.get('tel'))       document.getElementById('f-tel').value       = p.get('tel');
     if (p.get('fgp'))       document.getElementById('f-fgp').value       = p.get('fgp');
     if (p.get('pago'))      document.getElementById('f-pago').value      = p.get('pago');
@@ -236,69 +333,27 @@
     nombres.forEach(function(nombre, i) {
       if (i >= filasProd.length) return;
       document.querySelectorAll('.p-nombre')[i].value = nombre || '';
-      document.querySelectorAll('.p-unid')[i].value   = unidades[i] || '';
-      document.querySelectorAll('.p-cant')[i].value   = '';  // FGP define la cantidad a pedir
+      document.querySelectorAll('.p-unid')[i].value   = unidades[i] || 'Unidades';
+      var cantInput = document.querySelectorAll('.p-cant')[i];
+      cantInput.value = '';
+      cantInput.style.outline    = '2px solid #dc2626';
+      cantInput.style.background = '#fef2f2';
+      cantInput.addEventListener('input', function() {
+        var ok = this.value.trim() && this.value.trim() !== '0';
+        this.style.outline    = ok ? '' : '2px solid #dc2626';
+        this.style.background = ok ? '' : '#fef2f2';
+      });
       document.querySelectorAll('.p-precio')[i].value = precios[i]  || '';
     });
     recalcularTotal();
   })();
 
-  // ── GENERAR WHATSAPP ───────────────────────────────────────────────────────
-  function enviarPedido() {
-    const tel       = document.getElementById('f-tel').value.trim().replace(/\D/g, '');
-    const proveedor = document.getElementById('f-proveedor').value.trim();
-    const fgp       = document.getElementById('f-fgp').value.trim();
-    const fecha     = document.getElementById('f-fecha').value;
-    const norden    = document.getElementById('f-norden').value.trim();
-    const pago      = document.getElementById('f-pago').value.trim();
-    const obs       = document.getElementById('f-obs').value.trim();
-
-    if (!tel) { alert('Completá el teléfono del proveedor antes de enviar.'); return; }
-
-    // Armar líneas de productos
-    let lineasProd = '';
-    const filas = document.querySelectorAll('#tbody-productos tr');
-    filas.forEach(function(fila) {
-      const n  = fila.querySelector('.p-nombre').value.trim();
-      if (!n) return;
-      const u  = fila.querySelector('.p-unid').value.trim();
-      const c  = fila.querySelector('.p-cant').value.trim();
-      const pr = fila.querySelector('.p-precio').value.trim();
-      const detalle = [c ? '📦 Cant: ' + c : null, pr ? '💲 $' + pr : null].filter(Boolean).join('  ·  ');
-      lineasProd += `• *${n}*${u ? ' (' + u + ')' : ''}\n${detalle ? '   ' + detalle + '\n' : ''}`;
-    });
-
-    if (!lineasProd) { alert('Agregá al menos un producto antes de enviar.'); return; }
-
-    // Formatear fecha dd/mm/aaaa
-    const fechaFmt = fecha ? fecha.split('-').reverse().join('/') : fecha;
-
-    recalcularTotal(); // asegura que f-total esté actualizado
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function leerFormulario() {
+    recalcularTotal();
     const totalCampo = document.getElementById('f-total').value;
     const total      = parseFloat(totalCampo.replace(/[^\d.,]/g, '').replace(/\./g,'').replace(',','.')) || 0;
-    const totalStr   = totalCampo ? totalCampo : null;
 
-    const partes = [
-      `🌼 *Orden de Pedido — Diente de León*`,
-      `━━━━━━━━━━━━━━━━━━━`,
-      norden    ? `🔢 N° ${norden}` : null,
-      `📅 Fecha: ${fechaFmt}`,
-      proveedor ? `🏪 Proveedor: ${proveedor}` : null,
-      ``,
-      `📦 *Productos solicitados:*`,
-      lineasProd.trimEnd(),
-      totalStr  ? `💰 *Total: ${totalStr}*` : null,
-      pago      ? `\n💳 Forma de pago: ${pago}` : null,
-      obs       ? `📝 ${obs}` : null,
-      `━━━━━━━━━━━━━━━━━━━`,
-      `✍️ Responsable: ${fgp || 'FGP Diente de León'}`,
-      `🌻 Escuela Dandelion · Waldorf · Córdoba`
-    ].filter(function(l) { return l !== null; }).join('\n');
-
-    const numFinal = tel.startsWith('549') ? tel : '549' + tel;
-    window.open('https://wa.me/' + numFinal + '?text=' + encodeURIComponent(partes), '_blank');
-
-    // Registrar en Sheet (silent — no bloquea si falla)
     const filasValidas = Array.from(document.querySelectorAll('#tbody-productos tr')).map(function(fila) {
       const n = fila.querySelector('.p-nombre').value.trim();
       if (!n) return null;
@@ -310,36 +365,144 @@
       };
     }).filter(Boolean);
 
-    const productosStr = filasValidas.map(function(r) {
-      return r.nombre + (r.cantidad ? ' x' + r.cantidad : '') + (r.unidad ? ' ' + r.unidad : '') + (r.precio ? ' ($' + r.precio + ')' : '');
-    }).join(' | ');
+    return {
+      norden:    document.getElementById('f-norden').value.trim(),
+      proveedor: (document.getElementById('f-proveedor').style.display !== 'none'
+        ? document.getElementById('f-proveedor').value
+        : document.getElementById('f-proveedor-sel').value === '__otro__' ? '' : document.getElementById('f-proveedor-sel').value
+      ).trim(),
+      fgp:       document.getElementById('f-fgp').value.trim(),
+      tel:       document.getElementById('f-tel').value.trim().replace(/\D/g, ''),
+      fecha:     document.getElementById('f-fecha').value,
+      pago:      document.getElementById('f-pago').value.trim(),
+      obs:       document.getElementById('f-obs').value.trim(),
+      filasValidas,
+      total,
+      totalStr:  totalCampo || null
+    };
+  }
 
-    // Si hay un único producto, mandamos cantidad/unidad/precio separados (para fórmula en Sheet)
-    const esSolo   = filasValidas.length === 1;
-    const soloCant = esSolo ? filasValidas[0].cantidad : '';
-    const soloUnid = esSolo ? filasValidas[0].unidad   : '';
-    const soloPrEC = esSolo ? filasValidas[0].precio    : '';
+  // ── 1. REGISTRAR EN SHEET ──────────────────────────────────────────────────
+  function registrarPedido() {
+    var f = leerFormulario();
+
+    if (!f.proveedor) { mostrarFeedback('⚠️ Completá el nombre del proveedor antes de registrar.', 'warn'); return; }
+    if (!f.filasValidas.length) { mostrarFeedback('⚠️ Agregá al menos un producto antes de registrar.', 'warn'); return; }
+
+    var sinCantidad = f.filasValidas.filter(function(r) { return !r.cantidad || r.cantidad === '0'; });
+    if (sinCantidad.length) {
+      mostrarFeedback('⚠️ Falta indicar la cantidad en: ' + sinCantidad.map(function(r){ return r.nombre; }).join(', '), 'warn');
+      return;
+    }
+
+    if (!f.norden || f.norden.includes('???') || f.norden === 'Generando…') {
+      mostrarFeedback('⚠️ El N° de Orden aún no se generó. Esperá un momento y volvé a intentar.', 'warn');
+      return;
+    }
+
+    var productosStr = f.filasValidas.map(function(r) {
+      var s = r.nombre + (r.cantidad ? ' x' + r.cantidad : '') + (r.unidad ? ' ' + r.unidad : '') + (r.precio !== '0' ? ' ($' + r.precio + ')' : '');
+      var sku = _skuMap[r.nombre.toUpperCase().trim()];
+      if (sku) s += ' [' + sku + ']';
+      return s;
+    }).join('\n');
+
+    var fechaFmt = f.fecha ? f.fecha.split('-').reverse().join('/') : f.fecha;
+
+    var btn = document.getElementById('btn-registrar');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    mostrarFeedback('⏳ Registrando orden en el sistema…', 'info');
 
     fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action:    'registrarPedido',
-        norden:    norden,
+        norden:    f.norden,
         fecha:     fechaFmt,
-        proveedor: proveedor,
-        fgp:       fgp,
+        proveedor: f.proveedor,
+        fgp:       f.fgp,
+        tel:       f.tel,
         productos: productosStr,
-        cantidad:  soloCant,
-        unidad:    soloUnid,
-        precio:    soloPrEC,
-        total:     total > 0 ? String(total) : '',
-        notas:     obs
+        total:     f.total > 0 ? String(f.total) : '',
+        notas:     f.obs
       })
-    }).catch(function() {});
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      if (data.ok) {
+        mostrarFeedback('✅ Orden ' + f.norden + ' registrada correctamente.', 'ok');
+        document.getElementById('btn-registrar').style.display = 'none';
+        document.getElementById('btn-whatsapp').style.display = 'flex';
+      } else {
+        mostrarFeedback('❌ Error al registrar: ' + (data.error || 'respuesta inesperada.'), 'error');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      mostrarFeedback('❌ No se pudo conectar con el servidor. Verificá tu conexión.', 'error');
+    });
+  }
+
+  // ── 2. ABRIR WHATSAPP ──────────────────────────────────────────────────────
+  function abrirWhatsapp() {
+    var f = leerFormulario();
+    if (!f.tel) { mostrarFeedback('⚠️ Completá el teléfono del proveedor antes de enviar.', 'warn'); return; }
+
+    var lineasProd = '';
+    f.filasValidas.forEach(function(r) {
+      var detalle = [r.cantidad ? '📦 Cant: ' + r.cantidad : null, r.precio && r.precio !== '0' ? '💲 $' + r.precio : null].filter(Boolean).join('  ·  ');
+      lineasProd += '• *' + r.nombre + '*' + (r.unidad ? ' (' + r.unidad + ')' : '') + '\n' + (detalle ? '   ' + detalle + '\n' : '');
+    });
+
+    var fechaFmt = f.fecha ? f.fecha.split('-').reverse().join('/') : f.fecha;
+
+    var partes = [
+      '🌼 *Orden de Pedido — Diente de León*',
+      '━━━━━━━━━━━━━━━━━━━',
+      f.norden    ? '🔢 N° ' + f.norden : null,
+      '📅 Fecha: ' + fechaFmt,
+      f.proveedor ? '🏪 Proveedor: ' + f.proveedor : null,
+      '',
+      '📦 *Productos solicitados:*',
+      lineasProd.trimEnd(),
+      f.totalStr  ? '💰 *Total: ' + f.totalStr + '*' : null,
+      f.pago      ? '\n💳 Forma de pago: ' + f.pago : null,
+      f.obs       ? '📝 ' + f.obs : null,
+      '━━━━━━━━━━━━━━━━━━━',
+      '✍️ Responsable: ' + (f.fgp || 'FGP Diente de León'),
+      '🌻 Escuela Dandelion · Waldorf · Córdoba'
+    ].filter(function(l) { return l !== null; }).join('\n');
+
+    var numFinal = f.tel.startsWith('549') ? f.tel : '549' + f.tel;
+    window.open('https://wa.me/' + numFinal + '?text=' + encodeURIComponent(partes), '_blank');
+  }
+
+  function mostrarFeedback(msg, tipo) {
+    var el = document.getElementById('feedback-registro');
+    var colores = {
+      ok:    { bg: '#eaf3e6', color: '#166534', border: '#a3c4a8' },
+      error: { bg: '#fef2f2', color: '#dc2626', border: '#fca5a5' },
+      warn:  { bg: '#fff8e1', color: '#b45309', border: '#fcd34d' },
+      info:  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' }
+    };
+    var c = colores[tipo] || colores.info;
+    el.style.background = c.bg;
+    el.style.color      = c.color;
+    el.style.border     = '1px solid ' + c.border;
+    el.textContent      = msg;
+    el.style.display    = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 // ── CORRELATIVO AUTOMÁTICO ──────────────────────────────────
   (async function generarCorrelativo() {
+    // Si el norden ya viene en la URL (generado por el script de alertas), no pisar
+    if (new URLSearchParams(window.location.search).get('norden')) return;
+
     const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/export?format=csv&gid=857535467';
     const input = document.getElementById('f-norden');
     try {
@@ -359,48 +522,6 @@
       input.placeholder = 'Error al leer el Sheet';
     }
   })();
-
-// ── AUTH (Google Sign-In) ──────────────────────────────────
-var AUTH_GAS_URL     = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
-var AUTH_CLIENT_ID   = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
-var AUTH_SESSION_KEY = 'ddl_gmail_session';
-var AUTH_SESSION_TTL = 8 * 60 * 60 * 1000;
-
-function authSave(email, role, name) {
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ email: email, role: role, name: name, ts: Date.now() }));
-}
-function authRead() {
-  try { var s = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null'); return s && (Date.now()-s.ts) < AUTH_SESSION_TTL ? s : null; } catch(e) { return null; }
-}
-function authHandleCredential(resp) {
-  var payload = JSON.parse(atob(resp.credential.split('.')[1]));
-  authVerify(payload.email);
-}
-function authVerify(email) {
-  var errEl = document.getElementById('auth-error');
-  errEl.style.display = 'none';
-  fetch(AUTH_GAS_URL + '?action=api_auth&email=' + encodeURIComponent(email), { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok && ['ADMIN','FGP'].indexOf(d.role) !== -1) {
-        authSave(email, d.role, d.name);
-        document.getElementById('auth-overlay').style.display = 'none';
-      } else {
-        errEl.textContent = d.error || 'Sin acceso a esta sección.';
-        errEl.style.display = 'block';
-      }
-    })
-    .catch(function() { errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'; });
-}
-window.addEventListener('load', function() {
-  var s = authRead();
-  if (s && ['ADMIN','FGP'].indexOf(s.role) !== -1) {
-    document.getElementById('auth-overlay').style.display = 'none';
-    return;
-  }
-  google.accounts.id.initialize({ client_id: AUTH_CLIENT_ID, callback: authHandleCredential });
-  google.accounts.id.renderButton(document.getElementById('g_id_signin'), { theme: 'outline', size: 'large', locale: 'es' });
-});
 </script>
 
 </body>
