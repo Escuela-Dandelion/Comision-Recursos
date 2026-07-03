@@ -216,10 +216,10 @@
     .pedidos-table thead { display: none; }
     .pedidos-table tbody { display: block; }
 
-    /* grilla: col1=contenido, col2=acciones/estado (max 140px) */
+    /* grilla 2 columnas por tarjeta */
     .pedidos-table tbody tr.main-row {
       display: grid !important;
-      grid-template-columns: 1fr minmax(0, 140px);
+      grid-template-columns: 1fr auto;
       grid-template-rows: auto auto auto;
       padding: 12px 14px;
       gap: 4px 10px;
@@ -229,48 +229,50 @@
     .pedidos-table tbody tr.main-row:hover { background: #fff !important; }
     .main-row td { display: block !important; padding: 0 !important; }
 
-    /* fila 1: N° Orden (izq) | menú ⋯ (der) */
-    .main-row .col-norden  { grid-column: 1; grid-row: 1; }
-    .main-row .col-accion  { grid-column: 2; grid-row: 1; text-align: right; align-self: start; }
-
-    /* fila 2: Proveedor+FGP (izq) | Estado badge (der) */
+    /* posición en grilla */
+    .main-row .col-norden    { grid-column: 1; grid-row: 1; }
+    .main-row .col-accion    { grid-column: 2; grid-row: 1; text-align: right; align-self: start; }
     .main-row .col-proveedor { grid-column: 1; grid-row: 2; }
-    .main-row .col-estado    { grid-column: 2; grid-row: 2; text-align: right; }
-
-    /* fila 3: Productos+totales (izq) | Pago (der) */
+    .main-row .col-estado    { grid-column: 2; grid-row: 2; text-align: right; max-width: 130px; }
     .main-row .col-productos { grid-column: 1; grid-row: 3; max-width: none; }
-    .main-row .col-pago      { grid-column: 2; grid-row: 3; text-align: right; align-self: center; }
+    .main-row .col-pago      { grid-column: 2; grid-row: 3; text-align: right; align-self: center; max-width: 130px; }
 
-    /* ── jerarquía tipográfica ── */
-    /* N° Orden: código pequeño/muted */
-    .main-row .col-norden a   { font-size: 11px !important; color: #6b7280; font-weight: 600; text-decoration: none; border-bottom: 1px solid #d1d5db; }
-    .main-row .col-norden div { font-size: 10px !important; color: #9ca3af; margin-top: 1px !important; }
+    /* jerarquía tipográfica */
+    .main-row .col-norden a          { font-size: 11px !important; color: #6b7280; font-weight: 600; }
+    .main-row .col-norden div        { font-size: 10px !important; color: #9ca3af; margin-top: 0 !important; }
+    .main-row .col-proveedor         { font-size: 14px !important; font-weight: 800 !important; }
+    .main-row .col-proveedor div     { font-size: 11px !important; font-weight: 600 !important; }
+    .main-row .btn-expand            { font-size: 12px !important; }
+    .main-row .col-productos > div   { font-size: 11px !important; margin-top: 2px; }
 
-    /* Proveedor: info principal, prominente */
-    .main-row .col-proveedor       { font-size: 14px !important; font-weight: 800; color: #111827; }
-    .main-row .col-proveedor div   { font-size: 11px !important; font-weight: 600; }
+    /* estado: solo badge, sin subtítulo */
+    tr.main-row .col-estado .estado-subtitulo { display: none !important; }
+    tr.main-row .col-estado .badge-estado {
+      font-size: 10px !important; padding: 2px 5px !important;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 128px; display: inline-block !important;
+    }
 
-    /* Estado: badge compacto, sin subtítulo */
-    .main-row .estado-subtitulo    { display: none !important; }
-    .main-row .badge-estado        { font-size: 10px !important; padding: 2px 6px !important;
-                                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                                     max-width: 138px; display: inline-block !important; }
-
-    /* Pago: badge compacto */
-    .main-row .col-pago a,
-    .main-row .col-pago > span     { font-size: 10px !important; padding: 2px 6px !important; }
-
-    /* Productos: botón expand + totales más pequeños */
-    .main-row .btn-expand          { font-size: 12px; }
-    .main-row .col-productos > div { font-size: 11px; margin-top: 2px; }
+    /* pago: texto simple, sin estilos de botón grandes */
+    tr.main-row .col-pago a,
+    tr.main-row .col-pago > span {
+      font-size: 10px !important; padding: 2px 5px !important;
+      display: inline-block !important;
+    }
 
     /* ── fila expandida ── */
-    /* usar > para no afectar la tabla interna */
-    .pedidos-table tbody tr.expand-row          { display: block; }
-    .pedidos-table tbody tr.expand-row > td     { display: block !important; padding: 0 !important; }
+    .pedidos-table tbody tr.expand-row     { display: block; }
+    .pedidos-table tbody tr.expand-row > td { display: block !important; padding: 0 !important; }
 
-    /* tabla interna del detalle: ocultar Unid. y P. Unit. */
-    .col-x-unid, .col-x-punit { display: none !important; }
+    /* forzar tabla interna a modo tabla (no hereda display:block del padre) */
+    tr.expand-row > td > div > table       { display: table !important; width: 100%; }
+    tr.expand-row > td > div > table tr    { display: table-row !important; }
+    tr.expand-row > td > div > table th,
+    tr.expand-row > td > div > table td    { display: table-cell !important; }
+
+    /* ocultar columnas Unid. y P. Unit. (selector más específico que table-cell) */
+    tr.expand-row .col-x-unid,
+    tr.expand-row .col-x-punit             { display: none !important; }
   }
 </style>
 </head>
