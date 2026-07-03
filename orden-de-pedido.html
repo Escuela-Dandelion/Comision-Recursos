@@ -389,7 +389,7 @@
     if (!f.proveedor) { mostrarFeedback('⚠️ Completá el nombre del proveedor antes de registrar.', 'warn'); return; }
     if (!f.filasValidas.length) { mostrarFeedback('⚠️ Agregá al menos un producto antes de registrar.', 'warn'); return; }
 
-    var sinCantidad = f.filasValidas.filter(function(r) { return !r.cantidad || r.cantidad === '0'; });
+    var sinCantidad = f.filasValidas.filter(function(r) { return !(parseFloat(r.cantidad) > 0); });
     if (sinCantidad.length) {
       mostrarFeedback('⚠️ Falta indicar la cantidad en: ' + sinCantidad.map(function(r){ return r.nombre; }).join(', '), 'warn');
       return;
