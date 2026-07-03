@@ -31,7 +31,7 @@ const HEADERS_CPEND = HEADERS_TRX; // misma estructura, distinta hoja
 
 const HEADERS_USR = [
   'customer_id', 'email', 'nombre', 'fecha_registro',
-  'is_paying', 'ultima_compra', 'total_compras', 'curioso', 'zombi'
+  'is_paying', 'ultima_compra', 'total_compras', 'curioso', 'zombi', 'rol'
 ];
 
 // ── AUTENTICACIÓN ──────────────────────────────────────────
@@ -273,17 +273,25 @@ function sincronizarUsuarios() {
     sheet.deleteRows(2, sheet.getLastRow() - 1);
   }
 
-  // Calcular ultima_compra y total_compras desde Transacciones
-  const compraMap = {}; // comprador_id → { ultima: "YYYY-MM", total }
+  // Calcular ultima_compra, total_compras y ultima_venta desde Transacciones
+  const compraMap   = {}; // comprador_id → { ultima: "YYYY-MM", total }
+  const vendedorMap = {}; // vendedor_id  → { ultima: "YYYY-MM" }
   if (sheetTrx && sheetTrx.getLastRow() > 1) {
-    const data = sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, 4).getValues();
+    const data = sheetTrx.getRange(2, 1, sheetTrx.getLastRow() - 1, 5).getValues();
     for (var i = 0; i < data.length; i++) {
-      var mes = toMes(data[i][0]); // normaliza Date obj o string a "YYYY-MM"
+      var mes = toMes(data[i][0]);
       if (!mes) continue;
-      var cid = String(data[i][3]);
-      if (!compraMap[cid]) compraMap[cid] = { ultima: mes, total: 0 };
-      if (mes > compraMap[cid].ultima) compraMap[cid].ultima = mes;
-      compraMap[cid].total++;
+      var cid = String(data[i][3]); // comprador_id
+      var vid = String(data[i][4]); // vendedor_id
+      if (cid) {
+        if (!compraMap[cid]) compraMap[cid] = { ultima: mes, total: 0 };
+        if (mes > compraMap[cid].ultima) compraMap[cid].ultima = mes;
+        compraMap[cid].total++;
+      }
+      if (vid) {
+        if (!vendedorMap[vid]) vendedorMap[vid] = { ultima: mes };
+        if (mes > vendedorMap[vid].ultima) vendedorMap[vid].ultima = mes;
+      }
     }
   }
 
@@ -294,34 +302,41 @@ function sincronizarUsuarios() {
   const rows = [];
 
   while (true) {
-    const resp = UrlFetchApp.fetch(CFG.WC_URL + '/customers?per_page=50&page=' + page, wcHeaders());
+    const resp = UrlFetchApp.fetch(CFG.WC_URL + '/customers?per_page=50&page=' + page + '&role=all', wcHeaders());
     if (resp.getResponseCode() !== 200) break;
 
     const customers = JSON.parse(resp.getContentText());
     if (customers.length === 0) break;
 
     for (var j = 0; j < customers.length; j++) {
-      const c    = customers[j];
-      const cid  = String(c.id);
-      const info = compraMap[cid] || { ultima: '', total: 0 };
-      const isPaying = c.is_paying_customer;
+      const c      = customers[j];
+      const cid    = String(c.id);
+      const compra  = compraMap[cid]   || { ultima: '', total: 0 };
+      const venta   = vendedorMap[cid] || { ultima: '' };
 
-      const curioso = !isPaying;
+      // curioso = nunca compró NI vendió en el SEF
+      const curioso = !compra.total && !venta.ultima;
+
+      // ultima participacion = la más reciente entre compra y venta
+      var ultimaParticipacion = compra.ultima > venta.ultima ? compra.ultima : venta.ultima;
+
       let zombi = false;
-      if (isPaying && info.ultima) {
-        zombi = new Date(info.ultima + '-01') < hace6meses; // "YYYY-MM" → "YYYY-MM-01"
+      if (ultimaParticipacion) {
+        zombi = new Date(ultimaParticipacion + '-01') < hace6meses;
       }
 
+      var rol = (c.roles && c.roles.length) ? c.roles[0] : (c.role || '');
       rows.push([
         c.id,
         c.email,
         (c.first_name + ' ' + c.last_name).trim(),
         c.date_created ? c.date_created.substring(0, 10) : '',
-        isPaying ? 'Si' : 'No',
-        info.ultima,
-        info.total,
-        curioso ? 'Si' : 'No',
-        zombi   ? 'Si' : 'No'
+        compra.total > 0 ? 'Si' : 'No',
+        compra.ultima,
+        compra.total,
+        curioso    ? 'Si' : 'No',
+        zombi      ? 'Si' : 'No',
+        rol
       ]);
     }
 

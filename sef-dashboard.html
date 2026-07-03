@@ -540,8 +540,8 @@
             </div>
             <div class="wiki-mc rose">
               <div class="wiki-mc-name">Zombies</div>
-              <div class="wiki-mc-def">Compradores sin actividad en los últimos 6 meses (estado actual, siempre global)</div>
-              <div class="wiki-mc-why">Es un <strong>estado de hoy</strong>, no un evento histórico. No se filtra: alguien es zombie ahora, independientemente del período que se analice.</div>
+              <div class="wiki-mc-def">Participantes (compradores o vendedores) sin actividad en los últimos 6 meses (estado actual, siempre global)</div>
+              <div class="wiki-mc-why">Es un <strong>estado de hoy</strong>, no un evento histórico. No se filtra: alguien es zombie ahora, independientemente del período que se analice. Aplica tanto a compradores como a prosumidores que dejaron de vender.</div>
             </div>
           </div>
         </div>
@@ -942,7 +942,7 @@ function renderTodo(meses) {
     curiosos    = sumar(meses, 'nuevos_curiosos');
     curSub      = numFmt(curiosos) + ' de ' + numFmt(registrados) + ' registrados en el periodo';
     zombies     = DATOS.usuarios.zombies;
-    zombSub     = numFmt(zombies) + ' de ' + numFmt(totUsr - DATOS.usuarios.curiosos) + ' compradores (hoy)';
+    zombSub     = numFmt(zombies) + ' de ' + numFmt(totUsr - DATOS.usuarios.curiosos) + ' participantes (hoy)';
     // Período completo (ventana variable)
     mauVal  = periodo.mau;
     mauSub  = 'compradores unicos en el periodo';
@@ -957,7 +957,7 @@ function renderTodo(meses) {
     curiosos    = DATOS.usuarios.curiosos;
     curSub      = numFmt(curiosos) + ' de ' + numFmt(totUsr) + ' registrados';
     zombies     = DATOS.usuarios.zombies;
-    zombSub     = numFmt(zombies) + ' de ' + numFmt(compradores) + ' compradores';
+    zombSub     = numFmt(zombies) + ' de ' + numFmt(compradores) + ' participantes';
     // Sin filtro: promedios mensuales
     mauVal  = uamPromedio;
     mauSub  = 'promedio mensual (sobre ' + DATOS.por_mes.length + ' meses)';
@@ -979,7 +979,7 @@ function renderTodo(meses) {
       value: numFmt(recVal) + pctBadge(recVal, mauVal), sub: recSub, color: 'purple' },
     { label: 'Curiosos <span class="info-tip" data-tip="Con filtro: registrados en el periodo que nunca compraron. Sin filtro: total historico.">&#9432;</span>',
       value: numFmt(curiosos), sub: curSub, color: 'amber' },
-    { label: 'Zombies <span class="info-tip" data-tip="Compradores que llevan mas de 6 meses sin comprar. Siempre muestra el total actual — es un estado de hoy, no un evento del periodo filtrado.">&#9432;</span>',
+    { label: 'Zombies <span class="info-tip" data-tip="Participantes (compradores o vendedores) sin actividad en los ultimos 6 meses. Siempre muestra el total actual — es un estado de hoy, no un evento del periodo filtrado.">&#9432;</span>',
       value: numFmt(zombies), sub: zombSub, color: 'rose' }
   ]);
 
@@ -1002,10 +1002,6 @@ function renderTodo(meses) {
       value: numFmt(totalNuevosEmp), sub: 'primera aparicion en el periodo', color: 'green' }
   ]);
 
-  // ── Cards economia
-  var convConf = totalInformada  ? Math.round(totalConfirmada / totalInformada  * 100) + '%' : '—';
-  var convPag  = totalConfirmada ? Math.round(totalCantidad   / totalConfirmada * 100) + '%' : '—';
-
   // ── Grupo 1: flujo de operaciones
   document.getElementById('cards-economia').innerHTML = cardsHtml([
     { label: 'Informadas <span class="info-tip" data-tip="Consumos informados por el comprador (paso 1 del flujo SEF).">&#9432;</span>',
@@ -1020,12 +1016,12 @@ function renderTodo(meses) {
     { label: 'Confirmadas <span class="info-tip" data-tip="Confirmadas por el prosumidor (paso 2). Incluye pagadas y pendientes de pago.">&#9432;</span>',
       value: totalConfirmada ? numFmt(totalConfirmada) : '—',
       monto: totalConfirmada ? kFmt(totalMontoConf) : null,
-      sub:   totalConfirmada ? 'conv. ' + convConf : 'sin datos',
+      sub:   null,
       color: 'blue' },
     { label: 'Pagadas <span class="info-tip" data-tip="Pago procesado por Mercado Pago (paso 3). Generan donacion real.">&#9432;</span>',
       value: numFmt(totalCantidad),
       monto: kFmt(totalMonto),
-      sub:   'conv. ' + convPag,
+      sub:   null,
       color: 'teal' }
   ]);
 
