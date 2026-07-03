@@ -205,10 +205,41 @@
 
   @media (max-width: 480px) {
     body { padding: 10px 12px; }
-    .col-productos { max-width: 130px; }
     .btn-accion-top { padding: 6px 10px; font-size: 11px; gap: 3px; }
     .detalle-topbar-actions { gap: 4px; }
     .detalle-topbar { gap: 6px; }
+  }
+
+  /* ── MOBILE: tabla → tarjetas ─────────────────────────────── */
+  @media (max-width: 600px) {
+    .pedidos-table         { display: block; }
+    .pedidos-table thead   { display: none; }
+    .pedidos-table tbody   { display: block; }
+
+    /* cada fila principal = tarjeta en grilla 2 columnas */
+    .pedidos-table tbody tr.main-row {
+      display: grid !important;
+      grid-template-columns: 1fr auto;
+      padding: 11px 14px;
+      gap: 3px 8px;
+      border-bottom: 2px solid #e5e7eb;
+      background: #fff !important;
+    }
+    .pedidos-table tbody tr.main-row:hover { background: #fff !important; }
+    .main-row td              { display: block !important; padding: 0 !important; }
+    .main-row .col-norden    { grid-column: 1; grid-row: 1; }
+    .main-row .col-estado    { grid-column: 2; grid-row: 1; text-align: right; }
+    .main-row .col-proveedor { grid-column: 1; grid-row: 2; }
+    .main-row .col-pago      { grid-column: 2; grid-row: 2; text-align: right; }
+    .main-row .col-productos { grid-column: 1; grid-row: 3; padding-top: 5px !important; max-width: none; }
+    .main-row .col-accion    { grid-column: 2; grid-row: 3; align-self: end; }
+
+    /* fila expandida */
+    .pedidos-table tbody tr.expand-row { display: block; }
+    .pedidos-table tbody tr.expand-row td { display: block !important; padding: 0 !important; }
+
+    /* tabla interna: ocultar columnas Unid. y P. Unit. */
+    .col-x-unid, .col-x-punit { display: none !important; }
   }
 </style>
 </head>
@@ -1054,7 +1085,7 @@ function toggleProductos(norden) {
   const chevron = document.getElementById('expand-chevron-' + norden);
   if (!row) return;
   const visible = row.style.display !== 'none';
-  row.style.display = visible ? 'none' : 'table-row';
+  row.style.display = visible ? 'none' : (window.innerWidth <= 600 ? 'block' : 'table-row');
   if (chevron) chevron.textContent = visible ? '↓' : '↑';
 }
 
@@ -1137,10 +1168,10 @@ function renderLista(pedidos) {
     const totalUnidades = prodsParsed.reduce(function(sum, r) {
       return sum + (parseFloat(r.cantidad) || 0);
     }, 0);
-    const unidStr = totalUnidades > 0 ? String(Math.round(totalUnidades)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' unid.' : '';
+    const unidStr = totalUnidades > 0 ? String(Math.round(totalUnidades)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' u.' : '';
 
     const mainRow = `
-      <tr>
+      <tr class="main-row">
         <td class="col-norden">
           <a href="?id=${p.norden}${isEmbedded?'&auth=1':''}" onclick="event.preventDefault();abrirDetalle('${p.norden}')" style="color:#2d5a27;font-weight:700;text-decoration:underline;font-size:11px;">${p.norden}</a>
           <div style="font-size:10px;color:#9ca3af;margin-top:2px">${p.fecha}</div>
@@ -1162,7 +1193,7 @@ function renderLista(pedidos) {
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
           ${SUBTITULO_ESTADO[p.estado] ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;font-family:'Inter',sans-serif;">${SUBTITULO_ESTADO[p.estado]}</div>` : ''}
         </td>
-        <td style="width:80px;text-align:center;vertical-align:middle;padding:8px 4px">
+        <td class="col-pago" style="width:80px;text-align:center;vertical-align:middle;padding:8px 4px">
           ${p.estadoPago === 'Pagado'
             ? `<a href="${p.comprobante || '#'}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;text-decoration:none;">💳 Pagado${p.comprobante ? ' 📎' : ''}</a>`
             : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
@@ -1195,7 +1226,7 @@ function renderLista(pedidos) {
       </tr>`;
 
     const expandRow = `
-      <tr id="expand-${p.norden}" style="display:none;">
+      <tr id="expand-${p.norden}" class="expand-row" style="display:none;">
         <td colspan="7" style="padding:0;background:#f8f9fa;border-bottom:1px solid #e5e7eb;">
           <div style="padding:4px 0 8px 0;">
             <table style="width:100%;border-collapse:collapse;">
@@ -1203,8 +1234,8 @@ function renderLista(pedidos) {
                 <tr style="background:#f1f3f5;">
                   <th style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 16px;text-align:left;letter-spacing:0.5px;text-transform:uppercase;">Producto</th>
                   <th style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 10px;text-align:center;letter-spacing:0.5px;text-transform:uppercase;width:55px;">Cant.</th>
-                  <th style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 10px;text-align:center;letter-spacing:0.5px;text-transform:uppercase;width:55px;">Unid.</th>
-                  <th style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 10px;text-align:right;letter-spacing:0.5px;text-transform:uppercase;width:140px;white-space:nowrap;">P. Unit.</th>
+                  <th class="col-x-unid" style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 10px;text-align:center;letter-spacing:0.5px;text-transform:uppercase;width:55px;">Unid.</th>
+                  <th class="col-x-punit" style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 10px;text-align:right;letter-spacing:0.5px;text-transform:uppercase;width:140px;white-space:nowrap;">P. Unit.</th>
                   <th style="font-size:11px;font-weight:600;color:#6b7280;padding:8px 16px;text-align:right;letter-spacing:0.5px;text-transform:uppercase;width:110px;white-space:nowrap;">Subtotal</th>
                 </tr>
               </thead>
@@ -1219,8 +1250,8 @@ function renderLista(pedidos) {
                       <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2d5a27;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>${parsed.nombre}
                     </td>
                     <td style="padding:10px 10px;font-size:13px;font-weight:700;color:#111827;text-align:center;">${parsed.cant}</td>
-                    <td style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:center;">${parsed.unidad || '—'}</td>
-                    <td style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:right;white-space:nowrap;">${punit}</td>
+                    <td class="col-x-unid" style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:center;">${parsed.unidad || '—'}</td>
+                    <td class="col-x-punit" style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:right;white-space:nowrap;">${punit}</td>
                     <td style="padding:10px 16px;font-size:13px;color:#2d5a27;font-weight:700;text-align:right;white-space:nowrap;">${sub}</td>
                   </tr>`;
                 }).join('')}
