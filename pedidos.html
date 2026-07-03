@@ -234,12 +234,13 @@
     .main-row .col-accion    { grid-column: 2; grid-row: 1; text-align: right; align-self: start; }
     .main-row .col-proveedor { grid-column: 1; grid-row: 2; }
     .main-row .col-productos { grid-column: 1; grid-row: 3; max-width: none; }
-    /* pills: celda unificada que abarca rows 2-3 → ambas badges alineadas juntas */
+    /* pills: columna derecha, fila 2 únicamente — crece a la altura de las badges */
     .main-row .col-pills {
-      grid-column: 2; grid-row: 2 / 4;
+      grid-column: 2; grid-row: 2;
       display: flex !important; flex-direction: column;
-      align-items: flex-end; justify-content: center;
+      align-items: flex-end; justify-content: flex-start;
       gap: 6px; max-width: 132px;
+      align-self: start;
     }
 
     /* jerarquía tipográfica */
