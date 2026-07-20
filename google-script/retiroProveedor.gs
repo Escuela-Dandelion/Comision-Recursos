@@ -807,6 +807,229 @@ function normalizarColumnas() {
 }
 
 // ── TESTING ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// ESTADO INVENTARIO — Dashboard de stock (autocontenido)
+// Usa TN_STORE_ID / TN_API_TOKEN ya declarados en este archivo.
+// ══════════════════════════════════════════════════════════════
+
+const INV_SHEET_ID      = CONFIG_RETIRO.PEDIDOS_SHEET_ID;
+const INV_VENTAS_ID     = '1-57n6RmTFQjwNFVYxNPzll8MMuV4NvXXx5v0wTvR_6g';
+const INV_SAFETY        = 1.5;
+const INV_DIAS_VENTANA  = 60;
+const INV_PISO_DEFAULT  = 10;
+const INV_UMBRAL_FB     = 10;
+const INV_MESES_EXC     = [0, 1, 2, 6]; // Ene, Feb, Mar, Jul
+
+const INV_FGP = {
+  'LA YAYA':                  { nombre: 'Yuliana Longhi',   email: 'longhi.yuliana@gmail.com'  },
+  'ODDIS':                    { nombre: 'Luli del Castillo', email: 'lourdelcastillo@gmail.com' },
+  'CABALLO NEGRO':            { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
+  'YEMARI':                   { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
+  'GROEN':                    { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
+  'EL MAITEN':                { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
+  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  }
+};
+
+const INV_PISO_MARCA = {
+  'GROEN': 5
+};
+
+function invGetVelocidades() {
+  const props  = PropertiesService.getScriptProperties();
+  const cached = props.getProperty('VELOCIDADES_CACHE');
+  const dias   = parseInt(props.getProperty('DIAS_ACTIVOS_CACHE')) || INV_DIAS_VENTANA;
+  if (cached) return { velocidades: JSON.parse(cached), diasActivos: dias };
+
+  // Sin cache: calcular on-the-fly
+  const velocidades = {};
+  var diasActivos = 0;
+  try {
+    const ss    = SpreadsheetApp.openById(INV_VENTAS_ID);
+    const sheet = ss.getSheetByName('Ventas');
+    if (sheet) {
+      const data   = sheet.getDataRange().getValues();
+      const hoy    = new Date();
+      const hace60 = new Date(hoy.getTime() - INV_DIAS_VENTANA * 864e5);
+      for (var d = new Date(hace60.getTime()); d <= hoy; d.setDate(d.getDate() + 1)) {
+        if (INV_MESES_EXC.indexOf(d.getMonth()) === -1) diasActivos++;
+      }
+      for (var i = 1; i < data.length; i++) {
+        const fecha = data[i][0] ? new Date(data[i][0]) : null;
+        if (!fecha || fecha < hace60 || fecha > hoy) continue;
+        if (INV_MESES_EXC.indexOf(fecha.getMonth()) !== -1) continue;
+        const nombre   = String(data[i][5] || '').trim();
+        const cantidad = parseInt(data[i][7]) || 0;
+        if (!nombre || cantidad <= 0) continue;
+        velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
+      }
+    }
+  } catch(e) { Logger.log('invGetVelocidades error: ' + e); }
+  return { velocidades: velocidades, diasActivos: diasActivos || INV_DIAS_VENTANA };
+}
+
+function invBuscarVel(nombreProd, nombreVar, velocidades) {
+  if (velocidades[nombreProd] !== undefined) return velocidades[nombreProd];
+  if (nombreVar) {
+    const conVar = nombreProd + ' (' + nombreVar + ')';
+    if (velocidades[conVar] !== undefined) return velocidades[conVar];
+  }
+  const lp = nombreProd.toLowerCase();
+  const lv = nombreVar ? (nombreProd + ' (' + nombreVar + ')').toLowerCase() : null;
+  var found;
+  Object.keys(velocidades).forEach(function(k) {
+    const kl = k.toLowerCase();
+    if (kl === lp || (lv && kl === lv)) found = velocidades[k];
+  });
+  return found !== undefined ? found : 0;
+}
+
+function invCalcUmbral(nombreProd, leadTime, velocidades, diasActivos, nombreVar) {
+  const total = invBuscarVel(nombreProd, nombreVar, velocidades);
+  if (!total) return INV_UMBRAL_FB;
+  return Math.ceil((total / diasActivos) * leadTime * INV_SAFETY);
+}
+
+function invLeerConfig() {
+  const defaults = {};
+  Object.keys(INV_FGP).forEach(function(m) {
+    defaults[m] = { leadTime: 14, stockMinimo: INV_PISO_MARCA[m] || INV_PISO_DEFAULT };
+  });
+  try {
+    const ss    = SpreadsheetApp.openById(INV_SHEET_ID);
+    const sheet = ss.getSheetByName('ConfigAlertas');
+    if (!sheet) return defaults;
+    const data  = sheet.getDataRange().getValues();
+    const cfg   = {};
+    for (var i = 1; i < data.length; i++) {
+      const marca = String(data[i][0] || '').toUpperCase().trim();
+      if (!marca) continue;
+      cfg[marca] = {
+        leadTime:    parseInt(data[i][1]) || 14,
+        stockMinimo: data[i][2] !== '' && data[i][2] !== undefined ? (parseInt(data[i][2]) || INV_PISO_DEFAULT) : (INV_PISO_MARCA[marca] || INV_PISO_DEFAULT)
+      };
+    }
+    return Object.keys(cfg).length ? cfg : defaults;
+  } catch(e) { return defaults; }
+}
+
+function invLeerOverrides() {
+  const map = {};
+  try {
+    const ss    = SpreadsheetApp.openById(INV_SHEET_ID);
+    const sheet = ss.getSheetByName('ConfigStock');
+    if (!sheet) return map;
+    const data  = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      const clave = String(data[i][0] || '').trim();
+      if (!clave) continue;
+      map[clave] = {
+        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
+        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null
+      };
+    }
+  } catch(e) { Logger.log('invLeerOverrides error: ' + e); }
+  return map;
+}
+
+function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride) {
+  const ss  = SpreadsheetApp.openById(INV_SHEET_ID);
+  var sheet = ss.getSheetByName('ConfigStock');
+  if (!sheet) {
+    sheet = ss.insertSheet('ConfigStock');
+    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override']);
+  }
+  const data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === clave) {
+      sheet.getRange(i + 1, 3).setValue(umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '');
+      sheet.getRange(i + 1, 4).setValue(pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : '');
+      return;
+    }
+  }
+  sheet.appendRow([clave, nombre,
+    umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '',
+    pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : ''
+  ]);
+}
+
+function getStockDashboard() {
+  const { velocidades, diasActivos } = invGetVelocidades();
+  const configMarca = invLeerConfig();
+  const overrides   = invLeerOverrides();
+  const alertas     = JSON.parse(PropertiesService.getScriptProperties().getProperty('ALERTAS_ENVIADAS') || '{}');
+
+  // Pedidos activos por marca
+  const pedidosActivos = {};
+  try {
+    const ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
+    const data    = getPedidosSheet().getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      const norden = String(data[i][0] || '').trim();
+      const marca  = String(data[i][2] || '').toUpperCase().trim();
+      const estado = String(data[i][5] || '').trim();
+      if (!norden || !marca || ACTIVOS.indexOf(estado) === -1) continue;
+      if (!pedidosActivos[marca]) pedidosActivos[marca] = [];
+      pedidosActivos[marca].push({ norden: norden, estado: estado, fecha: String(data[i][1] || '') });
+    }
+  } catch(e) { Logger.log('getStockDashboard pedidos error: ' + e); }
+
+  // Productos TiendaNube
+  const productos = obtenerProductosTN();
+  const resultado = [];
+
+  productos.forEach(function(producto) {
+    const marca     = (producto.brand || '').toUpperCase();
+    const fgp       = INV_FGP[marca];
+    if (!fgp) return;
+    const cfg        = configMarca[marca] || { leadTime: 14, stockMinimo: INV_PISO_DEFAULT };
+    const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
+
+    const variantes = [];
+    (producto.variants || []).forEach(function(variante) {
+      if (variante.stock === null) return;
+      const stock     = parseInt(variante.stock);
+      const clave     = producto.id + '_' + variante.id;
+      const nombreVar = variante.values && variante.values.length
+        ? variante.values.map(function(v) { return v.es || v; }).join(' / ')
+        : null;
+
+      const ov           = overrides[clave] || {};
+      const umbralCalc   = invCalcUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
+      const umbralFinal  = (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : umbralCalc;
+      const pisoMarca    = cfg.stockMinimo;
+      const pisoFinal    = (ov.pisoOverride !== null && ov.pisoOverride !== undefined) ? ov.pisoOverride : pisoMarca;
+      const velocidad    = invBuscarVel(nombreProd, nombreVar, velocidades);
+      const alertaEnviada = !!alertas[clave];
+
+      var semaforo;
+      if (stock < pisoFinal || stock <= umbralFinal) semaforo = 'rojo';
+      else if (stock <= umbralFinal * 2)              semaforo = 'amarillo';
+      else                                            semaforo = 'verde';
+
+      variantes.push({
+        id: variante.id, clave: clave,
+        nombre: nombreVar || nombreProd,
+        stock: stock, velocidad: velocidad, diasActivos: diasActivos,
+        umbralCalc: umbralCalc, umbralOverride: ov.umbralOverride !== undefined ? ov.umbralOverride : null,
+        pisoMarca: pisoMarca,  pisoOverride:   ov.pisoOverride   !== undefined ? ov.pisoOverride   : null,
+        umbralFinal: umbralFinal, pisoFinal: pisoFinal,
+        alertaEnviada: alertaEnviada, semaforo: semaforo
+      });
+    });
+
+    if (!variantes.length) return;
+    resultado.push({
+      id: producto.id, nombre: nombreProd, marca: marca,
+      fgp: fgp.nombre,
+      pedidos:   pedidosActivos[marca] || [],
+      variantes: variantes
+    });
+  });
+
+  return { ok: true, productos: resultado, diasActivos: diasActivos };
+}
+
+// ── TEST ───────────────────────────────────────────────────
 function testAgendarRetiro() {
   const dataPrueba = {
     proveedor:     'La Yaya',
