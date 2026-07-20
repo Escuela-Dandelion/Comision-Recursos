@@ -3,15 +3,18 @@
 // ============================================================
 
 const CONFIG_STOCK = {
-  STORE_ID:     '7396246',
-  API_TOKEN:    'e3d744d94ddbf13317bef0082c53e2c46fb50631',
-  STOCK_UMBRAL: 10,
-  FORM_URL:     'https://escuela-dandelion.github.io/Comision-Recursos/orden-de-pedido.html',
-  RETIRO_URL:   'https://escuela-dandelion.github.io/Comision-Recursos/retiro-proveedor.html',
-  SHEET_ID:     '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
-  ADMIN_EMAIL:  'martinimaria39@gmail.com',   // siempre recibe copia del aviso
-  TEST_MODE:    false,
-  TEST_EMAIL:   'robertson.ine@gmail.com'     // usado solo si TEST_MODE: true
+  STORE_ID:        '7396246',
+  API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
+  STOCK_UMBRAL:    10,           // fallback si no hay historial de ventas
+  VELOCIDAD_DIAS:  60,
+  SAFETY_FACTOR:   1.5,
+  VENTAS_SHEET_ID: '1-57n6RmTFQjwNFVYxNPzll8MMuV4NvXXx5v0wTvR_6g',
+  FORM_URL:        'https://escuela-dandelion.github.io/Comision-Recursos/orden-de-pedido.html',
+  RETIRO_URL:      'https://escuela-dandelion.github.io/Comision-Recursos/retiro-proveedor.html',
+  SHEET_ID:        '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
+  ADMIN_EMAIL:     'martinimaria39@gmail.com',
+  TEST_MODE:       false,
+  TEST_EMAIL:      'robertson.ine@gmail.com'
 };
 
 const FGP_POR_MARCA = {
@@ -25,102 +28,266 @@ const FGP_POR_MARCA = {
   'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' }
 };
 
+// ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
+function leerConfigAlertas() {
+  const defaults = {
+    'CABALLO NEGRO':            { leadTime: 14 },
+    'YEMARI':                   { leadTime: 14 },
+    'LA YAYA':                  { leadTime: 14 },
+    'ODDIS':                    { leadTime: 14 },
+    'GROEN':                    { leadTime: 14 },
+    'EL MAITEN':                { leadTime: 14 },
+    'GUARDIANES DE LA COLMENA': { leadTime: 14 }
+  };
+  try {
+    const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
+    const sheet = ss.getSheetByName('ConfigAlertas');
+    if (!sheet) return defaults;
+    const data   = sheet.getDataRange().getValues();
+    const config = {};
+    for (var i = 1; i < data.length; i++) {
+      const marca = String(data[i][0] || '').toUpperCase().trim();
+      if (!marca) continue;
+      config[marca] = { leadTime: parseInt(data[i][1]) || 14 };
+    }
+    return Object.keys(config).length > 0 ? config : defaults;
+  } catch(e) {
+    Logger.log('Error leyendo ConfigAlertas: ' + e);
+    return defaults;
+  }
+}
+
+// ── VELOCIDADES — lee el Sheet de Ventas (últimos 60 días, por nombre de producto) ──
+function calcularVelocidades() {
+  const velocidades = {};
+  try {
+    const ss    = SpreadsheetApp.openById(CONFIG_STOCK.VENTAS_SHEET_ID);
+    const sheet = ss.getSheetByName('Ventas');
+    if (!sheet) return velocidades;
+    const data   = sheet.getDataRange().getValues();
+    const hoy    = new Date();
+    const hace60 = new Date(hoy.getTime() - CONFIG_STOCK.VELOCIDAD_DIAS * 24 * 60 * 60 * 1000);
+    for (var i = 1; i < data.length; i++) {
+      const fecha    = data[i][0] ? new Date(data[i][0]) : null;
+      if (!fecha || fecha < hace60 || fecha > hoy) continue;
+      const nombre   = String(data[i][5] || '').trim();   // col F: nombre del producto
+      const cantidad = parseInt(data[i][7]) || 0;          // col H: cantidad
+      if (!nombre || cantidad <= 0) continue;
+      velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
+    }
+    Logger.log('Velocidades calculadas: ' + JSON.stringify(velocidades));
+  } catch(e) {
+    Logger.log('Error calculando velocidades: ' + e);
+  }
+  return velocidades;
+}
+
+// ── VELOCIDADES CON CACHE — se recalcula una vez por mes en el 3er lunes ──
+function getVelocidades() {
+  const hoy   = new Date();
+  const llave = 'VEL_' + hoy.getFullYear() + '_' + hoy.getMonth();
+  const props = PropertiesService.getScriptProperties();
+
+  if (esTercerLunes() && !props.getProperty(llave)) {
+    const v = calcularVelocidades();
+    props.setProperty('VELOCIDADES_CACHE', JSON.stringify(v));
+    props.setProperty(llave, '1');
+    Logger.log('Velocidades recalculadas y guardadas para este mes.');
+    return v;
+  }
+  const cached = props.getProperty('VELOCIDADES_CACHE');
+  if (cached) return JSON.parse(cached);
+
+  // Sin cache aún (primera vez): calcular aunque no sea 3er lunes
+  Logger.log('Sin cache de velocidades — calculando por primera vez.');
+  const v = calcularVelocidades();
+  props.setProperty('VELOCIDADES_CACHE', JSON.stringify(v));
+  return v;
+}
+
+// ── BUSCAR VELOCIDAD ─────────────────────────────────────────
+// Prueba: nombre exacto → nombre + "(variante)" → case-insensitive
+function buscarVelocidad(nombreProducto, nombreVariante, velocidades) {
+  if (velocidades[nombreProducto] !== undefined) return velocidades[nombreProducto];
+  if (nombreVariante) {
+    const conVar = nombreProducto + ' (' + nombreVariante + ')';
+    if (velocidades[conVar] !== undefined) return velocidades[conVar];
+  }
+  const lowProd  = nombreProducto.toLowerCase();
+  const lowConVar = nombreVariante ? (nombreProducto + ' (' + nombreVariante + ')').toLowerCase() : null;
+  var found;
+  Object.keys(velocidades).forEach(function(k) {
+    const kl = k.toLowerCase();
+    if (kl === lowProd || (lowConVar && kl === lowConVar)) found = velocidades[k];
+  });
+  return found !== undefined ? found : 0;
+}
+
+// ── UMBRAL REACTIVO (buffer de lead time, cualquier día) ───
+function calcularUmbral(nombreProducto, leadTime, velocidades, nombreVariante) {
+  const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
+  if (!total) return CONFIG_STOCK.STOCK_UMBRAL;
+  return Math.ceil((total / CONFIG_STOCK.VELOCIDAD_DIAS) * leadTime * CONFIG_STOCK.SAFETY_FACTOR);
+}
+
+// ── UMBRAL MENSUAL (demanda proyectada del mes siguiente, 3er lunes) ──
+function calcularUmbralMensual(nombreProducto, velocidades, nombreVariante) {
+  const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
+  if (!total) return null;
+  return Math.ceil(total / 2);
+}
+
+// ── TERCER LUNES DEL MES ───────────────────────────────────
+function esTercerLunes() {
+  const hoy  = new Date();
+  const anio = hoy.getFullYear();
+  const mes  = hoy.getMonth();
+  var count  = 0;
+  for (var d = 1; d <= 31; d++) {
+    var fecha = new Date(anio, mes, d);
+    if (fecha.getMonth() !== mes) break;
+    if (fecha.getDay() === 1) {
+      count++;
+      if (count === 3) return fecha.getDate() === hoy.getDate();
+    }
+  }
+  return false;
+}
+
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
 function checkStockBajo() {
-  const productos = obtenerProductos();
-  Logger.log(`Productos encontrados: ${productos.length}`);
-
+  const configMarca     = leerConfigAlertas();
+  const velocidades     = getVelocidades();
+  const esLunes3        = esTercerLunes();
+  const productos       = obtenerProductos();
   const alertasEnviadas = obtenerAlertasEnviadas();
-  Logger.log(`Alertas enviadas previamente: ${JSON.stringify(alertasEnviadas)}`);
-  const nuevasAlertas = {};
-
-  // Agrupar alertas por FGP + marca (= un email por proveedor por FGP)
+  const nuevasAlertas   = {};
   const alertasPorGrupo = {};
 
-  productos.forEach(producto => {
-    const marca = (producto.brand || '').toUpperCase();
-    const fgp = FGP_POR_MARCA[marca];
-    Logger.log(`Producto: ${JSON.stringify(producto.name)} | Marca: "${marca}" | FGP encontrado: ${!!fgp}`);
+  const hoy   = new Date();
+  const yyyyM = hoy.getFullYear() + '_' + hoy.getMonth();
 
+  Logger.log('Productos: ' + productos.length + ' | Es 3er lunes: ' + esLunes3);
+
+  productos.forEach(function(producto) {
+    const marca      = (producto.brand || '').toUpperCase();
+    const fgp        = FGP_POR_MARCA[marca];
     if (!fgp) return;
 
-    const nombreProducto = producto.name && producto.name.es
-      ? producto.name.es
-      : String(producto.name || 'Producto sin nombre');
+    const cfg        = configMarca[marca] || { leadTime: 14 };
+    const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
 
-    producto.variants.forEach(variante => {
-      if (variante.stock === null) return;
-      const stock = parseInt(variante.stock);
-      const clave = `${producto.id}_${variante.id}`;
-      Logger.log(`  Variante: ${clave} | Stock: ${stock} | Ya enviada: ${!!alertasEnviadas[clave]}`);
+    producto.variants.forEach(function(variante) {
+      const nombreVar  = variante.values && variante.values.length > 0
+        ? variante.values.map(function(v) { return v.es || v; }).join(' / ')
+        : null;
+      const descripcion = nombreVar ? nombreProd + ' — ' + nombreVar : nombreProd;
+      const clave      = producto.id + '_' + variante.id;
+      const claveLunes = clave + '_tlunes_' + yyyyM;
 
-      if (stock > CONFIG_STOCK.STOCK_UMBRAL && alertasEnviadas[clave]) {
-        // Stock se repuso — limpiar la alerta para que vuelva a disparar cuando baje de nuevo
+      // ── DEBUG ──────────────────────────────────────────────
+      if (variante.stock === null) {
+        Logger.log('[SKIP] ' + descripcion + ' — stock null (infinito en TiendaNube)');
+        return;
+      }
+      const stock      = parseInt(variante.stock);
+      const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
+      const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, nombreVar);
+      const yaAlertado = !!alertasEnviadas[clave];
+      Logger.log(
+        '[CHECK] ' + descripcion +
+        ' | stock=' + stock +
+        ' | vel60d=' + velocidad +
+        ' | umbral=' + umbral +
+        ' | yaAlertado=' + yaAlertado +
+        ' | clave=' + clave
+      );
+      // ── FIN DEBUG ──────────────────────────────────────────
+
+      // Reset alerta regular si el stock se repuso
+      if (stock > umbral && alertasEnviadas[clave]) {
         delete alertasEnviadas[clave];
         nuevasAlertas['__reset__'] = true;
-        Logger.log(`  Stock repuesto — alerta reseteada: ${clave}`);
+        Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > ' + umbral + ')');
       }
 
-      if (stock <= CONFIG_STOCK.STOCK_UMBRAL && !alertasEnviadas[clave]) {
-        const nombreVariante = variante.values && variante.values.length > 0
-          ? variante.values.map(v => v.es || v).join(' / ')
-          : null;
-        const descripcion = nombreVariante
-          ? `${nombreProducto} — ${nombreVariante}`
-          : nombreProducto;
+      // Condición A (cualquier día): stock bajo y no alertado aún
+      const condA = stock <= umbral && !alertasEnviadas[clave];
+      // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
+      const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, nombreVar) : null;
+      const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
-        const grupoKey = fgp.email + '|' + marca;
-        if (!alertasPorGrupo[grupoKey]) {
-          alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [] };
+      if (!condA && !condB) {
+        if (stock > umbral) {
+          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ')');
+        } else if (yaAlertado) {
+          Logger.log('  [BLOQUEADO] alerta ya enviada — resetear con resetearAlertas() para re-alertar');
         }
-        alertasPorGrupo[grupoKey].items.push({
-          clave:       clave,
-          descripcion: descripcion,
-          stock:       stock,
-          precio:      variante.price || null
-        });
-        nuevasAlertas[clave] = new Date().toISOString();
+        return;
       }
+
+      const grupoKey = fgp.email + '|' + marca;
+      if (!alertasPorGrupo[grupoKey]) {
+        alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [], _claves: {} };
+      }
+      if (!alertasPorGrupo[grupoKey]._claves[clave]) {
+        alertasPorGrupo[grupoKey].items.push({
+          clave:         clave,
+          descripcion:   descripcion,
+          stock:         stock,
+          precio:        variante.price || null,
+          umbral:        condA ? umbral : null,
+          umbralMensual: condB ? umbralMensual : null,
+          cantSugerida:  condB ? Math.max(0, umbralMensual - stock) : null
+        });
+        alertasPorGrupo[grupoKey]._claves[clave] = true;
+      }
+      if (condA) nuevasAlertas[clave]      = hoy.toISOString();
+      if (condB) nuevasAlertas[claveLunes] = hoy.toISOString();
+      Logger.log('  ⚠️ ' + (condA ? 'condA' : '') + (condB ? ' condB(mensual:' + umbralMensual + ')' : '') + ': ' + clave + ' (' + stock + ')');
     });
   });
 
-  // Enviar UN email por FGP + proveedor
   Object.values(alertasPorGrupo).forEach(function(grupo) {
-    const fgp   = grupo.fgp;
-    const marca = grupo.marca;
-    const items = grupo.items;
-    const urls  = generarUrls(items, marca, fgp);
-
-    enviarAlertaStock(fgp, marca, items, urls);
-    Logger.log('Email enviado a ' + fgp.nombre + ' (' + fgp.email + ') | Proveedor: ' + marca + ' | ' + items.length + ' producto(s)');
+    const urls = generarUrls(grupo.items, grupo.marca, grupo.fgp);
+    enviarAlertaStock(grupo.fgp, grupo.marca, grupo.items, urls);
+    Logger.log('Email enviado a ' + grupo.fgp.nombre + ' | ' + grupo.marca + ' | ' + grupo.items.length + ' ítem(s)');
   });
 
   delete alertasEnviadas['__reset__'];
   delete nuevasAlertas['__reset__'];
-  const toGuardar = Object.assign(alertasEnviadas, nuevasAlertas);
   PropertiesService.getScriptProperties()
-    .setProperty('ALERTAS_ENVIADAS', JSON.stringify(toGuardar));
+    .setProperty('ALERTAS_ENVIADAS', JSON.stringify(Object.assign(alertasEnviadas, nuevasAlertas)));
 }
 
 // ── ENVÍO DE EMAIL ─────────────────────────────────────────
 function enviarAlertaStock(fgp, marca, items, urls) {
   const destinatario = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_EMAIL : fgp.email;
-
-  // CC al admin, evitando duplicado si el FGP ya es el admin
   const cc = (destinatario !== CONFIG_STOCK.ADMIN_EMAIL && !CONFIG_STOCK.TEST_MODE)
-    ? CONFIG_STOCK.ADMIN_EMAIL
-    : '';
+    ? CONFIG_STOCK.ADMIN_EMAIL : '';
 
   const intro = items.length === 1
-    ? `El siguiente producto de <strong>${marca}</strong> tiene stock bajo:`
-    : `Los siguientes productos de <strong>${marca}</strong> tienen stock bajo:`;
+    ? 'El siguiente producto de <strong>' + marca + '</strong> tiene stock bajo:'
+    : 'Los siguientes productos de <strong>' + marca + '</strong> tienen stock bajo:';
 
   const listaHtml = items.map(function(item) {
-    return `<li><strong>${item.descripcion}</strong> — ${item.stock} unidades restantes</li>`;
+    var linea = '<li style="margin-bottom:10px"><strong>' + item.descripcion + '</strong> — ' + item.stock + ' unidades en stock';
+    if (item.umbralMensual !== null && item.umbralMensual !== undefined) {
+      linea += '<br><span style="color:#92400e;font-size:13px">Según los últimos meses debés contar con <strong>' + item.umbralMensual + ' u.</strong>';
+      if (item.cantSugerida > 0) {
+        linea += ' — pedí al menos <strong>' + item.cantSugerida + ' u.</strong>';
+      } else {
+        linea += ' — tenés suficiente para el mes.';
+      }
+      linea += '</span>';
+    } else if (item.umbral) {
+      linea += ' <span style="color:#6b7280;font-size:12px">(umbral: ' + item.umbral + ' u.)</span>';
+    }
+    linea += '</li>';
+    return linea;
   }).join('');
 
-  const asunto = `Diente de Leon - Stock bajo: ${marca}`;
-
+  const asunto   = 'Diente de León - Stock bajo: ' + marca;
   const cuerpoHtml = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
       <div style="background:#3a7d44;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center">
@@ -250,6 +417,11 @@ function obtenerAlertasEnviadas() {
 function resetearAlertas() {
   PropertiesService.getScriptProperties().deleteProperty('ALERTAS_ENVIADAS');
   Logger.log('Alertas reseteadas.');
+}
+
+function resetearVelocidades() {
+  PropertiesService.getScriptProperties().deleteProperty('VELOCIDADES_CACHE');
+  Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
 }
 
 // ── TRIGGER ────────────────────────────────────────────────
