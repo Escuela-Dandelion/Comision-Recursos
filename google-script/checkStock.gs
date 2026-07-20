@@ -6,6 +6,7 @@ const CONFIG_STOCK = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
   STOCK_UMBRAL:    10,           // fallback si no hay historial de ventas
+  STOCK_MINIMO:    10,           // piso absoluto: alerta siempre si stock < este valor
   VELOCIDAD_DIAS:  60,
   SAFETY_FACTOR:   1.5,
   VENTAS_SHEET_ID: '1-57n6RmTFQjwNFVYxNPzll8MMuV4NvXXx5v0wTvR_6g',
@@ -16,6 +17,9 @@ const CONFIG_STOCK = {
   TEST_MODE:       false,
   TEST_EMAIL:      'robertson.ine@gmail.com'
 };
+
+// Meses excluidos del cálculo de velocidad (0=Ene, 1=Feb, 2=Mar, 6=Jul)
+const MESES_EXCLUIDOS = [0, 1, 2, 6];
 
 const FGP_POR_MARCA = {
   'LA YAYA':                  { nombre: 'Yuliana Longhi',    email: 'longhi.yuliana@gmail.com',   tel_proveedor: '' },
@@ -60,26 +64,34 @@ function leerConfigAlertas() {
 // ── VELOCIDADES — lee el Sheet de Ventas (últimos 60 días, por nombre de producto) ──
 function calcularVelocidades() {
   const velocidades = {};
+  var diasActivos = 0;
   try {
     const ss    = SpreadsheetApp.openById(CONFIG_STOCK.VENTAS_SHEET_ID);
     const sheet = ss.getSheetByName('Ventas');
-    if (!sheet) return velocidades;
+    if (!sheet) return { velocidades: velocidades, diasActivos: CONFIG_STOCK.VELOCIDAD_DIAS };
     const data   = sheet.getDataRange().getValues();
     const hoy    = new Date();
     const hace60 = new Date(hoy.getTime() - CONFIG_STOCK.VELOCIDAD_DIAS * 24 * 60 * 60 * 1000);
+
+    // Contar solo los días activos (no excluidos) dentro de la ventana de 60 días
+    for (var d = new Date(hace60.getTime()); d <= hoy; d.setDate(d.getDate() + 1)) {
+      if (MESES_EXCLUIDOS.indexOf(d.getMonth()) === -1) diasActivos++;
+    }
+
     for (var i = 1; i < data.length; i++) {
       const fecha    = data[i][0] ? new Date(data[i][0]) : null;
       if (!fecha || fecha < hace60 || fecha > hoy) continue;
-      const nombre   = String(data[i][5] || '').trim();   // col F: nombre del producto
-      const cantidad = parseInt(data[i][7]) || 0;          // col H: cantidad
+      if (MESES_EXCLUIDOS.indexOf(fecha.getMonth()) !== -1) continue; // saltar mes excluido
+      const nombre   = String(data[i][5] || '').trim();
+      const cantidad = parseInt(data[i][7]) || 0;
       if (!nombre || cantidad <= 0) continue;
       velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
     }
-    Logger.log('Velocidades calculadas: ' + JSON.stringify(velocidades));
+    Logger.log('Velocidades calculadas (' + diasActivos + ' días activos): ' + JSON.stringify(velocidades));
   } catch(e) {
     Logger.log('Error calculando velocidades: ' + e);
   }
-  return velocidades;
+  return { velocidades: velocidades, diasActivos: diasActivos || CONFIG_STOCK.VELOCIDAD_DIAS };
 }
 
 // ── VELOCIDADES CON CACHE — se recalcula una vez por mes en el 3er lunes ──
@@ -89,20 +101,25 @@ function getVelocidades() {
   const props = PropertiesService.getScriptProperties();
 
   if (esTercerLunes() && !props.getProperty(llave)) {
-    const v = calcularVelocidades();
-    props.setProperty('VELOCIDADES_CACHE', JSON.stringify(v));
+    const result = calcularVelocidades();
+    props.setProperty('VELOCIDADES_CACHE', JSON.stringify(result.velocidades));
+    props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
     props.setProperty(llave, '1');
     Logger.log('Velocidades recalculadas y guardadas para este mes.');
-    return v;
+    return result;
   }
   const cached = props.getProperty('VELOCIDADES_CACHE');
-  if (cached) return JSON.parse(cached);
+  if (cached) {
+    const diasActivos = parseInt(props.getProperty('DIAS_ACTIVOS_CACHE')) || CONFIG_STOCK.VELOCIDAD_DIAS;
+    return { velocidades: JSON.parse(cached), diasActivos: diasActivos };
+  }
 
   // Sin cache aún (primera vez): calcular aunque no sea 3er lunes
   Logger.log('Sin cache de velocidades — calculando por primera vez.');
-  const v = calcularVelocidades();
-  props.setProperty('VELOCIDADES_CACHE', JSON.stringify(v));
-  return v;
+  const result = calcularVelocidades();
+  props.setProperty('VELOCIDADES_CACHE', JSON.stringify(result.velocidades));
+  props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
+  return result;
 }
 
 // ── BUSCAR VELOCIDAD ─────────────────────────────────────────
@@ -124,17 +141,18 @@ function buscarVelocidad(nombreProducto, nombreVariante, velocidades) {
 }
 
 // ── UMBRAL REACTIVO (buffer de lead time, cualquier día) ───
-function calcularUmbral(nombreProducto, leadTime, velocidades, nombreVariante) {
+function calcularUmbral(nombreProducto, leadTime, velocidades, diasActivos, nombreVariante) {
   const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
   if (!total) return CONFIG_STOCK.STOCK_UMBRAL;
-  return Math.ceil((total / CONFIG_STOCK.VELOCIDAD_DIAS) * leadTime * CONFIG_STOCK.SAFETY_FACTOR);
+  return Math.ceil((total / diasActivos) * leadTime * CONFIG_STOCK.SAFETY_FACTOR);
 }
 
 // ── UMBRAL MENSUAL (demanda proyectada del mes siguiente, 3er lunes) ──
-function calcularUmbralMensual(nombreProducto, velocidades, nombreVariante) {
+function calcularUmbralMensual(nombreProducto, velocidades, diasActivos, nombreVariante) {
   const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
   if (!total) return null;
-  return Math.ceil(total / 2);
+  // diasActivos días activos → proyectar a 30 días de mes activo
+  return Math.ceil((total / diasActivos) * 30);
 }
 
 // ── TERCER LUNES DEL MES ───────────────────────────────────
@@ -156,9 +174,9 @@ function esTercerLunes() {
 
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
 function checkStockBajo() {
-  const configMarca     = leerConfigAlertas();
-  const velocidades     = getVelocidades();
-  const esLunes3        = esTercerLunes();
+  const configMarca              = leerConfigAlertas();
+  const { velocidades, diasActivos } = getVelocidades();
+  const esLunes3                 = esTercerLunes();
   const productos       = obtenerProductos();
   const alertasEnviadas = obtenerAlertasEnviadas();
   const nuevasAlertas   = {};
@@ -192,7 +210,7 @@ function checkStockBajo() {
       }
       const stock      = parseInt(variante.stock);
       const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
-      const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, nombreVar);
+      const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
       const yaAlertado = !!alertasEnviadas[clave];
       Logger.log(
         '[CHECK] ' + descripcion +
@@ -211,15 +229,15 @@ function checkStockBajo() {
         Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > ' + umbral + ')');
       }
 
-      // Condición A (cualquier día): stock bajo y no alertado aún
-      const condA = stock <= umbral && !alertasEnviadas[clave];
+      // Condición A (cualquier día): stock bajo (umbral dinámico O piso absoluto) y no alertado aún
+      const condA = (stock <= umbral || stock < CONFIG_STOCK.STOCK_MINIMO) && !alertasEnviadas[clave];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
-      const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, nombreVar) : null;
+      const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, diasActivos, nombreVar) : null;
       const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
       if (!condA && !condB) {
-        if (stock > umbral) {
-          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ')');
+        if (stock > umbral && stock >= CONFIG_STOCK.STOCK_MINIMO) {
+          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ', mínimo=' + CONFIG_STOCK.STOCK_MINIMO + ')');
         } else if (yaAlertado) {
           Logger.log('  [BLOQUEADO] alerta ya enviada — resetear con resetearAlertas() para re-alertar');
         }
@@ -420,7 +438,9 @@ function resetearAlertas() {
 }
 
 function resetearVelocidades() {
-  PropertiesService.getScriptProperties().deleteProperty('VELOCIDADES_CACHE');
+  const props = PropertiesService.getScriptProperties();
+  props.deleteProperty('VELOCIDADES_CACHE');
+  props.deleteProperty('DIAS_ACTIVOS_CACHE');
   Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
 }
 
