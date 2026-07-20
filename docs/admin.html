@@ -311,9 +311,9 @@
       <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
         <span class="nav-icon">📦</span> Pedidos
       </button>
-      <a class="nav-item" href="stock.html" target="_blank" data-roles="admin,staff,fgp" style="text-decoration:none">
-        <span class="nav-icon">🟢</span> Estado Inventario ↗
-      </a>
+      <button class="nav-item" data-view="inventario" data-roles="admin,staff,fgp" onclick="showView('inventario', this)">
+        <span class="nav-icon">🟢</span> Estado Inventario
+      </button>
       <button class="nav-item" data-view="qr" data-roles="admin,staff,referente" onclick="showView('qr', this)">
         <span class="nav-icon">📷</span> Registrar Entrega
       </button>
@@ -328,9 +328,9 @@
       <a class="nav-item" href="dashboard-referentes.html" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
-      <a class="nav-item" href="stock.html" target="_blank" data-roles="admin,staff,fgp" style="text-decoration:none">
-        <span class="nav-icon">🟢</span> Estado Inventario ↗
-      </a>
+      <button class="nav-item" data-view="inventario" data-roles="admin,staff,fgp" onclick="showView('inventario', this)">
+        <span class="nav-icon">🟢</span> Estado Inventario
+      </button>
     </div>
   </nav>
 
@@ -351,6 +351,11 @@
     <div class="view" id="view-pedidos">
       <div class="view-title">📦 Órdenes de Pedido Proveedores</div>
       <iframe class="view-iframe" src="pedidos.html?auth=1" id="iframe-pedidos"></iframe>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div class="view" id="view-inventario">
+      <iframe class="view-iframe" src="stock.html?auth=1" id="iframe-inventario"></iframe>
     </div>
 
     <!-- QR -->

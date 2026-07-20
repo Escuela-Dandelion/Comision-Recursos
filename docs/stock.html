@@ -338,6 +338,15 @@ function mostrarFlash(msg, tipo) {
 
 // ── INIT ───────────────────────────────────────────────────
 (function() {
+  var params = new URLSearchParams(window.location.search);
+  var embedded = params.get('auth') === '1';
+  if (embedded) {
+    document.getElementById('loginView').style.display = 'none';
+    document.querySelector('.header').style.display = 'none';
+    document.getElementById('mainView').style.display = 'block';
+    cargarDashboard();
+    return;
+  }
   if (checkAuth() || localStorage.getItem('dl_stock_auth') === '1') {
     mostrarMain();
   } else {
