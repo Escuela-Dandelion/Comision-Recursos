@@ -48,6 +48,9 @@ function doPost(e) {
       resultado = updateProductosPedido(data);
     } else if (action === 'updateProveedor') {
       resultado = updateProveedorPedido(data);
+    } else if (action === 'saveStockOverride') {
+      guardarOverrideStock(data.clave, data.nombre, data.umbralOverride, data.pisoOverride);
+      resultado = { saved: true };
     } else {
       throw new Error('Acción no reconocida: ' + action);
     }
@@ -174,6 +177,13 @@ function doGet(e) {
       });
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, updated: true, mensaje: resultado }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'getStockDashboard') {
+      const dash = getStockDashboard();
+      return ContentService
+        .createTextOutput(JSON.stringify(dash))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
