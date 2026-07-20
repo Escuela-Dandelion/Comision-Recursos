@@ -35,13 +35,13 @@ const FGP_POR_MARCA = {
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
 function leerConfigAlertas() {
   const defaults = {
-    'CABALLO NEGRO':            { leadTime: 14 },
-    'YEMARI':                   { leadTime: 14 },
-    'LA YAYA':                  { leadTime: 14 },
-    'ODDIS':                    { leadTime: 14 },
-    'GROEN':                    { leadTime: 14 },
-    'EL MAITEN':                { leadTime: 14 },
-    'GUARDIANES DE LA COLMENA': { leadTime: 14 }
+    'CABALLO NEGRO':            { leadTime: 14, stockMinimo: 10 },
+    'YEMARI':                   { leadTime: 14, stockMinimo: 10 },
+    'LA YAYA':                  { leadTime: 14, stockMinimo: 10 },
+    'ODDIS':                    { leadTime: 14, stockMinimo: 10 },
+    'GROEN':                    { leadTime: 14, stockMinimo:  5 },
+    'EL MAITEN':                { leadTime: 14, stockMinimo: 10 },
+    'GUARDIANES DE LA COLMENA': { leadTime: 14, stockMinimo: 10 }
   };
   try {
     const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
@@ -52,7 +52,10 @@ function leerConfigAlertas() {
     for (var i = 1; i < data.length; i++) {
       const marca = String(data[i][0] || '').toUpperCase().trim();
       if (!marca) continue;
-      config[marca] = { leadTime: parseInt(data[i][1]) || 14 };
+      config[marca] = {
+        leadTime:    parseInt(data[i][1]) || 14,
+        stockMinimo: data[i][2] !== '' && data[i][2] !== undefined ? (parseInt(data[i][2]) || CONFIG_STOCK.STOCK_MINIMO) : CONFIG_STOCK.STOCK_MINIMO
+      };
     }
     return Object.keys(config).length > 0 ? config : defaults;
   } catch(e) {
@@ -217,6 +220,7 @@ function checkStockBajo() {
         ' | stock=' + stock +
         ' | vel60d=' + velocidad +
         ' | umbral=' + umbral +
+        ' | piso=' + stockMinimo +
         ' | yaAlertado=' + yaAlertado +
         ' | clave=' + clave
       );
@@ -229,15 +233,16 @@ function checkStockBajo() {
         Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > ' + umbral + ')');
       }
 
+      const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
       // Condición A (cualquier día): stock bajo (umbral dinámico O piso absoluto) y no alertado aún
-      const condA = (stock <= umbral || stock < CONFIG_STOCK.STOCK_MINIMO) && !alertasEnviadas[clave];
+      const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[clave];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
       const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, diasActivos, nombreVar) : null;
       const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
       if (!condA && !condB) {
-        if (stock > umbral && stock >= CONFIG_STOCK.STOCK_MINIMO) {
-          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ', mínimo=' + CONFIG_STOCK.STOCK_MINIMO + ')');
+        if (stock > umbral && stock >= stockMinimo) {
+          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ', piso=' + stockMinimo + ')');
         } else if (yaAlertado) {
           Logger.log('  [BLOQUEADO] alerta ya enviada — resetear con resetearAlertas() para re-alertar');
         }
