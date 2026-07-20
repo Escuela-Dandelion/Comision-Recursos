@@ -215,6 +215,7 @@ function checkStockBajo() {
       const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
       const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
       const yaAlertado = !!alertasEnviadas[clave];
+      const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
       Logger.log(
         '[CHECK] ' + descripcion +
         ' | stock=' + stock +
@@ -232,8 +233,6 @@ function checkStockBajo() {
         nuevasAlertas['__reset__'] = true;
         Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > ' + umbral + ')');
       }
-
-      const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
       // Condición A (cualquier día): stock bajo (umbral dinámico O piso absoluto) y no alertado aún
       const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[clave];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
