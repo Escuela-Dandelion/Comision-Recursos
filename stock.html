@@ -29,67 +29,69 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
 .last-update  { font-size: 10px; color: #9ca3af; }
 
 /* ── PRODUCTO CARD ── */
-.producto-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 10px; overflow: hidden; }
+.producto-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 8px; overflow: hidden; }
 
-.producto-header { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; user-select: none; border-bottom: 1px solid #f3f4f6; }
+.producto-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; }
 .producto-header:hover { background: #f9fafb; }
-.semaforo-group { display: flex; gap: 3px; flex-shrink: 0; }
+
+/* Semáforo con stock en el header */
+.semaforo-group { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; align-items: center; min-width: 32px; }
+.sem-item { display: flex; align-items: center; gap: 4px; }
+.sem-stock { font-size: 11px; font-weight: 700; line-height: 1; }
+.sem-stock.stock-rojo     { color: #dc2626; }
+.sem-stock.stock-amarillo { color: #f59e0b; }
+.sem-stock.stock-verde    { color: #16a34a; }
+
 .prod-info { flex: 1; min-width: 0; }
 .prod-nombre { font-size: 13px; font-weight: 800; color: #111827; }
-.prod-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
-.prod-fgp  { font-size: 10px; color: #6b7280; font-weight: 600; }
+.prod-meta { display: flex; align-items: center; gap: 7px; margin-top: 3px; flex-wrap: wrap; }
+.prod-fgp  { font-size: 10px; color: #6b7280; }
 .chevron { font-size: 11px; color: #9ca3af; transition: transform .2s; flex-shrink: 0; }
 .chevron.open { transform: rotate(180deg); }
 
 /* ── PEDIDO BADGE ── */
 .pedido-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 100px; font-size: 10px; font-weight: 700; padding: 2px 8px; text-decoration: none; white-space: nowrap; border: 1px solid; }
-.pedido-badge.solicitado { background: #f3f4f6; color: #374151;  border-color: #d1d5db; }
+.pedido-badge.solicitado { background: #f3f4f6; color: #4b5563;  border-color: #d1d5db; }
 .pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8;  border-color: #bfdbfe; }
 .pedido-badge.en-camino  { background: #f0fdf4; color: #15803d;  border-color: #86efac; }
 
-/* ── VARIANTES WRAP ── */
-.variantes-wrap { display: none; }
+/* ── VARIANTES ── */
+.variantes-wrap { display: none; border-top: 1px solid #f3f4f6; }
 .variantes-wrap.open { display: block; }
 
 /* ── TABLA DE VARIANTES ── */
 .var-table { width: 100%; border-collapse: collapse; }
-
 .var-table thead tr { background: #f9fafb; }
 .var-table thead th {
   font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px;
-  padding: 5px 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600;
-  white-space: nowrap;
+  padding: 5px 10px; border-bottom: 1px solid #f0f0f0; font-weight: 600; white-space: nowrap;
 }
-.var-table thead th.th-center { text-align: center; }
-.var-table thead th.th-right  { text-align: right; }
-
-.var-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+.var-table thead th.th-c { text-align: center; }
+.var-table tbody tr { border-bottom: 1px solid #f9fafb; }
 .var-table tbody tr:last-child { border-bottom: none; }
-.var-table td { padding: 9px 10px; vertical-align: middle; }
+.var-table td { padding: 8px 10px; vertical-align: middle; }
 
-/* columnas */
-.td-dot    { width: 16px; padding-right: 2px !important; }
-.td-nombre { font-size: 12px; font-weight: 700; color: #374151; }
-.td-alerta { width: 20px; text-align: center; font-size: 12px; }
-.td-stock  { text-align: center; width: 60px; font-size: 22px; font-weight: 900; line-height: 1; }
-.td-umbral, .td-piso { text-align: center; width: 90px; }
-.td-vel    { text-align: center; width: 70px; font-size: 11px; color: #9ca3af; }
+.td-dot  { width: 16px; padding-right: 0 !important; }
+.td-nombre { font-size: 12px; color: #4b5563; font-weight: 400; }
+.td-alerta { width: 20px; text-align: center; font-size: 11px; }
+.td-stock  { text-align: center; width: 60px; font-size: 20px; font-weight: 900; line-height: 1; }
+.td-umbral, .td-piso { text-align: center; width: 88px; }
+.td-vel    { text-align: center; width: 64px; font-size: 11px; color: #9ca3af; }
 .td-save   { width: 90px; text-align: right; white-space: nowrap; }
 
 .stock-rojo    { color: #dc2626; }
 .stock-amarillo{ color: #f59e0b; }
 .stock-verde   { color: #16a34a; }
 
-/* ── INPUTS OVERRIDE ── */
+/* ── INPUTS ── */
 .ov-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 3px; position: relative; }
 .ov-input {
-  width: 54px; padding: 4px 4px; font-size: 12px;
+  width: 54px; padding: 4px; font-size: 12px;
   border: 1px solid #e5e7eb; border-radius: 5px;
   text-align: center; background: #f9fafb; color: #374151;
 }
 .ov-input:focus { outline: none; border-color: #3a7d44; background: #fff; }
 .ov-input.has-override { border-color: #f59e0b; background: #fefce8; color: #854d0e; font-weight: 700; }
-.ov-placeholder { font-size: 11px; color: #d1d5db; }
 
 /* ── TOOLTIP ── */
 .tip-btn {
@@ -106,18 +108,14 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
 }
 .ov-wrap.tip-open .tip-box { display: block; }
 
-/* ── BOTÓN GUARDAR ── */
-.btn-save {
-  padding: 4px 10px; font-size: 11px; font-weight: 700;
-  background: #3a7d44; color: #fff; border: none; border-radius: 5px;
-  cursor: pointer; display: none;
-}
+/* ── GUARDAR ── */
+.btn-save { padding: 4px 10px; font-size: 11px; font-weight: 700; background: #3a7d44; color: #fff; border: none; border-radius: 5px; cursor: pointer; display: none; }
 .btn-save.visible { display: inline-block; }
 .btn-save:hover { background: #2d5a27; }
 .save-fb { font-size: 10px; display: block; min-height: 14px; margin-top: 1px; }
 
 /* ── ESTADOS CARGA ── */
-.loading   { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px; }
+.loading   { text-align: center; padding: 40px 20px; color: #9ca3af; }
 .error-msg { background: #fef2f2; color: #dc2626; border-radius: 8px; padding: 12px 14px; margin: 12px 0; font-size: 13px; }
 .flash { border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; display: none; }
 .flash.ok    { background: #f0fdf4; color: #15803d; }
@@ -132,9 +130,9 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
 .pin-error { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
 
 /* ── MOBILE ── */
-@media (max-width: 600px) {
-  .td-vel, .var-table thead .th-vel { display: none; }
-  .td-stock { font-size: 18px; }
+@media (max-width: 580px) {
+  .td-vel, .th-vel { display: none; }
+  .td-stock { font-size: 17px; }
   .ov-input { width: 46px; font-size: 11px; }
   .page-wrap { padding: 10px; }
 }
@@ -222,14 +220,41 @@ function cargarDashboard() {
     });
 }
 
+// ── PRIORIDAD DE PRODUCTO ─────────────────────────────────
+// 0 = rojo sin pedido (más urgente)
+// 1 = rojo con pedido
+// 2 = amarillo
+// 3 = verde
+function prodPrioridad(prod) {
+  var semaforo = prod.variantes.reduce(function(w, v) {
+    if (v.semaforo === 'rojo')                       return 'rojo';
+    if (v.semaforo === 'amarillo' && w !== 'rojo')   return 'amarillo';
+    return w;
+  }, 'verde');
+  var tienePedido = (prod.pedidos || []).length > 0;
+  if (semaforo === 'rojo' && !tienePedido) return 0;
+  if (semaforo === 'rojo' &&  tienePedido) return 1;
+  if (semaforo === 'amarillo')             return 2;
+  return 3;
+}
+
 // ── RENDER ────────────────────────────────────────────────
 function renderDashboard(d) {
+  var productos = d.productos.slice().sort(function(a, b) {
+    return prodPrioridad(a) - prodPrioridad(b);
+  });
+
   var html = '';
-  d.productos.forEach(function(prod) {
-    var dots = prod.variantes.map(function(v) {
-      return '<span class="dot dot-' + v.semaforo + '"></span>';
+  productos.forEach(function(prod) {
+    // Semáforo con stock en el header
+    var semHtml = prod.variantes.map(function(v) {
+      return '<div class="sem-item">' +
+        '<span class="dot dot-' + v.semaforo + '"></span>' +
+        '<span class="sem-stock stock-' + v.semaforo + '">' + v.stock + '</span>' +
+      '</div>';
     }).join('');
 
+    // Pedido badges
     var pedidosHtml = '';
     (prod.pedidos || []).forEach(function(p) {
       var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
@@ -242,7 +267,7 @@ function renderDashboard(d) {
     html +=
       '<div class="producto-card">' +
         '<div class="producto-header" onclick="toggleCard(\'' + prod.id + '\')">' +
-          '<div class="semaforo-group">' + dots + '</div>' +
+          '<div class="semaforo-group">' + semHtml + '</div>' +
           '<div class="prod-info">' +
             '<div class="prod-nombre">' + esc(prod.nombre) + '</div>' +
             '<div class="prod-meta">' +
@@ -250,24 +275,24 @@ function renderDashboard(d) {
               pedidosHtml +
             '</div>' +
           '</div>' +
-          '<span class="chevron open" id="chev-' + prod.id + '">▾</span>' +
+          '<span class="chevron" id="chev-' + prod.id + '">▾</span>' +
         '</div>' +
-        '<div class="variantes-wrap open" id="vars-' + prod.id + '">' +
+        '<div class="variantes-wrap" id="vars-' + prod.id + '">' +
           renderTabla(prod) +
         '</div>' +
       '</div>';
   });
+
   if (!html) html = '<div class="loading">No hay productos con seguimiento de stock.</div>';
   document.getElementById('dashContent').innerHTML = html;
 }
 
 function renderTabla(prod) {
   var filas = prod.variantes.map(function(v) {
-    var stockCls  = 'stock-' + v.semaforo;
-    var hasOvU    = v.umbralOverride !== null && v.umbralOverride !== undefined;
-    var hasOvP    = v.pisoOverride   !== null && v.pisoOverride   !== undefined;
-    var tipTxt    = umbralTip(v);
-    var varNombre = prod.variantes.length === 1 ? esc(prod.nombre) : esc(v.nombre);
+    var stockCls = 'stock-' + v.semaforo;
+    var hasOvU   = v.umbralOverride !== null && v.umbralOverride !== undefined;
+    var hasOvP   = v.pisoOverride   !== null && v.pisoOverride   !== undefined;
+    var varNombre = prod.variantes.length === 1 ? '' : esc(v.nombre);
 
     return '<tr>' +
       '<td class="td-dot"><span class="dot dot-' + v.semaforo + '"></span></td>' +
@@ -275,14 +300,14 @@ function renderTabla(prod) {
       '<td class="td-alerta">' + (v.alertaEnviada ? '⚠️' : '') + '</td>' +
       '<td class="td-stock ' + stockCls + '">' + v.stock + '</td>' +
       '<td class="td-umbral">' +
-        '<div class="ov-wrap" id="tipwrap-umb-' + v.clave + '">' +
+        '<div class="ov-wrap" id="tipwrap-' + v.clave + '">' +
           '<input class="ov-input' + (hasOvU ? ' has-override' : '') + '" type="number" min="0"' +
             ' id="umb-' + v.clave + '"' +
             ' value="' + (hasOvU ? v.umbralOverride : '') + '"' +
             ' placeholder="' + v.umbralCalc + '"' +
             ' oninput="onOvChange(\'' + v.clave + '\')">' +
-          '<button class="tip-btn" onclick="toggleTip(\'tipwrap-umb-' + v.clave + '\',event)">i</button>' +
-          '<div class="tip-box">' + tipTxt + '</div>' +
+          '<button class="tip-btn" onclick="toggleTip(\'' + v.clave + '\',event)">i</button>' +
+          '<div class="tip-box">' + umbralTip(v) + '</div>' +
         '</div>' +
       '</td>' +
       '<td class="td-piso">' +
@@ -303,13 +328,11 @@ function renderTabla(prod) {
 
   return '<table class="var-table">' +
     '<thead><tr>' +
-      '<th></th>' +
-      '<th>Variante</th>' +
-      '<th></th>' +
-      '<th class="th-center">Stock</th>' +
-      '<th class="th-center">Umbral</th>' +
-      '<th class="th-center">Piso</th>' +
-      '<th class="th-center th-vel">Vel/60d</th>' +
+      '<th></th><th>Variante</th><th></th>' +
+      '<th class="th-c">Stock</th>' +
+      '<th class="th-c">Umbral</th>' +
+      '<th class="th-c">Piso</th>' +
+      '<th class="th-c th-vel">Vel/60d</th>' +
       '<th></th>' +
     '</tr></thead>' +
     '<tbody>' + filas + '</tbody>' +
@@ -321,7 +344,7 @@ function umbralTip(v) {
     return 'Sin ventas en los últimos ' + v.diasActivos + ' días activos → umbral por defecto (' + v.umbralCalc + ' u.)';
   var dxd = (v.velocidad / v.diasActivos).toFixed(2);
   return v.velocidad + ' u. / ' + v.diasActivos + ' días activos = ' + dxd + ' u./día × ' +
-    (v.leadTime || 14) + 'd lead time × 1.5 = ' + v.umbralCalc + ' u.';
+    (v.leadTime || 14) + 'd LT × 1.5 = ' + v.umbralCalc + ' u.';
 }
 
 // ── INTERACCIÓN ───────────────────────────────────────────
@@ -342,9 +365,9 @@ function onOvChange(clave) {
   btn.classList.add('visible');
 }
 
-function toggleTip(wrapId, e) {
+function toggleTip(clave, e) {
   e.stopPropagation();
-  var wrap   = document.getElementById(wrapId);
+  var wrap   = document.getElementById('tipwrap-' + clave);
   var isOpen = wrap.classList.contains('tip-open');
   document.querySelectorAll('.ov-wrap.tip-open').forEach(function(el) { el.classList.remove('tip-open'); });
   if (!isOpen) wrap.classList.add('tip-open');

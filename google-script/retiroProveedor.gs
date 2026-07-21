@@ -972,13 +972,13 @@ function getStockDashboard() {
   // Pedidos activos por marca
   const pedidosActivos = {};
   try {
-    const ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
+    const ACTIVOS = ['solicitado', 'confirmado', 'en camino'];
     const data    = getPedidosSheet().getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       const norden = String(data[i][0] || '').trim();
       const marca  = String(data[i][2] || '').toUpperCase().trim();
       const estado = String(data[i][5] || '').trim();
-      if (!norden || !marca || ACTIVOS.indexOf(estado) === -1) continue;
+      if (!norden || !marca || ACTIVOS.indexOf(estado.toLowerCase()) === -1) continue;
       if (!pedidosActivos[marca]) pedidosActivos[marca] = [];
       pedidosActivos[marca].push({ norden: norden, estado: estado, fecha: String(data[i][1] || '') });
     }
