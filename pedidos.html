@@ -949,16 +949,6 @@ async function cargarLista(incluyeCerrados) {
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('listaContent').style.display  = '';
     generarMesesRapidos();
-    // Aplicar filtro de últimos 30 días por defecto (solo si no hay filtro activo)
-    var desdeEl = document.getElementById('fechaDesde');
-    var hastaEl = document.getElementById('fechaHasta');
-    if (desdeEl && !desdeEl.value) {
-      var hoy  = new Date();
-      var hace30 = new Date(); hace30.setDate(hoy.getDate() - 30);
-      var fmt = function(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); };
-      desdeEl.value = fmt(hace30);
-      hastaEl.value = fmt(hoy);
-    }
     poblarFiltroProveedor();
     renderLista(todosLosPedidos);
     cargarProveedoresMap();
