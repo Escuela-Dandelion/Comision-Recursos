@@ -346,7 +346,7 @@ function umbralTip(v) {
     return 'Sin ventas en los últimos ' + v.diasActivos + ' días activos → umbral por defecto (' + v.umbralCalc + ' u.)';
   var dxd = (v.velocidad / v.diasActivos).toFixed(2);
   return v.velocidad + ' u. / ' + v.diasActivos + ' días activos = ' + dxd + ' u./día × ' +
-    (v.leadTime || 14) + 'd LT × 1.5 = ' + v.umbralCalc + ' u.';
+    (v.leadTime || 14) + 'd Lead Time × 1.5 = ' + v.umbralCalc + ' u.';
 }
 
 // ── INTERACCIÓN ───────────────────────────────────────────
