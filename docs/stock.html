@@ -226,16 +226,18 @@ function cargarDashboard() {
 // 2 = amarillo
 // 3 = verde
 function prodPrioridad(prod) {
+  var violaUmbral = prod.variantes.some(function(v) { return v.violaUmbral; });
   var semaforo = prod.variantes.reduce(function(w, v) {
     if (v.semaforo === 'rojo')                       return 'rojo';
     if (v.semaforo === 'amarillo' && w !== 'rojo')   return 'amarillo';
     return w;
   }, 'verde');
   var tienePedido = (prod.pedidos || []).length > 0;
-  if (semaforo === 'rojo' && !tienePedido) return 0;
-  if (semaforo === 'rojo' &&  tienePedido) return 1;
-  if (semaforo === 'amarillo')             return 2;
-  return 3;
+  if (violaUmbral && !tienePedido) return 0;
+  if (violaUmbral &&  tienePedido) return 1;
+  if (semaforo === 'amarillo')     return 2;
+  if (semaforo === 'rojo')         return 3; // piso-only, above umbral
+  return 4;
 }
 
 // ── RENDER ────────────────────────────────────────────────

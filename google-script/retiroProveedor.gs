@@ -1024,7 +1024,8 @@ function getStockDashboard() {
         umbralCalc: umbralCalc, umbralOverride: ov.umbralOverride !== undefined ? ov.umbralOverride : null,
         pisoMarca: pisoMarca,  pisoOverride:   ov.pisoOverride   !== undefined ? ov.pisoOverride   : null,
         umbralFinal: umbralFinal, pisoFinal: pisoFinal,
-        alertaEnviada: alertaEnviada, semaforo: semaforo
+        alertaEnviada: alertaEnviada, semaforo: semaforo,
+        violaUmbral: stock <= umbralFinal
       });
     });
 
