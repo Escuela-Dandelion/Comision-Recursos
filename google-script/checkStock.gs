@@ -227,11 +227,11 @@ function checkStockBajo() {
       );
       // ── FIN DEBUG ──────────────────────────────────────────
 
-      // Reset alerta regular si el stock se repuso
-      if (stock > umbral && alertasEnviadas[clave]) {
+      // Reset alerta regular si el stock se repuso por encima de umbral Y piso
+      if (stock > umbral && stock >= stockMinimo && alertasEnviadas[clave]) {
         delete alertasEnviadas[clave];
         nuevasAlertas['__reset__'] = true;
-        Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > ' + umbral + ')');
+        Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > umbral=' + umbral + ' y >= piso=' + stockMinimo + ')');
       }
       // Condición A (cualquier día): stock bajo (umbral dinámico O piso absoluto) y no alertado aún
       const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[clave];
@@ -398,6 +398,22 @@ function registrarNuevaOrden(marca, fgp, items) {
   const config = ss.getSheetByName('Config');
   const pedidos = ss.getSheetByName('Pedidos');
 
+  // Evitar duplicado: si ya hay una orden activa para esta marca, reutilizarla
+  const ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
+  const data = pedidos.getDataRange().getValues();
+  Logger.log('[DUPL] Buscando orden activa para marca="' + marca + '" entre ' + (data.length - 1) + ' filas');
+  for (var i = 1; i < data.length; i++) {
+    const fila = data[i];
+    const filaMarca  = String(fila[2]).toUpperCase().trim();
+    const filaEstado = String(fila[5]).trim();
+    Logger.log('[DUPL] fila ' + i + ': norden=' + fila[0] + ' marca="' + filaMarca + '" estado="' + filaEstado + '"');
+    if (filaMarca === marca.toUpperCase().trim() && ACTIVOS.indexOf(filaEstado) !== -1) {
+      const nordenExistente = String(fila[0]);
+      Logger.log('[DUPL] Orden activa encontrada: ' + nordenExistente + ' — no se crea duplicado');
+      return nordenExistente;
+    }
+  }
+
   const ultimo = parseInt(config.getRange('B2').getValue()) || 0;
   const nuevo  = ultimo + 1;
   config.getRange('B2').setValue(nuevo);
@@ -446,138 +462,6 @@ function resetearVelocidades() {
   props.deleteProperty('VELOCIDADES_CACHE');
   props.deleteProperty('DIAS_ACTIVOS_CACHE');
   Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
-}
-
-// ── OVERRIDES POR PRODUCTO ────────────────────────────────
-// Pestaña ConfigStock: col A=clave, col B=nombre, col C=umbralOverride, col D=pisoOverride
-function leerOverridesStock() {
-  const map = {};
-  try {
-    const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
-    const sheet = ss.getSheetByName('ConfigStock');
-    if (!sheet) return map;
-    const data = sheet.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      const clave = String(data[i][0] || '').trim();
-      if (!clave) continue;
-      map[clave] = {
-        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
-        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null
-      };
-    }
-  } catch(e) { Logger.log('Error leyendo ConfigStock: ' + e); }
-  return map;
-}
-
-function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride) {
-  const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
-  var sheet   = ss.getSheetByName('ConfigStock');
-  if (!sheet) {
-    sheet = ss.insertSheet('ConfigStock');
-    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override']);
-  }
-  const data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]).trim() === clave) {
-      sheet.getRange(i + 1, 3).setValue(umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '');
-      sheet.getRange(i + 1, 4).setValue(pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : '');
-      return;
-    }
-  }
-  sheet.appendRow([clave, nombre,
-    umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '',
-    pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : ''
-  ]);
-}
-
-// ── DASHBOARD DE STOCK ────────────────────────────────────
-function getStockDashboard() {
-  const { velocidades, diasActivos } = getVelocidades();
-  const configMarca  = leerConfigAlertas();
-  const overrides    = leerOverridesStock();
-  const alertas      = obtenerAlertasEnviadas();
-  const productos    = obtenerProductos();
-
-  // Pedidos activos por marca (Solicitado, Confirmado, En Camino)
-  const pedidosActivos = {};
-  try {
-    const ss     = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
-    const sheet  = ss.getSheetByName('Pedidos');
-    const data   = sheet ? sheet.getDataRange().getValues() : [];
-    const ESTADOS_ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
-    for (var i = 1; i < data.length; i++) {
-      const norden  = String(data[i][0] || '').trim();
-      const marca   = String(data[i][2] || '').toUpperCase().trim();
-      const estado  = String(data[i][5] || '').trim();
-      if (!norden || !marca || ESTADOS_ACTIVOS.indexOf(estado) === -1) continue;
-      if (!pedidosActivos[marca]) pedidosActivos[marca] = [];
-      pedidosActivos[marca].push({ norden: norden, estado: estado, fecha: String(data[i][1] || '') });
-    }
-  } catch(e) { Logger.log('Error leyendo pedidos activos: ' + e); }
-
-  const resultado = [];
-
-  productos.forEach(function(producto) {
-    const marca     = (producto.brand || '').toUpperCase();
-    if (!FGP_POR_MARCA[marca]) return;
-    const cfg       = configMarca[marca] || { leadTime: 14, stockMinimo: CONFIG_STOCK.STOCK_MINIMO };
-    const fgp       = FGP_POR_MARCA[marca];
-    const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
-    const pedidosMarca = pedidosActivos[marca] || [];
-
-    const variantes = [];
-    producto.variants.forEach(function(variante) {
-      if (variante.stock === null) return;
-      const stock    = parseInt(variante.stock);
-      const clave    = producto.id + '_' + variante.id;
-      const nombreVar = variante.values && variante.values.length > 0
-        ? variante.values.map(function(v) { return v.es || v; }).join(' / ')
-        : null;
-
-      const ov            = overrides[clave] || {};
-      const umbralCalc    = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
-      const umbralFinal   = (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : umbralCalc;
-      const pisoMarca     = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
-      const pisoFinal     = (ov.pisoOverride !== null && ov.pisoOverride !== undefined) ? ov.pisoOverride : pisoMarca;
-      const alertaEnviada = !!alertas[clave];
-      const velocidad     = buscarVelocidad(nombreProd, nombreVar, velocidades);
-
-      var semaforo;
-      if (stock < pisoFinal || stock <= umbralFinal) semaforo = 'rojo';
-      else if (stock <= umbralFinal * 2)              semaforo = 'amarillo';
-      else                                            semaforo = 'verde';
-
-      variantes.push({
-        id:             variante.id,
-        clave:          clave,
-        nombre:         nombreVar || nombreProd,
-        stock:          stock,
-        velocidad:      velocidad,
-        diasActivos:    diasActivos,
-        umbralCalc:     umbralCalc,
-        umbralOverride: ov.umbralOverride !== undefined ? ov.umbralOverride : null,
-        pisoMarca:      pisoMarca,
-        pisoOverride:   ov.pisoOverride !== undefined ? ov.pisoOverride : null,
-        umbralFinal:    umbralFinal,
-        pisoFinal:      pisoFinal,
-        alertaEnviada:  alertaEnviada,
-        semaforo:       semaforo
-      });
-    });
-
-    if (!variantes.length) return;
-
-    resultado.push({
-      id:       producto.id,
-      nombre:   nombreProd,
-      marca:    marca,
-      fgp:      fgp.nombre,
-      pedidos:  pedidosMarca,
-      variantes: variantes
-    });
-  });
-
-  return { ok: true, productos: resultado, diasActivos: diasActivos };
 }
 
 // ── TRIGGER ────────────────────────────────────────────────

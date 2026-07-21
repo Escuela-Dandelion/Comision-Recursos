@@ -5,104 +5,147 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stock — Diente de León</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d2d; background: #f9fafb; padding-bottom: 40px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d2d; background: #f9fafb; padding-bottom: 40px; }
 
-  .header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; border-bottom: 3px solid #3a7d44; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
-  .header img { height: 44px; }
-  .header h1 { font-size: 17px; font-weight: 800; color: #3a7d44; flex: 1; }
-  .header-meta { font-size: 11px; color: #9ca3af; }
-  .btn-back { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; color: #6b7280; }
+/* ── HEADER ── */
+.header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 3px solid #3a7d44; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+.header img { height: 38px; }
+.header h1 { font-size: 16px; font-weight: 800; color: #3a7d44; flex: 1; }
+.header-meta { font-size: 11px; color: #9ca3af; }
+.btn-icon { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px; color: #6b7280; }
 
-  .page-wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+/* ── PAGE ── */
+.page-wrap { max-width: 900px; margin: 0 auto; padding: 14px 16px; }
 
-  .legend { display: flex; gap: 16px; align-items: center; background: #fff; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .dot-rojo    { background: #dc2626; }
-  .dot-amarillo { background: #f59e0b; }
-  .dot-verde   { background: #16a34a; }
-  .legend-sep  { flex: 1; }
-  .last-update { font-size: 11px; color: #9ca3af; }
+/* ── LEGEND ── */
+.legend { display: flex; gap: 14px; align-items: center; background: #fff; border-radius: 8px; padding: 8px 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05); flex-wrap: wrap; font-size: 11px; color: #6b7280; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.dot-rojo     { background: #dc2626; }
+.dot-amarillo { background: #f59e0b; }
+.dot-verde    { background: #16a34a; }
+.legend-item  { display: flex; align-items: center; gap: 5px; }
+.legend-sep   { flex: 1; }
+.last-update  { font-size: 10px; color: #9ca3af; }
 
-  /* ── CARD DE PRODUCTO ── */
-  .producto-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 12px; overflow: hidden; }
-  .producto-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; border-bottom: 1px solid #f3f4f6; }
-  .producto-header:hover { background: #f9fafb; }
-  .producto-nombre { font-size: 14px; font-weight: 800; color: #111827; flex: 1; }
-  .producto-marca { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
-  .producto-fgp { font-size: 11px; color: #1d4ed8; font-weight: 700; }
-  .semaforo-group { display: flex; gap: 4px; align-items: center; }
-  .chevron { font-size: 12px; color: #9ca3af; transition: transform .2s; }
-  .chevron.open { transform: rotate(180deg); }
+/* ── PRODUCTO CARD ── */
+.producto-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 10px; overflow: hidden; }
 
-  /* badge de pedido */
-  .pedido-badge { display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 100px; font-size: 10px; font-weight: 700; padding: 2px 7px; text-decoration: none; white-space: nowrap; }
-  .pedido-badge.en-camino  { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-  .pedido-badge.confirmado { background: #fefce8; color: #854d0e; border-color: #fde68a; }
+.producto-header { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; user-select: none; border-bottom: 1px solid #f3f4f6; }
+.producto-header:hover { background: #f9fafb; }
+.semaforo-group { display: flex; gap: 3px; flex-shrink: 0; }
+.prod-info { flex: 1; min-width: 0; }
+.prod-nombre { font-size: 13px; font-weight: 800; color: #111827; }
+.prod-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.prod-fgp  { font-size: 10px; color: #6b7280; font-weight: 600; }
+.chevron { font-size: 11px; color: #9ca3af; transition: transform .2s; flex-shrink: 0; }
+.chevron.open { transform: rotate(180deg); }
 
-  /* ── VARIANTES ── */
-  .variantes-wrap { display: none; }
-  .variantes-wrap.open { display: block; }
+/* ── PEDIDO BADGE ── */
+.pedido-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 100px; font-size: 10px; font-weight: 700; padding: 2px 8px; text-decoration: none; white-space: nowrap; border: 1px solid; }
+.pedido-badge.solicitado { background: #f3f4f6; color: #374151;  border-color: #d1d5db; }
+.pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8;  border-color: #bfdbfe; }
+.pedido-badge.en-camino  { background: #f0fdf4; color: #15803d;  border-color: #86efac; }
 
-  .variante-row { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; display: grid; grid-template-columns: 14px 1fr auto; gap: 0 10px; align-items: start; }
-  .variante-row:last-child { border-bottom: none; }
+/* ── VARIANTES WRAP ── */
+.variantes-wrap { display: none; }
+.variantes-wrap.open { display: block; }
 
-  .var-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
-  .var-info { min-width: 0; }
-  .var-nombre { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; }
-  .var-stats  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-  .stat-chip  { font-size: 11px; color: #6b7280; background: #f3f4f6; border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
-  .stat-chip.alerta { background: #fef2f2; color: #dc2626; font-weight: 700; }
-  .stat-chip.stock-ok { background: #f0fdf4; color: #15803d; }
+/* ── TABLA DE VARIANTES ── */
+.var-table { width: 100%; border-collapse: collapse; }
 
-  /* override inputs */
-  .overrides { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-  .override-field { display: flex; align-items: center; gap: 4px; }
-  .override-field label { font-size: 10px; color: #9ca3af; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
-  .override-field input { width: 60px; padding: 4px 6px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 6px; text-align: center; background: #f9fafb; color: #374151; }
-  .override-field input:focus { outline: none; border-color: #3a7d44; background: #fff; }
-  .override-field input.has-override { border-color: #f59e0b; background: #fefce8; color: #854d0e; font-weight: 700; }
-  .btn-save-override { padding: 4px 10px; font-size: 11px; font-weight: 700; background: #3a7d44; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-  .btn-save-override:hover { background: #2d5a27; }
-  .save-feedback { font-size: 11px; margin-left: 4px; }
+.var-table thead tr { background: #f9fafb; }
+.var-table thead th {
+  font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px;
+  padding: 5px 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600;
+  white-space: nowrap;
+}
+.var-table thead th.th-center { text-align: center; }
+.var-table thead th.th-right  { text-align: right; }
 
-  .var-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .stock-num { font-size: 20px; font-weight: 900; line-height: 1; }
-  .stock-label { font-size: 10px; color: #9ca3af; text-align: right; }
-  .stock-rojo    { color: #dc2626; }
-  .stock-amarillo { color: #f59e0b; }
-  .stock-verde   { color: #16a34a; }
+.var-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+.var-table tbody tr:last-child { border-bottom: none; }
+.var-table td { padding: 9px 10px; vertical-align: middle; }
 
-  /* ── ESTADO CARGA ── */
-  .loading { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px; }
-  .error-msg { background: #fef2f2; color: #dc2626; border-radius: 10px; padding: 14px 16px; margin: 16px 0; font-size: 13px; }
-  .flash { border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; display: none; }
-  .flash.ok    { background: #f0fdf4; color: #15803d; }
-  .flash.error { background: #fef2f2; color: #dc2626; }
+/* columnas */
+.td-dot    { width: 16px; padding-right: 2px !important; }
+.td-nombre { font-size: 12px; font-weight: 700; color: #374151; }
+.td-alerta { width: 20px; text-align: center; font-size: 12px; }
+.td-stock  { text-align: center; width: 60px; font-size: 22px; font-weight: 900; line-height: 1; }
+.td-umbral, .td-piso { text-align: center; width: 90px; }
+.td-vel    { text-align: center; width: 70px; font-size: 11px; color: #9ca3af; }
+.td-save   { width: 90px; text-align: right; white-space: nowrap; }
 
-  /* ── LOGIN ── */
-  #loginView { max-width: 360px; margin: 60px auto; background: #fff; border-radius: 14px; padding: 32px 24px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-  #loginView h2 { font-size: 18px; color: #3a7d44; margin-bottom: 8px; }
-  #loginView p { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
-  #pinInputStock { width: 160px; padding: 12px; font-size: 20px; text-align: center; letter-spacing: 6px; border: 1.5px solid #d1d5db; border-radius: 10px; margin-bottom: 12px; }
-  .btn-login { padding: 12px 28px; background: #3a7d44; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
-  .pin-error { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
+.stock-rojo    { color: #dc2626; }
+.stock-amarillo{ color: #f59e0b; }
+.stock-verde   { color: #16a34a; }
 
-  @media (max-width: 600px) {
-    .variante-row { grid-template-columns: 12px 1fr; }
-    .var-actions  { display: none; }
-    .var-nombre   { display: flex; align-items: center; gap: 8px; }
-    .var-nombre::after { content: attr(data-stock); font-size: 15px; font-weight: 900; margin-left: auto; }
-  }
+/* ── INPUTS OVERRIDE ── */
+.ov-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 3px; position: relative; }
+.ov-input {
+  width: 54px; padding: 4px 4px; font-size: 12px;
+  border: 1px solid #e5e7eb; border-radius: 5px;
+  text-align: center; background: #f9fafb; color: #374151;
+}
+.ov-input:focus { outline: none; border-color: #3a7d44; background: #fff; }
+.ov-input.has-override { border-color: #f59e0b; background: #fefce8; color: #854d0e; font-weight: 700; }
+.ov-placeholder { font-size: 11px; color: #d1d5db; }
+
+/* ── TOOLTIP ── */
+.tip-btn {
+  background: none; border: 1px solid #d1d5db; border-radius: 50%;
+  width: 13px; height: 13px; font-size: 8px; cursor: pointer;
+  color: #9ca3af; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; flex-shrink: 0;
+}
+.tip-box {
+  display: none; position: absolute; top: calc(100% + 5px); left: 50%;
+  transform: translateX(-50%); background: #1f2937; color: #f3f4f6;
+  font-size: 10px; padding: 6px 9px; border-radius: 7px; width: 200px;
+  line-height: 1.5; z-index: 300; white-space: normal; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.ov-wrap.tip-open .tip-box { display: block; }
+
+/* ── BOTÓN GUARDAR ── */
+.btn-save {
+  padding: 4px 10px; font-size: 11px; font-weight: 700;
+  background: #3a7d44; color: #fff; border: none; border-radius: 5px;
+  cursor: pointer; display: none;
+}
+.btn-save.visible { display: inline-block; }
+.btn-save:hover { background: #2d5a27; }
+.save-fb { font-size: 10px; display: block; min-height: 14px; margin-top: 1px; }
+
+/* ── ESTADOS CARGA ── */
+.loading   { text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px; }
+.error-msg { background: #fef2f2; color: #dc2626; border-radius: 8px; padding: 12px 14px; margin: 12px 0; font-size: 13px; }
+.flash { border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; display: none; }
+.flash.ok    { background: #f0fdf4; color: #15803d; }
+.flash.error { background: #fef2f2; color: #dc2626; }
+
+/* ── LOGIN ── */
+#loginView { max-width: 360px; margin: 60px auto; background: #fff; border-radius: 14px; padding: 32px 24px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+#loginView h2 { font-size: 18px; color: #3a7d44; margin-bottom: 8px; }
+#loginView p  { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+#pinInputStock { width: 160px; padding: 12px; font-size: 20px; text-align: center; letter-spacing: 6px; border: 1.5px solid #d1d5db; border-radius: 10px; margin-bottom: 12px; }
+.btn-login { padding: 12px 28px; background: #3a7d44; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
+.pin-error { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .td-vel, .var-table thead .th-vel { display: none; }
+  .td-stock { font-size: 18px; }
+  .ov-input { width: 46px; font-size: 11px; }
+  .page-wrap { padding: 10px; }
+}
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN ──────────────────────────────────────────────── -->
+<!-- LOGIN -->
 <div id="loginView" style="display:none">
   <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Logo" style="height:60px;margin-bottom:16px">
-  <h2>Stock — Diente de León</h2>
+  <h2>Estado Inventario</h2>
   <p>Ingresá tu PIN para continuar</p>
   <input type="password" id="pinInputStock" inputmode="numeric" placeholder="••••"
     onkeydown="if(event.key==='Enter') validarPinStock()">
@@ -111,69 +154,54 @@
   <p class="pin-error" id="pinErrorStock">PIN incorrecto.</p>
 </div>
 
-<!-- ── MAIN ───────────────────────────────────────────────── -->
+<!-- MAIN -->
 <div id="mainView" style="display:none">
   <div class="header">
-    <a href="pedidos.html" style="text-decoration:none"><button class="btn-back">‹</button></a>
+    <a href="pedidos.html" style="text-decoration:none"><button class="btn-icon">‹</button></a>
     <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Logo">
     <div style="flex:1">
       <h1>Estado Inventario</h1>
       <div class="header-meta" id="header-meta">Cargando…</div>
     </div>
-    <button onclick="cargarDashboard()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280" title="Actualizar">↻</button>
+    <button onclick="cargarDashboard()" class="btn-icon" title="Actualizar">↻</button>
   </div>
 
   <div class="page-wrap">
     <div class="flash" id="flash"></div>
-
     <div class="legend">
-      <div class="legend-item"><div class="dot dot-rojo"></div> Stock bajo — alerta activa</div>
-      <div class="legend-item"><div class="dot dot-amarillo"></div> Atención — pronto va a alertar</div>
-      <div class="legend-item"><div class="dot dot-verde"></div> OK</div>
+      <div class="legend-item"><span class="dot dot-rojo"></span> Alerta activa</div>
+      <div class="legend-item"><span class="dot dot-amarillo"></span> Atención</div>
+      <div class="legend-item"><span class="dot dot-verde"></span> OK</div>
       <div class="legend-sep"></div>
       <div class="last-update" id="last-update"></div>
     </div>
-
-    <div id="dashContent">
-      <div class="loading">Cargando inventario…</div>
-    </div>
+    <div id="dashContent"><div class="loading">Cargando inventario…</div></div>
   </div>
 </div>
 
 <script>
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 var PEDIDOS_URL = 'pedidos.html';
-
 var PINES_VALIDOS = ['1234','2468','3579','1111','7531','8642','9753','4321','6543','2580'];
 
-// ── AUTH ───────────────────────────────────────────────────
+// ── AUTH ──────────────────────────────────────────────────
 function checkAuth() {
-  try {
-    var s = JSON.parse(localStorage.getItem('dl_admin_session') || 'null');
-    if (s && s.role) return true;
-  } catch(e) {}
+  try { var s = JSON.parse(localStorage.getItem('dl_admin_session') || 'null'); if (s && s.role) return true; } catch(e) {}
   return false;
 }
-
 function validarPinStock() {
   var pin = document.getElementById('pinInputStock').value.trim();
-  if (PINES_VALIDOS.indexOf(pin) !== -1) {
-    localStorage.setItem('dl_stock_auth', '1');
-    mostrarMain();
-  } else {
-    document.getElementById('pinErrorStock').style.display = 'block';
-  }
+  if (PINES_VALIDOS.indexOf(pin) !== -1) { localStorage.setItem('dl_stock_auth','1'); mostrarMain(); }
+  else document.getElementById('pinErrorStock').style.display = 'block';
 }
-
 function mostrarMain() {
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('mainView').style.display = 'block';
   cargarDashboard();
 }
 
-// ── CARGA ──────────────────────────────────────────────────
+// ── CARGA ─────────────────────────────────────────────────
 var _dashData = null;
-
 function cargarDashboard() {
   document.getElementById('dashContent').innerHTML = '<div class="loading">Cargando inventario…</div>';
   document.getElementById('header-meta').textContent = 'Actualizando…';
@@ -183,175 +211,191 @@ function cargarDashboard() {
       if (!d.ok) throw new Error(d.error || 'Error desconocido');
       _dashData = d;
       renderDashboard(d);
-      document.getElementById('last-update').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+      document.getElementById('last-update').textContent =
+        'Actualizado ' + new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
       document.getElementById('header-meta').textContent = d.diasActivos + ' días activos en ventana';
     })
     .catch(function(err) {
-      document.getElementById('dashContent').innerHTML = '<div class="error-msg">No se pudo cargar el inventario. ' + err.message + '</div>';
+      document.getElementById('dashContent').innerHTML =
+        '<div class="error-msg">No se pudo cargar el inventario. ' + err.message + '</div>';
       document.getElementById('header-meta').textContent = 'Error al cargar';
     });
 }
 
-// ── RENDER ─────────────────────────────────────────────────
+// ── RENDER ────────────────────────────────────────────────
 function renderDashboard(d) {
   var html = '';
   d.productos.forEach(function(prod) {
-    var dotsColores = prod.variantes.map(function(v) {
-      return '<div class="dot dot-' + v.semaforo + '"></div>';
+    var dots = prod.variantes.map(function(v) {
+      return '<span class="dot dot-' + v.semaforo + '"></span>';
     }).join('');
 
     var pedidosHtml = '';
-    if (prod.pedidos && prod.pedidos.length) {
-      prod.pedidos.forEach(function(p) {
-        var cls = p.estado === 'En Camino' ? 'en-camino' : p.estado === 'Confirmado' ? 'confirmado' : '';
-        pedidosHtml += '<a href="' + PEDIDOS_URL + '?id=' + p.norden + '" class="pedido-badge ' + cls + '" target="_blank">' +
-          '📋 ' + p.norden + ' · ' + p.estado + '</a> ';
-      });
-    }
+    (prod.pedidos || []).forEach(function(p) {
+      var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
+      var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : 'solicitado';
+      pedidosHtml +=
+        '<a href="' + PEDIDOS_URL + '?id=' + p.norden + '" class="pedido-badge ' + cls + '" target="_blank">' +
+        p.norden + ' · ' + p.estado + '</a> ';
+    });
 
-    html += '<div class="producto-card">' +
-      '<div class="producto-header" onclick="toggleVariantes(\'' + prod.id + '\')">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div class="producto-nombre">' + esc(prod.nombre) + '</div>' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap">' +
-            '<span class="producto-marca">' + esc(prod.marca) + '</span>' +
-            '<span class="producto-fgp">' + esc(prod.fgp) + '</span>' +
-            (pedidosHtml ? '<div style="margin-top:2px">' + pedidosHtml + '</div>' : '') +
+    html +=
+      '<div class="producto-card">' +
+        '<div class="producto-header" onclick="toggleCard(\'' + prod.id + '\')">' +
+          '<div class="semaforo-group">' + dots + '</div>' +
+          '<div class="prod-info">' +
+            '<div class="prod-nombre">' + esc(prod.nombre) + '</div>' +
+            '<div class="prod-meta">' +
+              (prod.fgp ? '<span class="prod-fgp">' + esc(prod.fgp) + '</span>' : '') +
+              pedidosHtml +
+            '</div>' +
           '</div>' +
+          '<span class="chevron open" id="chev-' + prod.id + '">▾</span>' +
         '</div>' +
-        '<div class="semaforo-group">' + dotsColores + '</div>' +
-        '<span class="chevron" id="chevron-' + prod.id + '">▾</span>' +
-      '</div>' +
-      '<div class="variantes-wrap open" id="vars-' + prod.id + '">' +
-        renderVariantes(prod) +
-      '</div>' +
-    '</div>';
+        '<div class="variantes-wrap open" id="vars-' + prod.id + '">' +
+          renderTabla(prod) +
+        '</div>' +
+      '</div>';
   });
   if (!html) html = '<div class="loading">No hay productos con seguimiento de stock.</div>';
   document.getElementById('dashContent').innerHTML = html;
 }
 
-function renderVariantes(prod) {
-  return prod.variantes.map(function(v) {
-    var stockCls = 'stock-' + v.semaforo;
-    var chips = '';
-    chips += '<span class="stat-chip">Vel. ' + v.velocidad + ' u./60d</span>';
-    chips += '<span class="stat-chip">Umbral: ' + v.umbralFinal + ' u.' + (v.umbralOverride !== null ? ' ✏️' : '') + '</span>';
-    chips += '<span class="stat-chip">Piso: ' + v.pisoFinal + ' u.' + (v.pisoOverride !== null ? ' ✏️' : '') + '</span>';
-    if (v.alertaEnviada) chips += '<span class="stat-chip alerta">⚠️ Alerta enviada</span>';
+function renderTabla(prod) {
+  var filas = prod.variantes.map(function(v) {
+    var stockCls  = 'stock-' + v.semaforo;
+    var hasOvU    = v.umbralOverride !== null && v.umbralOverride !== undefined;
+    var hasOvP    = v.pisoOverride   !== null && v.pisoOverride   !== undefined;
+    var tipTxt    = umbralTip(v);
+    var varNombre = prod.variantes.length === 1 ? esc(prod.nombre) : esc(v.nombre);
 
-    return '<div class="variante-row">' +
-      '<div class="var-dot dot-' + v.semaforo + '"></div>' +
-      '<div class="var-info">' +
-        '<div class="var-nombre" data-stock="' + v.stock + ' u.">' + esc(v.nombre) + '</div>' +
-        '<div class="var-stats">' + chips + '</div>' +
-        '<div class="overrides">' +
-          '<div class="override-field">' +
-            '<label>Umbral</label>' +
-            '<input type="number" min="0" id="umb-' + v.clave + '" ' +
-              'value="' + (v.umbralOverride !== null ? v.umbralOverride : '') + '" ' +
-              'placeholder="' + v.umbralCalc + '" ' +
-              'class="' + (v.umbralOverride !== null ? 'has-override' : '') + '" ' +
-              'oninput="onOverrideInput(this)">' +
-          '</div>' +
-          '<div class="override-field">' +
-            '<label>Piso</label>' +
-            '<input type="number" min="0" id="piso-' + v.clave + '" ' +
-              'value="' + (v.pisoOverride !== null ? v.pisoOverride : '') + '" ' +
-              'placeholder="' + v.pisoMarca + '" ' +
-              'class="' + (v.pisoOverride !== null ? 'has-override' : '') + '" ' +
-              'oninput="onOverrideInput(this)">' +
-          '</div>' +
-          '<button class="btn-save-override" onclick="guardarOverride(\'' + v.clave + '\',\'' + esc(v.nombre + ' (' + prod.nombre + ')') + '\')">' +
-            'Guardar' +
-          '</button>' +
-          '<span class="save-feedback" id="fb-' + v.clave + '"></span>' +
+    return '<tr>' +
+      '<td class="td-dot"><span class="dot dot-' + v.semaforo + '"></span></td>' +
+      '<td class="td-nombre">' + varNombre + '</td>' +
+      '<td class="td-alerta">' + (v.alertaEnviada ? '⚠️' : '') + '</td>' +
+      '<td class="td-stock ' + stockCls + '">' + v.stock + '</td>' +
+      '<td class="td-umbral">' +
+        '<div class="ov-wrap" id="tipwrap-umb-' + v.clave + '">' +
+          '<input class="ov-input' + (hasOvU ? ' has-override' : '') + '" type="number" min="0"' +
+            ' id="umb-' + v.clave + '"' +
+            ' value="' + (hasOvU ? v.umbralOverride : '') + '"' +
+            ' placeholder="' + v.umbralCalc + '"' +
+            ' oninput="onOvChange(\'' + v.clave + '\')">' +
+          '<button class="tip-btn" onclick="toggleTip(\'tipwrap-umb-' + v.clave + '\',event)">i</button>' +
+          '<div class="tip-box">' + tipTxt + '</div>' +
         '</div>' +
-      '</div>' +
-      '<div class="var-actions">' +
-        '<span class="stock-num ' + stockCls + '">' + v.stock + '</span>' +
-        '<span class="stock-label">en stock</span>' +
-      '</div>' +
-    '</div>';
+      '</td>' +
+      '<td class="td-piso">' +
+        '<input class="ov-input' + (hasOvP ? ' has-override' : '') + '" type="number" min="0"' +
+          ' id="piso-' + v.clave + '"' +
+          ' value="' + (hasOvP ? v.pisoOverride : '') + '"' +
+          ' placeholder="' + v.pisoMarca + '"' +
+          ' oninput="onOvChange(\'' + v.clave + '\')">' +
+      '</td>' +
+      '<td class="td-vel th-vel">' + v.velocidad + ' u.</td>' +
+      '<td class="td-save">' +
+        '<button class="btn-save" id="btn-' + v.clave + '"' +
+          ' onclick="guardarOverride(\'' + v.clave + '\',\'' + esc(v.nombre) + '\')">Guardar</button>' +
+        '<span class="save-fb" id="fb-' + v.clave + '"></span>' +
+      '</td>' +
+    '</tr>';
   }).join('');
+
+  return '<table class="var-table">' +
+    '<thead><tr>' +
+      '<th></th>' +
+      '<th>Variante</th>' +
+      '<th></th>' +
+      '<th class="th-center">Stock</th>' +
+      '<th class="th-center">Umbral</th>' +
+      '<th class="th-center">Piso</th>' +
+      '<th class="th-center th-vel">Vel/60d</th>' +
+      '<th></th>' +
+    '</tr></thead>' +
+    '<tbody>' + filas + '</tbody>' +
+  '</table>';
 }
 
-function toggleVariantes(prodId) {
-  var wrap    = document.getElementById('vars-' + prodId);
-  var chevron = document.getElementById('chevron-' + prodId);
-  var isOpen  = wrap.classList.contains('open');
-  wrap.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
+function umbralTip(v) {
+  if (!v.velocidad)
+    return 'Sin ventas en los últimos ' + v.diasActivos + ' días activos → umbral por defecto (' + v.umbralCalc + ' u.)';
+  var dxd = (v.velocidad / v.diasActivos).toFixed(2);
+  return v.velocidad + ' u. / ' + v.diasActivos + ' días activos = ' + dxd + ' u./día × ' +
+    (v.leadTime || 14) + 'd lead time × 1.5 = ' + v.umbralCalc + ' u.';
 }
 
-function onOverrideInput(input) {
-  input.classList.toggle('has-override', input.value.trim() !== '');
+// ── INTERACCIÓN ───────────────────────────────────────────
+function toggleCard(id) {
+  var wrap = document.getElementById('vars-' + id);
+  var chev = document.getElementById('chev-' + id);
+  var open = wrap.classList.contains('open');
+  wrap.classList.toggle('open', !open);
+  chev.classList.toggle('open', !open);
 }
 
-// ── GUARDAR OVERRIDE ───────────────────────────────────────
+function onOvChange(clave) {
+  var umbEl  = document.getElementById('umb-'  + clave);
+  var pisoEl = document.getElementById('piso-' + clave);
+  var btn    = document.getElementById('btn-'  + clave);
+  umbEl.classList.toggle('has-override',  umbEl.value.trim()  !== '');
+  pisoEl.classList.toggle('has-override', pisoEl.value.trim() !== '');
+  btn.classList.add('visible');
+}
+
+function toggleTip(wrapId, e) {
+  e.stopPropagation();
+  var wrap   = document.getElementById(wrapId);
+  var isOpen = wrap.classList.contains('tip-open');
+  document.querySelectorAll('.ov-wrap.tip-open').forEach(function(el) { el.classList.remove('tip-open'); });
+  if (!isOpen) wrap.classList.add('tip-open');
+}
+document.addEventListener('click', function() {
+  document.querySelectorAll('.ov-wrap.tip-open').forEach(function(el) { el.classList.remove('tip-open'); });
+});
+
+// ── GUARDAR OVERRIDE ──────────────────────────────────────
 function guardarOverride(clave, nombre) {
   var umbVal  = document.getElementById('umb-'  + clave).value.trim();
   var pisoVal = document.getElementById('piso-' + clave).value.trim();
+  var btn     = document.getElementById('btn-'  + clave);
   var fb      = document.getElementById('fb-'   + clave);
-  fb.textContent = '…';
-  fb.style.color = '#9ca3af';
+  btn.classList.remove('visible');
+  fb.textContent = '…'; fb.style.color = '#9ca3af';
 
   fetch(SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      action:         'saveStockOverride',
-      clave:          clave,
-      nombre:         nombre,
-      umbralOverride: umbVal !== '' ? parseInt(umbVal) : null,
+      action: 'saveStockOverride', clave: clave, nombre: nombre,
+      umbralOverride: umbVal  !== '' ? parseInt(umbVal)  : null,
       pisoOverride:   pisoVal !== '' ? parseInt(pisoVal) : null
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    if (d.ok) {
-      fb.textContent = '✓ Guardado';
-      fb.style.color = '#16a34a';
-      setTimeout(function() { fb.textContent = ''; }, 3000);
-    } else {
-      fb.textContent = '✗ Error';
-      fb.style.color = '#dc2626';
-    }
+    fb.textContent = d.ok ? '✓ Guardado' : '✗ Error';
+    fb.style.color = d.ok ? '#16a34a' : '#dc2626';
+    if (d.ok) setTimeout(function() { fb.textContent = ''; }, 3000);
   })
-  .catch(function() {
-    fb.textContent = '✗ Error de conexión';
-    fb.style.color = '#dc2626';
-  });
+  .catch(function() { fb.textContent = '✗'; fb.style.color = '#dc2626'; btn.classList.add('visible'); });
 }
 
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 
-function mostrarFlash(msg, tipo) {
-  var el = document.getElementById('flash');
-  el.textContent = msg;
-  el.className = 'flash ' + tipo;
-  el.style.display = 'block';
-  setTimeout(function() { el.style.display = 'none'; }, 4000);
-}
-
-// ── INIT ───────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────
 (function() {
   var params = new URLSearchParams(window.location.search);
-  var embedded = params.get('auth') === '1';
-  if (embedded) {
+  if (params.get('auth') === '1') {
     document.getElementById('loginView').style.display = 'none';
     document.querySelector('.header').style.display = 'none';
     document.getElementById('mainView').style.display = 'block';
     cargarDashboard();
     return;
   }
-  if (checkAuth() || localStorage.getItem('dl_stock_auth') === '1') {
-    mostrarMain();
-  } else {
-    document.getElementById('loginView').style.display = 'block';
-  }
+  if (checkAuth() || localStorage.getItem('dl_stock_auth') === '1') mostrarMain();
+  else document.getElementById('loginView').style.display = 'block';
 })();
 </script>
 </body>

@@ -952,6 +952,17 @@ function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride) {
   ]);
 }
 
+function invObtenerProductosTN() {
+  const resp = UrlFetchApp.fetch(
+    'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200', {
+    headers: {
+      'Authentication': 'bearer ' + TN_API_TOKEN,
+      'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
+    }
+  });
+  return JSON.parse(resp.getContentText());
+}
+
 function getStockDashboard() {
   const { velocidades, diasActivos } = invGetVelocidades();
   const configMarca = invLeerConfig();
@@ -974,15 +985,14 @@ function getStockDashboard() {
   } catch(e) { Logger.log('getStockDashboard pedidos error: ' + e); }
 
   // Productos TiendaNube
-  const productos = obtenerProductosTN();
+  const productos = invObtenerProductosTN();
   const resultado = [];
 
   productos.forEach(function(producto) {
-    const marca     = (producto.brand || '').toUpperCase();
-    const fgp       = INV_FGP[marca];
-    if (!fgp) return;
-    const cfg        = configMarca[marca] || { leadTime: 14, stockMinimo: INV_PISO_DEFAULT };
     const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
+    const marca      = invDetectarMarca(nombreProd);
+    const fgp        = marca ? INV_FGP[marca] : null;
+    const cfg        = configMarca[marca] || { leadTime: 14, stockMinimo: INV_PISO_DEFAULT };
 
     const variantes = [];
     (producto.variants || []).forEach(function(variante) {
@@ -1010,6 +1020,7 @@ function getStockDashboard() {
         id: variante.id, clave: clave,
         nombre: nombreVar || nombreProd,
         stock: stock, velocidad: velocidad, diasActivos: diasActivos,
+        leadTime: cfg.leadTime,
         umbralCalc: umbralCalc, umbralOverride: ov.umbralOverride !== undefined ? ov.umbralOverride : null,
         pisoMarca: pisoMarca,  pisoOverride:   ov.pisoOverride   !== undefined ? ov.pisoOverride   : null,
         umbralFinal: umbralFinal, pisoFinal: pisoFinal,
@@ -1020,13 +1031,71 @@ function getStockDashboard() {
     if (!variantes.length) return;
     resultado.push({
       id: producto.id, nombre: nombreProd, marca: marca,
-      fgp: fgp.nombre,
-      pedidos:   pedidosActivos[marca] || [],
+      fgp: fgp ? fgp.nombre : null,
+      pedidos:   (marca ? pedidosActivos[marca] : []) || [],
       variantes: variantes
     });
   });
 
   return { ok: true, productos: resultado, diasActivos: diasActivos };
+}
+
+function invDetectarMarca(nombreProd) {
+  const n = nombreProd.toUpperCase();
+  var found = null;
+  Object.keys(INV_FGP).forEach(function(marca) {
+    if (n.indexOf(marca) !== -1) found = marca;
+  });
+  return found;
+}
+
+function debugProductosTN() {
+  const productos = invObtenerProductosTN();
+  Logger.log('Total productos: ' + productos.length);
+  if (productos.length > 0) {
+    Logger.log('Keys primer producto: ' + Object.keys(productos[0]).join(', '));
+    const p = productos[0];
+    const v = (p.variants || [])[0];
+    Logger.log('Nombre: ' + JSON.stringify(p.name));
+    Logger.log('Variante[0]: ' + JSON.stringify(v));
+  }
+}
+
+function debugStockDashboard() {
+  const result = getStockDashboard();
+  Logger.log('ok: ' + result.ok);
+  Logger.log('diasActivos: ' + result.diasActivos);
+  Logger.log('productos count: ' + (result.productos || []).length);
+  if (result.productos && result.productos.length > 0) {
+    Logger.log('Primer producto: ' + JSON.stringify(result.productos[0]));
+  } else {
+    // debug step a step
+    const productos = invObtenerProductosTN();
+    Logger.log('TN productos: ' + productos.length);
+    var conVariantes = 0, sinStock = 0, pasaron = 0;
+    productos.forEach(function(p) {
+      const nombre = p.name && p.name.es ? p.name.es : String(p.name || '');
+      const vars = p.variants || [];
+      conVariantes += vars.length;
+      vars.forEach(function(v) {
+        if (v.stock === null) sinStock++;
+        else pasaron++;
+      });
+      Logger.log(nombre + ' → variantes: ' + vars.length + ', marca: ' + invDetectarMarca(nombre));
+    });
+    Logger.log('Total variantes: ' + conVariantes + ' | stock null: ' + sinStock + ' | pasan filtro: ' + pasaron);
+  }
+}
+
+function debugMarcasTN() {
+  const productos = obtenerProductosTN();
+  const marcas = {};
+  productos.forEach(function(p) {
+    const m = (p.brand || '(vacío)').toUpperCase();
+    marcas[m] = (marcas[m] || 0) + 1;
+  });
+  Logger.log('Marcas en TiendaNube: ' + JSON.stringify(marcas, null, 2));
+  Logger.log('Marcas en INV_FGP: ' + JSON.stringify(Object.keys(INV_FGP)));
 }
 
 // ── TEST ───────────────────────────────────────────────────
