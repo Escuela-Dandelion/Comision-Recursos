@@ -49,11 +49,11 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
 .chevron { font-size: 11px; color: #9ca3af; transition: transform .2s; flex-shrink: 0; }
 .chevron.open { transform: rotate(180deg); }
 
-/* ── PEDIDO BADGE ── */
+/* ── PEDIDO BADGE (mismos colores que pedidos.html) ── */
 .pedido-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 100px; font-size: 10px; font-weight: 700; padding: 2px 8px; text-decoration: none; white-space: nowrap; border: 1px solid; }
-.pedido-badge.solicitado { background: #f3f4f6; color: #4b5563;  border-color: #d1d5db; }
-.pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8;  border-color: #bfdbfe; }
-.pedido-badge.en-camino  { background: #f0fdf4; color: #15803d;  border-color: #86efac; }
+.pedido-badge.solicitado { background: #fff8e1; color: #b45309; border-color: #fcd34d; }
+.pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.pedido-badge.en-camino  { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
 
 /* ── VARIANTES ── */
 .variantes-wrap { display: none; border-top: 1px solid #f3f4f6; }
@@ -259,9 +259,10 @@ function renderDashboard(d) {
     (prod.pedidos || []).forEach(function(p) {
       var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
       var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : 'solicitado';
+      var emoji = est === 'en-camino' ? '🚚' : est === 'confirmado' ? '✅' : '📋';
       pedidosHtml +=
         '<a href="' + PEDIDOS_URL + '?id=' + p.norden + '" class="pedido-badge ' + cls + '" target="_blank">' +
-        p.norden + ' · ' + p.estado + '</a> ';
+        emoji + ' ' + p.norden + ' · ' + p.estado + '</a> ';
     });
 
     html +=
