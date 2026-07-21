@@ -101,10 +101,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
   padding: 0; flex-shrink: 0;
 }
 .tip-box {
-  display: none; position: absolute; top: calc(100% + 5px); left: 50%;
-  transform: translateX(-50%); background: #1f2937; color: #f3f4f6;
+  display: none; position: fixed;
+  background: #1f2937; color: #f3f4f6;
   font-size: 10px; padding: 6px 9px; border-radius: 7px; width: 200px;
-  line-height: 1.5; z-index: 300; white-space: normal; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  line-height: 1.5; z-index: 9999; white-space: normal; box-shadow: 0 4px 14px rgba(0,0,0,.2);
 }
 .ov-wrap.tip-open .tip-box { display: block; }
 
@@ -372,7 +372,16 @@ function toggleTip(clave, e) {
   var wrap   = document.getElementById('tipwrap-' + clave);
   var isOpen = wrap.classList.contains('tip-open');
   document.querySelectorAll('.ov-wrap.tip-open').forEach(function(el) { el.classList.remove('tip-open'); });
-  if (!isOpen) wrap.classList.add('tip-open');
+  if (!isOpen) {
+    wrap.classList.add('tip-open');
+    var btn  = e.currentTarget;
+    var rect = btn.getBoundingClientRect();
+    var box  = wrap.querySelector('.tip-box');
+    var left = rect.left + rect.width / 2 - 100; // centrar los 200px
+    left = Math.max(8, Math.min(left, window.innerWidth - 208));
+    box.style.top  = (rect.bottom + 5) + 'px';
+    box.style.left = left + 'px';
+  }
 }
 document.addEventListener('click', function() {
   document.querySelectorAll('.ov-wrap.tip-open').forEach(function(el) { el.classList.remove('tip-open'); });
