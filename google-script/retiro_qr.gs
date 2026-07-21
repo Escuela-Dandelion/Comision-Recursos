@@ -1541,7 +1541,7 @@ var AUTH_EMAILS = {
   'beluravaza@gmail.com':            { role: 'ADMIN',     name: 'Belén' },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },   // 2do grado
-  'monicachesta@gmail.com':          { role: 'referente', name: 'Monica' },
+  'monicachesta@gmail.com':          { role: 'ADMIN',     name: 'Monica' },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },  // 6to / 10mo
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },      // 8vo
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },    // 7mo
