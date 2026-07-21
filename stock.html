@@ -226,17 +226,16 @@ function cargarDashboard() {
 // 2 = amarillo
 // 3 = verde
 function prodPrioridad(prod) {
-  var violaUmbral = prod.variantes.some(function(v) { return v.violaUmbral; });
   var semaforo = prod.variantes.reduce(function(w, v) {
     if (v.semaforo === 'rojo')                       return 'rojo';
     if (v.semaforo === 'amarillo' && w !== 'rojo')   return 'amarillo';
     return w;
   }, 'verde');
   var tienePedido = (prod.pedidos || []).length > 0;
-  if (violaUmbral && !tienePedido) return 0;
-  if (violaUmbral &&  tienePedido) return 1;
-  if (semaforo === 'amarillo')     return 2;
-  if (semaforo === 'rojo')         return 3; // piso-only, above umbral
+  if (semaforo === 'rojo'     && !tienePedido) return 0;
+  if (semaforo === 'rojo'     &&  tienePedido) return 1;
+  if (semaforo === 'amarillo' && !tienePedido) return 2;
+  if (semaforo === 'amarillo' &&  tienePedido) return 3;
   return 4;
 }
 
@@ -291,15 +290,15 @@ function renderDashboard(d) {
 }
 
 function renderTabla(prod) {
+  var multiVar = prod.variantes.length > 1;
   var filas = prod.variantes.map(function(v) {
     var stockCls = 'stock-' + v.semaforo;
     var hasOvU   = v.umbralOverride !== null && v.umbralOverride !== undefined;
     var hasOvP   = v.pisoOverride   !== null && v.pisoOverride   !== undefined;
-    var varNombre = prod.variantes.length === 1 ? '' : esc(v.nombre);
 
     return '<tr>' +
       '<td class="td-dot"><span class="dot dot-' + v.semaforo + '"></span></td>' +
-      '<td class="td-nombre">' + varNombre + '</td>' +
+      (multiVar ? '<td class="td-nombre">' + esc(v.nombre) + '</td>' : '') +
       '<td class="td-alerta">' + (v.alertaEnviada ? '⚠️' : '') + '</td>' +
       '<td class="td-stock ' + stockCls + '">' + v.stock + '</td>' +
       '<td class="td-umbral">' +
@@ -331,7 +330,7 @@ function renderTabla(prod) {
 
   return '<table class="var-table">' +
     '<thead><tr>' +
-      '<th></th><th>Variante</th><th></th>' +
+      '<th></th>' + (multiVar ? '<th>Variante</th>' : '') + '<th></th>' +
       '<th class="th-c">Stock</th>' +
       '<th class="th-c">Umbral</th>' +
       '<th class="th-c">Piso</th>' +
