@@ -342,6 +342,18 @@
       </div>
     </div>
 
+    <!-- Filtro por proveedor y producto -->
+    <div style="background:#fff;border-radius:10px;padding:10px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select id="filtroProveedor" onchange="aplicarFiltros()"
+        style="padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;min-width:170px">
+        <option value="">Todos los proveedores</option>
+      </select>
+      <input id="filtroProducto" type="text" placeholder="🔍 Buscar producto…" oninput="aplicarFiltros()"
+        style="flex:1;min-width:160px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#374151">
+      <button onclick="limpiarBusqueda()" id="btn-limpiar-busqueda"
+        style="display:none;padding:7px 10px;background:#f3f4f6;border:none;border-radius:8px;font-size:12px;color:#6b7280;cursor:pointer;font-weight:600">✕ Limpiar</button>
+    </div>
+
     <!-- Filtro por fecha -->
     <div style="background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#2d5a27;margin-bottom:10px">📅 Filtrar por fecha</div>
@@ -947,6 +959,7 @@ async function cargarLista(incluyeCerrados) {
       desdeEl.value = fmt(hace30);
       hastaEl.value = fmt(hoy);
     }
+    poblarFiltroProveedor();
     renderLista(todosLosPedidos);
     cargarProveedoresMap();
     cargarProductosTN();
@@ -1392,6 +1405,18 @@ function aplicarFiltros() {
     });
   }
 
+  // Filtro proveedor
+  const filtProv = document.getElementById('filtroProveedor').value;
+  if (filtProv) resultado = resultado.filter(p => p.proveedor === filtProv);
+
+  // Filtro producto (texto libre sobre el campo productos)
+  const filtProd = (document.getElementById('filtroProducto').value || '').trim().toLowerCase();
+  if (filtProd) resultado = resultado.filter(p => p.productos && p.productos.toLowerCase().includes(filtProd));
+
+  // Mostrar/ocultar botón limpiar
+  const btnLB = document.getElementById('btn-limpiar-busqueda');
+  if (btnLB) btnLB.style.display = (filtProv || filtProd) ? 'inline-block' : 'none';
+
   // Contador
   const total = todosLosPedidos.length;
   const cont  = document.getElementById('contadorFiltro');
@@ -1400,6 +1425,28 @@ function aplicarFiltros() {
     : '';
 
   renderLista(resultado);
+}
+
+function poblarFiltroProveedor() {
+  const sel = document.getElementById('filtroProveedor');
+  if (!sel) return;
+  const proveedores = [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))].sort();
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Todos los proveedores</option>';
+  proveedores.forEach(function(p) {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = p;
+    if (p === actual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function limpiarBusqueda() {
+  document.getElementById('filtroProveedor').value = '';
+  document.getElementById('filtroProducto').value = '';
+  const btnLB = document.getElementById('btn-limpiar-busqueda');
+  if (btnLB) btnLB.style.display = 'none';
+  aplicarFiltros();
 }
 
 function limpiarFechas() {
