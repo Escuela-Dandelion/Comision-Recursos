@@ -1542,6 +1542,7 @@ var AUTH_EMAILS = {
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },   // 2do grado
   'monicachesta@gmail.com':          { role: 'ADMIN',     name: 'Monica' },
+  'lmdestefano@dandelion.edu.ar':    { role: 'ADMIN',     name: 'Lucas' },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },  // 6to / 10mo
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },      // 8vo
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },    // 7mo
