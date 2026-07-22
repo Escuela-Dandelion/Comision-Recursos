@@ -46,6 +46,8 @@
   .prod-table td { padding: 0; border: 1px solid #e0e0e0; vertical-align: top; }
   .prod-table td input { width: 100%; border: none; background: transparent; padding: 8px 6px; font-size: 13px; font-family: inherit; color: #2d2d2d; white-space: normal; word-break: break-word; }
   .prod-table td.col-producto input { min-height: 38px; height: auto; word-break: break-word; }
+  .p-nombre.sku-invalid { border-color: #ef4444 !important; background: #fef2f2; }
+  .p-nombre.sku-invalid::placeholder { color: #fca5a5; }
   .prod-table td input:focus { outline: none; background: #f0fdf4; }
   .prod-table td select.p-unid { width: 100%; border: none; background: transparent; padding: 8px 4px; font-size: 13px; font-family: inherit; color: #2d2d2d; cursor: pointer; appearance: none; -webkit-appearance: none; }
   .prod-table td select.p-unid:focus { outline: none; background: #f0fdf4; }
@@ -306,6 +308,15 @@
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.p-cant, .p-precio').forEach(function(input) {
       input.addEventListener('input', recalcularTotal);
+    });
+
+    document.getElementById('tbody-productos').addEventListener('focusout', function(e) {
+      if (!e.target.classList.contains('p-nombre')) return;
+      var val = e.target.value.trim();
+      if (!val) { e.target.classList.remove('sku-invalid'); return; }
+      var valido = !!_skuMap[val.toUpperCase()];
+      e.target.classList.toggle('sku-invalid', !valido);
+      e.target.title = valido ? '' : '⚠️ Este producto no existe en TiendaNube';
     });
   });
 
