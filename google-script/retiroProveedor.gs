@@ -467,7 +467,7 @@ function registrarPedidoEnSheet(data) {
   const fila = new Array(13).fill('');
   fila[COL.NORDEN]    = norden;
   fila[COL.FECHA]     = fecha || hoy;
-  fila[COL.PROVEEDOR] = proveedor || '';
+  fila[COL.PROVEEDOR] = invDetectarMarca(proveedor || '') || (proveedor || '');
   fila[COL.FGP]       = fgp || '';
   fila[COL.PRODUCTOS] = productos || '';
   fila[COL.ESTADO]    = 'Solicitado';
@@ -975,10 +975,12 @@ function getStockDashboard() {
     const ACTIVOS = ['solicitado', 'confirmado', 'en camino'];
     const data    = getPedidosSheet().getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
-      const norden = String(data[i][0] || '').trim();
-      const marca  = String(data[i][2] || '').toUpperCase().trim();
-      const estado = String(data[i][5] || '').trim();
-      if (!norden || !marca || ACTIVOS.indexOf(estado.toLowerCase()) === -1) continue;
+      const norden      = String(data[i][0] || '').trim();
+      const proveedorRaw = String(data[i][2] || '').trim();
+      const estado      = String(data[i][5] || '').trim();
+      if (!norden || !proveedorRaw || ACTIVOS.indexOf(estado.toLowerCase()) === -1) continue;
+      // Normalizar: si el proveedor coincide con una marca conocida, usar esa key
+      const marca = invDetectarMarca(proveedorRaw) || proveedorRaw.toUpperCase();
       if (!pedidosActivos[marca]) pedidosActivos[marca] = [];
       pedidosActivos[marca].push({ norden: norden, estado: estado, fecha: String(data[i][1] || '') });
     }
