@@ -395,6 +395,12 @@
       return;
     }
 
+    var sinSku = f.filasValidas.filter(function(r) { return !_skuMap[r.nombre.toUpperCase().trim()]; });
+    if (sinSku.length) {
+      var nombresInvalidos = sinSku.map(function(r) { return '"' + r.nombre + '"'; }).join(', ');
+      if (!confirm('⚠️ Los siguientes productos no existen en TiendaNube:\n\n' + nombresInvalidos + '\n\nVerificá que el nombre sea exacto. ¿Querés registrar el pedido igual?')) return;
+    }
+
     if (!f.norden || f.norden.includes('???') || f.norden === 'Generando…') {
       mostrarFeedback('⚠️ El N° de Orden aún no se generó. Esperá un momento y volvé a intentar.', 'warn');
       return;
