@@ -2076,7 +2076,7 @@ function renderDetalle(p) {
   if (mostrarPool) {
     botonesTop += `<button class="btn-accion-top btn-pool" onclick="agendarPool('${p.norden}')">🚗 Solicitar Pool</button>`;
   }
-  if (sig.includes('Cancelado')) botonesTop += `<button class="btn-accion-top btn-cancelar-ord" onclick="confirmarAccion('${p.norden}','Cancelado')">Cancelar</button>`;
+  if (sig.includes('Cancelado')) botonesTop += `<button class="btn-accion-top btn-cancelar-ord" onclick="confirmarAccion('${p.norden}','Cancelado')">Cancelar pedido</button>`;
   if (p.estado === 'Solicitado' && esAdmin()) botonesTop += `<button class="btn-accion-top btn-cancelar-ord" onclick="eliminarPedido('${p.norden}')">🗑️ Eliminar</button>`;
   document.getElementById('d-acciones-top').innerHTML = botonesTop;
 
