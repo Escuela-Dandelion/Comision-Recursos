@@ -354,6 +354,8 @@
   <a href="gestion-proveedores.html" class="sub">→ 📦 Gestión Proveedores</a>
   <a href="https://escuela-dandelion.github.io/Comision-Recursos/dashboard-general.html" target="_blank" class="sub">→ 📊 Dashboard de Ventas</a>
 
+  <a href="#faq" class="sub">→ Preguntas Frecuentes</a>
+
   <div class="sidebar-section">🌱 Otras Iniciativas</div>
   <a href="#juguetes">Otras Iniciativas</a>
   <button class="sidebar-logout" onclick="cerrarSesion()">🔒 Cerrar sesión</button>
@@ -964,6 +966,62 @@
     </div>
 
     <!-- ══════════════════════════════════════════════ -->
+    <!-- FAQ -->
+    <div class="section" id="faq">
+      <h2><span class="icon">❓</span> Preguntas Frecuentes</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Hacé clic en cada pregunta para ver la respuesta.</p>
+
+      <h3 style="margin-bottom:12px">Para las familias</h3>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo compro en la tienda? <span class="arrow">▶</span></div>
+        <div class="faq-body">Ingresá a <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" style="color:var(--green);font-weight:600">tiendadientedeleon.mitiendanube.com</a>, elegí los productos, completá tus datos y pagá online. Te recomendamos crear una cuenta en la primera compra para que el proceso sea más rápido la próxima vez.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo recibo el código QR? <span class="arrow">▶</span></div>
+        <div class="faq-body">El QR se envía automáticamente al email que ingresaste al comprar, una vez que el pago fue confirmado. Revisá también la carpeta de spam si no lo encontrás.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">No recibí el QR — ¿qué hago? <span class="arrow">▶</span></div>
+        <div class="faq-body">Si no recibiste el QR, es probable que el pago aún no haya sido procesado. Verificá el estado del pago en tu cuenta de TiendaNube o en el resumen de tu tarjeta/billetera. Si el pago ya fue debitado y el QR no llegó, escribile a Inés Robertson.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Dónde retiro mi pedido? <span class="arrow">▶</span></div>
+        <div class="faq-body">Los pedidos se retiran en la tienda de la escuela que corresponda: <strong>Tienda Primaria</strong> con Claudio, o <strong>Tienda Secundario</strong> con Inés Robertson. Presentá el QR desde tu celular al momento del retiro.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Puedo pagar en el momento del retiro? <span class="arrow">▶</span></div>
+        <div class="faq-body">No. El pago es obligatorio antes del retiro, a través de la tienda virtual. No se acepta pago en efectivo ni transferencia en el lugar. Sin QR no hay entrega.</div>
+      </div>
+
+      <h3 style="margin:24px 0 12px">Para la Comisión de Recursos</h3>
+
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo sé cuándo hay que reponer un producto? <span class="arrow">▶</span></div>
+        <div class="faq-body">El sistema envía un email automático al responsable del proveedor cuando el stock cae por debajo del umbral de reposición. También podés revisar el semáforo en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=inventario" target="_blank" style="color:var(--green);font-weight:600">Estado Inventario</a>: 🔴 requiere acción inmediata, 🟡 pronto por reponer, 🟢 stock suficiente.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo registro un pedido a un proveedor? <span class="arrow">▶</span></div>
+        <div class="faq-body">Entrá a <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank" style="color:var(--green);font-weight:600">Nuevo Pedido</a> en el panel de administración. El email de alerta incluye un botón "Hacer el pedido" que pre-completa el formulario con los productos sugeridos.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Qué hago cuando llega la mercadería? <span class="arrow">▶</span></div>
+        <div class="faq-body">Contá los productos recibidos y actualizá el stock en TiendaNube. Avisale a Claudio qué productos llegaron y en qué cantidades para que reponga la tienda física. Si hay productos para el secundario, coordinar el traslado con Franco Alini (va todos los miércoles) o el pool de ayuda.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo actualizo el stock en TiendaNube? <span class="arrow">▶</span></div>
+        <div class="faq-body">Ingresá al <a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank" style="color:var(--green);font-weight:600">panel de inventario de TiendaNube</a> y modificá las cantidades directamente. Necesitás acceso de administrador a TiendaNube.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo cierro un pedido? <span class="arrow">▶</span></div>
+        <div class="faq-body">En <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Pedidos</a>, avanzá el estado del pedido hasta "Entregado en Escuela" y luego a "Cerrado". Antes de cerrar, registrá el pago al proveedor solicitando el dinero a Inés Robertson, en cuya cuenta se registran todas las compras de Diente de León.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Cómo solicito acceso al sistema? <span class="arrow">▶</span></div>
+        <div class="faq-body">Escribile a <strong>Inés Robertson</strong> indicando tu nombre, Gmail y qué acceso necesitás (panel de administración o TiendaNube).</div>
+      </div>
+    </div>
+
     <div class="section-divider">
       <div class="section-divider-line"></div>
       <div class="section-divider-label">🌱 Otras Iniciativas</div>
