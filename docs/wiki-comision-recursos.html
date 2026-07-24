@@ -800,10 +800,31 @@
           <div class="step-body">
             <div class="step-title">Detectar que hay que reponer</div>
             <p class="step-desc">Hay dos formas de saberlo:</p>
-            <ul style="margin:6px 0 0 16px;font-size:12px;color:var(--muted)">
-              <li><strong>Email automático:</strong> el sistema revisa el stock periódicamente y manda un email cuando un producto cae por debajo del umbral. El mail le llega únicamente al responsable de ese proveedor, no a todo el equipo.</li>
-              <li><strong>Admin → Estado de Inventario:</strong> en cualquier momento se puede ver el semáforo de cada producto. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
+            <ul style="margin:6px 0 12px 16px;font-size:12px;color:var(--muted)">
+              <li><strong>Email automático:</strong> el sistema revisa el stock periódicamente y manda un email cuando un producto cae por debajo del umbral. El mail le llega únicamente al responsable de ese proveedor, no a todo el equipo. Incluye links directos para hacer el pedido con los productos ya cargados por defecto.</li>
+              <li><strong><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=inventario" target="_blank" style="color:var(--green)">Admin → Estado de Inventario ↗</a>:</strong> en cualquier momento se puede ver el semáforo de cada producto. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
             </ul>
+
+            <div style="border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;max-width:480px;font-size:12px;font-family:Arial,sans-serif;">
+              <div style="background:#3a7d44;padding:14px 20px;text-align:center;">
+                <div style="color:#fff;font-weight:700;font-size:14px">🌼 Diente de León — Stock Bajo</div>
+              </div>
+              <div style="background:#f7f8fa;padding:18px 20px;">
+                <p style="margin:0 0 10px;color:#1a1a2e">Hola <strong>María</strong>! Los siguientes productos de <strong>EL MAITEN</strong> tienen stock bajo:</p>
+                <ul style="margin:0 0 14px 16px;padding:0;line-height:1.8;color:#1a1a2e">
+                  <li><strong>Granola El Maiten 1 Kg</strong> — 3 unidades en stock<br>
+                    <span style="color:#92400e;font-size:11px">Según los últimos meses debés contar con <strong>16 u.</strong> — pedí al menos <strong>13 u.</strong></span>
+                  </li>
+                </ul>
+                <hr style="border:none;border-top:1px solid #e0e0e0;margin:14px 0">
+                <p style="margin:0 0 8px;color:#1a1a2e"><strong>📋 1. Hacer el pedido al proveedor:</strong></p>
+                <p style="margin:0 0 14px"><span style="display:inline-block;background:#3a7d44;color:#fff;padding:8px 16px;border-radius:6px;font-weight:700;font-size:12px">Hacer el pedido</span></p>
+                <p style="margin:0 0 8px;color:#1a1a2e"><strong>📅 2. Agendar el retiro (cuando el proveedor confirme):</strong></p>
+                <p style="margin:0"><span style="display:inline-block;background:#3a7d44;color:#fff;padding:8px 16px;border-radius:6px;font-weight:700;font-size:12px">Agendar el retiro</span></p>
+                <hr style="border:none;border-top:1px solid #e0e0e0;margin:14px 0">
+                <p style="font-size:11px;color:#6b7280;margin:0">Este mensaje fue generado automáticamente por el sistema Diente de León.</p>
+              </div>
+            </div>
             <div class="callout callout-info" style="margin-top:12px">
               <div class="icon">📐</div>
               <div>
