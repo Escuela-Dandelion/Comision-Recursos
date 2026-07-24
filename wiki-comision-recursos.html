@@ -922,14 +922,22 @@
       <table class="wiki-table">
         <thead><tr><th>Estado</th><th>Qué significa</th><th>Quién lo actualiza</th></tr></thead>
         <tbody>
-          <tr><td><span class="badge badge-draft">Solicitado</span></td><td>El pedido fue registrado en el sistema. Todavía no fue confirmado por el proveedor.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge badge-draft">Solicitado</span></td><td>El pedido fue registrado en el sistema. Todavía no fue confirmado por el proveedor. <strong>Único estado donde se puede eliminar el pedido</strong> (solo admins).</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó que puede despachar el pedido.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>La mercadería ya fue despachada (correo) o está siendo retirada (retiro).</td><td>Responsable del proveedor</td></tr>
-          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida. A partir de acá se actualiza el stock.</td><td>Responsable del proveedor</td></tr>
-          <tr><td><span class="badge badge-pilot">Entregado a Referente</span></td><td>Los pedidos de las familias fueron distribuidos al referente de grado para entrega.</td><td>Coordinación de entregas</td></tr>
-          <tr><td><span class="badge" style="background:#fdecea;color:#c62828">Cancelado</span></td><td>El pedido fue cancelado. Queda registrado pero no afecta el stock.</td><td>Responsable del proveedor / Admin</td></tr>
+          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida. A partir de acá se actualiza el stock. Ya no se puede cancelar.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo. El pago fue registrado y el pedido está cerrado.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge" style="background:#fdecea;color:#c62828">Cancelado</span></td><td>El pedido fue cancelado. Solo se puede cancelar en estado Solicitado, Confirmado o En Camino. Queda registrado pero no afecta el stock.</td><td>Responsable del proveedor / Admin</td></tr>
         </tbody>
       </table>
+
+      <div class="callout callout-warn">
+        <div class="icon">⚠️</div>
+        <div>
+          <div class="callout-title">Eliminar vs. Cancelar</div>
+          <strong>Eliminar</strong> borra el pedido del sistema — solo es posible cuando está en estado <em>Solicitado</em> y solo los administradores pueden hacerlo. <strong>Cancelar</strong> deja el pedido registrado con estado <em>Cancelado</em> y está disponible mientras el pedido no haya llegado a la escuela (es decir, en Solicitado, Confirmado o En Camino).
+        </div>
+      </div>
 
       <h3>B. Armado y Entrega de Pedidos</h3>
       <p>Existen dos tipos de pedido con dinámicas distintas:</p>
