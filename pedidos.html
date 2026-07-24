@@ -131,7 +131,7 @@
   @media (max-width: 768px) { .det-layout { grid-template-columns: 1fr; } }
 
   .det-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow: hidden; }
-  .det-card-header { padding: 14px 18px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+  .det-card-header { padding: 14px 18px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 12px; }
   .det-card-title { font-size: 13px; font-weight: 700; color: #374151; }
   .det-card-body { padding: 18px; }
 
@@ -1276,16 +1276,18 @@ function renderLista(pedidos) {
                 </tr>
               </thead>
               <tbody>
-                ${prods.map((prod, idx) => {
-                  const parsed = parseProdLinea(prod);
-                  const sub    = parsed.subtotal > 0 ? formatPesosConDec(parsed.subtotal) : '—';
-                  const punit  = parsed.precio   > 0 ? formatPesosConDec(parsed.precio)   : '—';
+                ${prodsParsed.map((parsed, idx) => {
+                  const cant   = parseFloat(parsed.cantidad) || 0;
+                  const precio = parsePrecio(parsed.precio);
+                  const sub    = (cant > 0 && precio > 0) ? formatPesosConDec(cant * precio) : '—';
+                  const punit  = precio > 0 ? formatPesosConDec(precio) : '—';
+                  const skuHtml = parsed.sku ? `<div style="font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px;letter-spacing:.3px">${parsed.sku}</div>` : '';
                   return `
                   <tr style="border-top:1px solid #e5e7eb;background:${idx%2===0?'#ffffff':'#fafafa'};">
                     <td style="padding:10px 16px;font-size:13px;color:#111827;">
-                      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2d5a27;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>${parsed.nombre}
+                      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2d5a27;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>${parsed.nombre}${skuHtml}
                     </td>
-                    <td style="padding:10px 10px;font-size:13px;font-weight:700;color:#111827;text-align:center;">${parsed.cant}</td>
+                    <td style="padding:10px 10px;font-size:13px;font-weight:700;color:#111827;text-align:center;">${parsed.cantidad || '—'}</td>
                     <td class="col-x-unid" style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:center;">${parsed.unidad || '—'}</td>
                     <td class="col-x-punit" style="padding:10px 10px;font-size:12px;color:#6b7280;text-align:right;white-space:nowrap;">${punit}</td>
                     <td style="padding:10px 16px;font-size:13px;color:#2d5a27;font-weight:700;text-align:right;white-space:nowrap;">${sub}</td>
@@ -1524,7 +1526,6 @@ function renderProdView(productosStr) {
     return;
   }
   var cell = 'padding:8px 6px;font-size:13px;color:#6b7280;background:#f9fafb;border:none;width:100%;';
-  var hasSku = rows.some(function(r){ return r.sku; });
   var incompletos = rows.filter(function(r){ return !r.cantidad || !r.precio || parsePrecio(r.precio) === 0; });
   var banner = incompletos.length
     ? '<div style="display:flex;align-items:center;gap:8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#dc2626;font-weight:600">' +
@@ -1539,18 +1540,17 @@ function renderProdView(productosStr) {
         '<th style="background:#f3f4f6;color:#9ca3af;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:7px 6px;text-align:left;border-bottom:1px solid #e5e7eb;width:85px">Unid.</th>' +
         '<th style="background:#f3f4f6;color:#9ca3af;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:7px 6px;text-align:left;border-bottom:1px solid #e5e7eb;width:60px">Cant.</th>' +
         '<th style="background:#f3f4f6;color:#9ca3af;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:7px 6px;text-align:left;border-bottom:1px solid #e5e7eb;min-width:150px;white-space:nowrap">Precio $</th>' +
-        (hasSku ? '<th style="background:#f3f4f6;color:#9ca3af;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:7px 6px;text-align:left;border-bottom:1px solid #e5e7eb;width:100px">SKU</th>' : '') +
       '</tr></thead><tbody>' +
     rows.map(function(r) {
       var sinCant  = !r.cantidad;
       var sinPrec  = !r.precio || parsePrecio(r.precio) === 0;
       var redCell  = 'color:#dc2626;font-weight:700;';
+      var skuHtml  = r.sku ? '<div style="font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px;letter-spacing:.3px">' + escHtml(r.sku) + '</div>' : '';
       return '<tr style="border-bottom:1px solid #f3f4f6">' +
-        '<td><span style="' + cell + 'display:block;font-weight:600;color:#374151;">' + escHtml(r.nombre) + '</span></td>' +
+        '<td><span style="' + cell + 'display:block;font-weight:600;color:#374151;">' + escHtml(r.nombre) + skuHtml + '</span></td>' +
         '<td><span style="' + cell + 'display:block">' + escHtml(r.unidad||'Unidades') + '</span></td>' +
         '<td><span style="' + cell + (sinCant ? redCell : '') + 'display:block">' + (sinCant ? '—' : escHtml(r.cantidad)) + '</span></td>' +
         '<td style="white-space:nowrap"><span style="' + cell + (sinPrec ? redCell : '') + 'display:block;white-space:nowrap">' + (sinPrec ? '—' : formatPesosConDec(parsePrecio(r.precio))) + '</span></td>' +
-        (hasSku ? '<td><span style="' + cell + 'display:block;font-family:monospace;font-size:11px;color:#9ca3af">' + escHtml(r.sku||'—') + '</span></td>' : '') +
       '</tr>';
     }).join('') +
     '</tbody></table>';
