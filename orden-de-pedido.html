@@ -235,10 +235,6 @@
             sel.appendChild(opt);
           });
         }
-        // Opción para ingresar uno nuevo
-        var optOtro = document.createElement('option');
-        optOtro.value = '__otro__'; optOtro.textContent = '➕ Otro proveedor…';
-        sel.appendChild(optOtro);
         sel.style.display = '';
         // Pre-seleccionar si viene por URL
         var urlProveedor = new URLSearchParams(window.location.search).get('proveedor');
@@ -248,16 +244,10 @@
               sel.selectedIndex = i; onProveedorChange(); return;
             }
           }
-          // No encontrado en lista → modo libre
-          sel.style.display = 'none';
-          var inp = document.getElementById('f-proveedor');
-          inp.value = urlProveedor; inp.style.display = '';
         }
       })
       .catch(function() {
-        // Sin conexión → modo texto libre
-        document.getElementById('f-proveedor-loading').style.display = 'none';
-        document.getElementById('f-proveedor').style.display = '';
+        document.getElementById('f-proveedor-loading').textContent = 'Error al cargar proveedores. Recargá la página.';
       });
   })();
 
@@ -265,12 +255,7 @@
     var sel = document.getElementById('f-proveedor-sel');
     var inp = document.getElementById('f-proveedor');
     var val = sel.value;
-    if (val === '__otro__') {
-      sel.style.display = 'none';
-      inp.value = ''; inp.style.display = '';
-      inp.focus();
-      document.getElementById('f-tel').value = '';
-    } else if (val) {
+    if (val) {
       inp.value = val;
       var tel = _proveedoresMap[val] || '';
       if (tel) document.getElementById('f-tel').value = tel;
