@@ -323,15 +323,19 @@ function obtenerProductosTN() {
     }
   });
   const data  = JSON.parse(resp.getContentText());
-  const skus  = {};
+  const seen  = {};
   const lista = [];
   data.forEach(function(p) {
-    const nombre = p.name && p.name.es ? p.name.es : String(p.name || '');
+    const nombreBase = p.name && p.name.es ? p.name.es : String(p.name || '');
     (p.variants || []).forEach(function(v) {
       const sku = v.sku ? String(v.sku).trim() : '';
-      if (sku && !skus[nombre.toUpperCase()]) {
-        skus[nombre.toUpperCase()] = sku;
-        lista.push({ nombre: nombre, sku: sku });
+      const varNombre = v.values && v.values.length
+        ? v.values.map(function(val) { return val.es || val; }).join(' / ')
+        : '';
+      const nombreCompleto = varNombre ? nombreBase + ' ' + varNombre : nombreBase;
+      if (sku && !seen[nombreCompleto.toUpperCase()]) {
+        seen[nombreCompleto.toUpperCase()] = true;
+        lista.push({ nombre: nombreCompleto, sku: sku });
       }
     });
   });
