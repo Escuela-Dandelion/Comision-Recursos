@@ -91,9 +91,9 @@
       border:1px solid #e8eaed; border-left:3px solid #c0c4cc;
       box-shadow:0 1px 3px rgba(0,0,0,.04);
     }
-    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; line-height:1.4; min-height:2.8em; display:flex; align-items:flex-start; }
+    .card-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
     .card-value { font-size:20px; font-weight:700; color:#333; line-height:1; }
-    .card-sub   { font-size:10px; color:#aaa; margin-top:4px; min-height:2.4em; }
+    .card-sub   { font-size:10px; color:#aaa; margin-top:4px; }
     .info-tip   { cursor:help; font-size:11px; color:#aaa; font-weight:400; position:relative; }
     .info-tip:hover::after { content:attr(data-tip); position:absolute; left:0; top:16px; background:#333; color:#fff; font-size:11px; font-weight:400; padding:6px 10px; border-radius:8px; white-space:normal; width:220px; z-index:10; line-height:1.4; }
 
@@ -259,6 +259,11 @@
         <option value="">Todas las marcas</option>
       </select>
 
+      <div class="filter-label">Producto</div>
+      <select class="filter-select" id="filtro-producto" onchange="aplicarFiltros()">
+        <option value="">Todos los productos</option>
+      </select>
+
       <hr class="sidebar-divider">
 
       <div class="sidebar-section">
@@ -387,6 +392,7 @@ var currentMes       = '';
 var currentDesde     = '';
 var currentHasta     = '';
 var currentMarca     = '';
+var currentProducto  = '';
 var _lastFilteredRows = [];
 
 // ── Helpers ──
@@ -602,6 +608,8 @@ function initDashboard(d) {
   selP.innerHTML = '<option value="">Todas las marcas</option>';
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
+  poblarProductos('');
+
   document.getElementById('contenido').style.display = 'block';
   render();
 }
@@ -618,13 +626,27 @@ function poblarMeses(anio) {
   currentMes = '';
 }
 
+function poblarProductos(marca) {
+  var productoSet = {};
+  ALL_ROWS.forEach(function(r) {
+    if (r.producto && (!marca || r.marca === marca)) productoSet[r.producto] = true;
+  });
+  var productos = Object.keys(productoSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  var sel = document.getElementById('filtro-producto');
+  sel.innerHTML = '<option value="">Todos los productos</option>';
+  productos.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+  currentProducto = '';
+}
+
 function aplicarFiltros() {
-  var nuevoAnio = document.getElementById('filtro-anio').value;
+  var nuevoAnio  = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
+  var nuevaMarca = document.getElementById('filtro-marca').value;
+  if (nuevaMarca !== currentMarca) { currentMarca = nuevaMarca; poblarProductos(currentMarca); }
   currentMes      = document.getElementById('filtro-mes').value;
   currentDesde    = document.getElementById('filtro-desde').value;
   currentHasta    = document.getElementById('filtro-hasta').value;
-  currentMarca    = document.getElementById('filtro-marca').value;
+  currentProducto = document.getElementById('filtro-producto').value;
   render();
 }
 
@@ -642,7 +664,8 @@ function render() {
       return true;
     });
   }
-  if (currentMarca) rows = rows.filter(function(r){ return r.marca === currentMarca; });
+  if (currentMarca)    rows = rows.filter(function(r){ return r.marca === currentMarca; });
+  if (currentProducto) rows = rows.filter(function(r){ return r.producto === currentProducto; });
   _lastFilteredRows = rows;
 
   updateCards(rows);
@@ -716,12 +739,7 @@ function renderEvolucion(rows) {
           borderWidth: 1,
           borderRadius: 4,
           pointStyle: 'circle',
-          yAxisID: 'y',
-          datalabels: {
-            anchor: 'end', align: 'top', color: '#6ea8d0',
-            font: { size: 9, weight: 'bold' },
-            formatter: function(v){ return v > 0 ? v : ''; }
-          }
+          yAxisID: 'y'
         },
         {
           type: 'line',
@@ -735,12 +753,7 @@ function renderEvolucion(rows) {
           pointStyle: 'circle',
           tension: 0.3,
           fill: false,
-          yAxisID: 'y1',
-          datalabels: {
-            anchor: 'end', align: 'top', color: '#1a1a6e',
-            font: { size: 9, weight: 'bold' },
-            formatter: function(v){ return v > 0 ? '$ ' + v.toLocaleString('es-AR') : ''; }
-          }
+          yAxisID: 'y1'
         },
         {
           type: 'line',
@@ -755,12 +768,7 @@ function renderEvolucion(rows) {
           borderDash: [5,4],
           tension: 0.3,
           fill: false,
-          yAxisID: 'y1',
-          datalabels: {
-            anchor: 'end', align: 'bottom', color: '#2e7d32',
-            font: { size: 9, weight: 'bold' },
-            formatter: function(v){ return v > 0 ? '$ ' + v.toLocaleString('es-AR') : ''; }
-          }
+          yAxisID: 'y1'
         }
       ]
     },
@@ -781,7 +789,7 @@ function renderEvolucion(rows) {
             color: '#444'
           }
         },
-        datalabels: {},
+        datalabels: { display: false },
         tooltip: {
           callbacks: {
             label: function(ctx){
@@ -810,8 +818,7 @@ function renderEvolucion(rows) {
         },
         x: { ticks: { font: { size: 11 } }, grid: { display: false } }
       }
-    },
-    plugins: [ChartDataLabels]
+    }
   });
 }
 

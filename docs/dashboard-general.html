@@ -259,6 +259,11 @@
         <option value="">Todas las marcas</option>
       </select>
 
+      <div class="filter-label">Producto</div>
+      <select class="filter-select" id="filtro-producto" onchange="aplicarFiltros()">
+        <option value="">Todos los productos</option>
+      </select>
+
       <hr class="sidebar-divider">
 
       <div class="sidebar-section">
@@ -387,6 +392,7 @@ var currentMes       = '';
 var currentDesde     = '';
 var currentHasta     = '';
 var currentMarca     = '';
+var currentProducto  = '';
 var _lastFilteredRows = [];
 
 // ── Helpers ──
@@ -602,6 +608,8 @@ function initDashboard(d) {
   selP.innerHTML = '<option value="">Todas las marcas</option>';
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
+  poblarProductos('');
+
   document.getElementById('contenido').style.display = 'block';
   render();
 }
@@ -618,13 +626,27 @@ function poblarMeses(anio) {
   currentMes = '';
 }
 
+function poblarProductos(marca) {
+  var productoSet = {};
+  ALL_ROWS.forEach(function(r) {
+    if (r.producto && (!marca || r.marca === marca)) productoSet[r.producto] = true;
+  });
+  var productos = Object.keys(productoSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  var sel = document.getElementById('filtro-producto');
+  sel.innerHTML = '<option value="">Todos los productos</option>';
+  productos.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+  currentProducto = '';
+}
+
 function aplicarFiltros() {
-  var nuevoAnio = document.getElementById('filtro-anio').value;
+  var nuevoAnio  = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
+  var nuevaMarca = document.getElementById('filtro-marca').value;
+  if (nuevaMarca !== currentMarca) { currentMarca = nuevaMarca; poblarProductos(currentMarca); }
   currentMes      = document.getElementById('filtro-mes').value;
   currentDesde    = document.getElementById('filtro-desde').value;
   currentHasta    = document.getElementById('filtro-hasta').value;
-  currentMarca    = document.getElementById('filtro-marca').value;
+  currentProducto = document.getElementById('filtro-producto').value;
   render();
 }
 
@@ -642,7 +664,8 @@ function render() {
       return true;
     });
   }
-  if (currentMarca) rows = rows.filter(function(r){ return r.marca === currentMarca; });
+  if (currentMarca)    rows = rows.filter(function(r){ return r.marca === currentMarca; });
+  if (currentProducto) rows = rows.filter(function(r){ return r.producto === currentProducto; });
   _lastFilteredRows = rows;
 
   updateCards(rows);
