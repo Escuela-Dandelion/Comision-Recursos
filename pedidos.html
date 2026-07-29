@@ -833,7 +833,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.ok && data.pedido) {
           var p = data.pedido.pedido || data.pedido;
           pedidoActual = p;
-          todosLosPedidos = [p];
           ocultarPageLoading();
           renderDetalle(p);
         } else {
@@ -2153,8 +2152,11 @@ function volverALista() {
     history.pushState({}, '', baseUrl());
   }
   mostrar('listaView');
-  // Redibujar la lista con los datos actuales (pueden haber cambiado estados)
-  if (todosLosPedidos.length) renderLista(todosLosPedidos);
+  if (todosLosPedidos.length > 1) {
+    renderLista(todosLosPedidos);
+  } else {
+    cargarLista();
+  }
 }
 
 // ── ACCIONES DE ESTADO ────────────────────────────────────────
