@@ -25,7 +25,7 @@ const FGP_POR_MARCA = {
   'LA YAYA':                  { nombre: 'Yuliana Longhi',    email: 'longhi.yuliana@gmail.com',   tel_proveedor: '5493516169370', contacto: 'Mariela' },
   'ODDIS':                    { nombre: 'Luli del Castillo',  email: 'lourdelcastillo@gmail.com',  tel_proveedor: '' },
   'CABALLO NEGRO':            { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493758446041', contacto: 'Susana', logistica: 'correo', retira: 'Dario Votta', tel_retira: '5493512414523', punto_retiro: 'Agencia Córdoba', tel_punto_retiro: '5493518738959', dir_punto_retiro: 'Av. Juan B Justo 3577, X5001GYA Córdoba', horario_punto_retiro: '9:00-12:30 y 14:00-17:30' },
-  'YEMARI':                   { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493415422181', contacto: 'Carlos' },
+  'YEMARI':                   { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493415422181', contacto: 'Carlos', logistica: 'envio_domicilio', flete: 'efectivo_al_recibir' },
   'GROEN':                    { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
   // PARAISA excluida — productos con stock infinito (null), no requieren alerta — contacto: Julia Denna +54 9 3515 31-7919
   'EL MAITEN':                { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493515067561', contacto: 'Franco' },
