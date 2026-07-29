@@ -22,14 +22,14 @@ const CONFIG_STOCK = {
 const MESES_EXCLUIDOS = [0, 1, 2, 6];
 
 const FGP_POR_MARCA = {
-  'LA YAYA':                  { nombre: 'Yuliana Longhi',    email: 'longhi.yuliana@gmail.com',   tel_proveedor: '' },
+  'LA YAYA':                  { nombre: 'Yuliana Longhi',    email: 'longhi.yuliana@gmail.com',   tel_proveedor: '5493516169370', contacto: 'Mariela' },
   'ODDIS':                    { nombre: 'Luli del Castillo',  email: 'lourdelcastillo@gmail.com',  tel_proveedor: '' },
-  'CABALLO NEGRO':            { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
-  'YEMARI':                   { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
+  'CABALLO NEGRO':            { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493758446041', contacto: 'Susana', logistica: 'correo', retira: 'Dario Votta', tel_retira: '5493512414523', punto_retiro: 'Agencia Córdoba', tel_punto_retiro: '5493518738959', dir_punto_retiro: 'Av. Juan B Justo 3577, X5001GYA Córdoba', horario_punto_retiro: '9:00-12:30 y 14:00-17:30' },
+  'YEMARI':                   { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493415422181', contacto: 'Carlos' },
   'GROEN':                    { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
-  // PARAISA excluida — productos con stock infinito (null), no requieren alerta
-  'EL MAITEN':                { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
-  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' }
+  // PARAISA excluida — productos con stock infinito (null), no requieren alerta — contacto: Julia Denna +54 9 3515 31-7919
+  'EL MAITEN':                { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493515067561', contacto: 'Franco' },
+  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez' }
 };
 
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
@@ -462,6 +462,56 @@ function resetearVelocidades() {
   props.deleteProperty('VELOCIDADES_CACHE');
   props.deleteProperty('DIAS_ACTIVOS_CACHE');
   Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
+}
+
+// ── EMAIL DE PRUEBA (training — no toca TiendaNube) ────────
+function enviarEmailDePrueba() {
+  const fgp = {
+    nombre:        'Maria Martini',
+    email:         CONFIG_STOCK.TEST_EMAIL,
+    tel_proveedor: ''
+  };
+  const marca = 'EL MAITEN';
+  const items = [
+    {
+      descripcion:   'Granola El Maiten 1 Kg',
+      stock:         3,
+      precio:        null,
+      umbral:        10,
+      umbralMensual: 15,
+      cantSugerida:  12
+    },
+    {
+      descripcion:   'Granola El Maiten 500 g',
+      stock:         5,
+      precio:        null,
+      umbral:        10,
+      umbralMensual: 12,
+      cantSugerida:  7
+    }
+  ];
+
+  // generarUrls registra una orden real en el Sheet → el link del email funciona
+  const urls = generarUrls(items, marca, fgp);
+
+  const destinatariosPrueba = [
+    CONFIG_STOCK.TEST_EMAIL,
+    'monicachesta@gmail.com',
+    'pialucarno@gmail.com',
+    'lmdestefano@gmail.com'
+  ].join(',');
+
+  const emailAnterior = CONFIG_STOCK.TEST_EMAIL;
+  const modoAnterior  = CONFIG_STOCK.TEST_MODE;
+  CONFIG_STOCK.TEST_EMAIL = destinatariosPrueba;
+  CONFIG_STOCK.TEST_MODE  = true;
+  try {
+    enviarAlertaStock(fgp, marca, items, urls);
+  } finally {
+    CONFIG_STOCK.TEST_EMAIL = emailAnterior;
+    CONFIG_STOCK.TEST_MODE  = modoAnterior;
+  }
+  Logger.log('✅ Email de prueba enviado a: ' + destinatariosPrueba);
 }
 
 // ── TRIGGER ────────────────────────────────────────────────

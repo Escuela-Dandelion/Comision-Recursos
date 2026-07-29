@@ -43,9 +43,7 @@ var CONFIG = {
     'PGD26',  // Gaby Dominguez   — 5to
     'PJD26',  // Juan Diaz        — 8vo
     'PK26',   // Karina           — 7mo
-    'PMC26',  // Monica Chesta    — —
     'PP26',   // Paola            — 2do
-    'PPI26',  // Pia              — 11vo
     'PSA26',  // Sabi             — 9no
     'PYA26',  // Yana             — 5to
     'PEL26',  // Elina            — 3ro
@@ -1291,9 +1289,7 @@ function enviarPinsReferentes() {
     { nombre: 'Gaby',    grado: '5to',    pin: 'PGD26',  tel: '5493517076221' },
     { nombre: 'Juan',    grado: '8vo',    pin: 'PJD26',  tel: '5493515514893' },
     { nombre: 'Karina',  grado: '7mo',    pin: 'PK26',   tel: '5493512130302' },
-    { nombre: 'Monica',  grado: null,     pin: 'PMC26',  tel: '5493516808115' },
     { nombre: 'Paola',   grado: '2do',    pin: 'PP26',   tel: '5493516166134' },
-    { nombre: 'Pia',     grado: '11vo',   pin: 'PPI26',  tel: '5493516602546' },
     { nombre: 'Sabi',    grado: '9no',    pin: 'PSA26',  tel: '5493517888479' },
     { nombre: 'Yana',    grado: '5to',    pin: 'PYA26',  tel: '5493512114209' },
     { nombre: 'Elina',   grado: '3ro',    pin: 'PEL26',  tel: '5493512032487' },
@@ -1537,7 +1533,7 @@ var AUTH_EMAILS = {
   'belen.ravaza@dandelion.edu.ar':   { role: 'FGP',   name: 'Belén' },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'referente', name: 'Pia' },
+  'pialucarno@gmail.com':            { role: 'ADMIN',     name: 'Pia' },
   'beluravaza@gmail.com':            { role: 'ADMIN',     name: 'Belén' },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },   // 2do grado
@@ -1564,9 +1560,9 @@ var AUTH_REFERENTES = {
   '5493517076221': { role: 'REFERENTE', name: 'Gaby'    },
   '5493515514893': { role: 'REFERENTE', name: 'Juan'    },
   '5493512130302': { role: 'REFERENTE', name: 'Karina'  },
-  '5493516808115': { role: 'REFERENTE', name: 'Monica'  },
+  '5493516808115': { role: 'ADMIN',     name: 'Monica'  },
   '5493516166134': { role: 'REFERENTE', name: 'Paola'   },
-  '5493516602546': { role: 'REFERENTE', name: 'Pia'     },
+  '5493516602546': { role: 'ADMIN',     name: 'Pia'     },
   '5493517888479': { role: 'REFERENTE', name: 'Sabi'    },
   '5493512114209': { role: 'REFERENTE', name: 'Yana'    },
   '5493512032487': { role: 'REFERENTE', name: 'Elina'   },
