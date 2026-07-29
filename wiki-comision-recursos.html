@@ -297,6 +297,7 @@
   .prov-table { width: 100%; font-size: 12px; border-collapse: collapse; }
   .prov-table td { padding: 4px 0; vertical-align: top; }
   .prov-table td:first-child { color: var(--muted); width: 90px; }
+  .prov-section-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 24px 0 0; }
 
   /* ── FLUJO BIFURCADO ── */
   .flujo-branch { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
@@ -676,6 +677,40 @@
       <h2><span class="icon">📦</span> Proveedores</h2>
       <p>Fichas de cada proveedor con datos de contacto, forma de pedido y logística. Los campos <strong>[COMPLETAR]</strong> se llenan cuando se confirme el responsable de cada proveedor.</p>
 
+      <div class="prov-section-label">🌿 Yerbas — Pía Lucarno / Maria Martini</div>
+      <div class="prov-grid">
+
+        <div class="prov-card correo">
+          <div class="prov-name">Yerba Caballo Negro</div>
+          <div><span class="prov-tipo correo">📬 Correo postal</span></div>
+          <table class="prov-table">
+            <tr><td>Contacto</td><td>Susana</td></tr>
+            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493758446041" target="_blank">+54 9 3758 44-6041</a></td></tr>
+            <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
+            <tr><td>Despacho</td><td>El proveedor envía por correo postal. Los paquetes llegan a una sucursal del correo — hay que ir a retirarlos. Suelen ser grandes y pesados, se necesita auto con baúl grande o camioneta.</td></tr>
+            <tr><td>Punto de retiro</td><td>Agencia Córdoba — Av. Juan B Justo 3577 · <a href="tel:+5493518738959">+54 9 3518 73-8959</a> · Lun a Vie 9:00–12:30 y 14:00–17:30</td></tr>
+            <tr><td>Quién retira</td><td>Darío Votta · <a href="https://wa.me/5493512414523" target="_blank">+54 9 3512 41-4523</a></td></tr>
+            <tr><td>Condiciones</td><td>El flete se paga en efectivo al retirar en la agencia. Referencia: ~$444/kg (180 kg ≈ $80.000).</td></tr>
+          </table>
+          <div class="prov-resp">Responsable: <strong>Pía Lucarno / Maria Martini</strong></div>
+        </div>
+
+        <div class="prov-card correo">
+          <div class="prov-name">Yemari</div>
+          <div><span class="prov-tipo correo">🚚 Envío a domicilio</span></div>
+          <table class="prov-table">
+            <tr><td>Contacto</td><td>Carlos</td></tr>
+            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493415422181" target="_blank">+54 9 3415 42-2181</a></td></tr>
+            <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
+            <tr><td>Despacho</td><td>El proveedor elige el correo y envía directo al colegio. No hay que ir a retirar.</td></tr>
+            <tr><td>Condiciones</td><td>El flete se paga en efectivo al recibir.</td></tr>
+          </table>
+          <div class="prov-resp">Responsable: <strong>Pía Lucarno / Maria Martini</strong></div>
+        </div>
+
+      </div>
+
+      <div class="prov-section-label">🍯 Mieles y Pasta de Maní — Monica Chesta / Maria Martini</div>
       <div class="prov-grid">
 
         <div class="prov-card retiro">
@@ -693,45 +728,52 @@
         </div>
 
         <div class="prov-card correo">
-          <div class="prov-name">Yerba Caballo Negro</div>
-          <div><span class="prov-tipo correo">📬 Correo postal</span></div>
+          <div class="prov-name">Guardianes de la Colmena</div>
+          <div><span class="prov-tipo correo">🚚 Envío a domicilio</span></div>
           <table class="prov-table">
-            <tr><td>Contacto</td><td>Susana</td></tr>
-            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493758446041" target="_blank">+54 9 3758 44-6041</a></td></tr>
+            <tr><td>Contacto</td><td>Alejandro Sanchez</td></tr>
+            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493513351025" target="_blank">+54 9 3513 35-1025</a></td></tr>
             <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
-            <tr><td>Despacho</td><td>El proveedor envía por correo postal. Los paquetes llegan a una sucursal del correo — hay que ir a retirarlos. Suelen ser grandes y pesados, se necesita auto con baúl grande o camioneta.</td></tr>
-            <tr><td>Punto de retiro</td><td>Agencia Córdoba — Av. Juan B Justo 3577 · <a href="tel:+5493518738959">+54 9 3518 73-8959</a> · Lun a Vie 9:00–12:30 y 14:00–17:30</td></tr>
-            <tr><td>Quién retira</td><td>Darío Votta · <a href="https://wa.me/5493512414523" target="_blank">+54 9 3512 41-4523</a></td></tr>
-            <tr><td>Condiciones</td><td>El flete se paga en efectivo al retirar en la agencia. Referencia: ~$444/kg (180 kg ≈ $80.000).</td></tr>
+            <tr><td>Despacho</td><td>El proveedor entrega directo en el colegio. No hay que ir a retirar.</td></tr>
+            <tr><td>Condiciones</td><td>Sin costo de envío.</td></tr>
           </table>
-          <div class="prov-resp">Responsable: <strong>Maria Martini</strong></div>
+          <div class="prov-resp">Responsable: <strong>Monica Chesta / Maria Martini</strong></div>
         </div>
 
         <div class="prov-card retiro">
-          <div class="prov-name">Oddis</div>
-          <div><span class="prov-tipo retiro">📍 Retiro en Córdoba</span></div>
+          <div class="prov-name">Pasta de Maní</div>
+          <div><span class="prov-tipo retiro">📍 [COMPLETAR]</span></div>
           <table class="prov-table">
             <tr><td>Contacto</td><td>[COMPLETAR]</td></tr>
             <tr><td>WhatsApp / mail</td><td>[COMPLETAR]</td></tr>
             <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
-            <tr><td>Lugar de retiro</td><td>[COMPLETAR]</td></tr>
-            <tr><td>Condiciones</td><td>[COMPLETAR]</td></tr>
+            <tr><td>Condiciones</td><td>Mínimo 10 cajas.</td></tr>
           </table>
-          <div class="prov-resp">Responsable: <strong>[A definir]</strong></div>
+          <div class="prov-resp">Responsable: <strong>Monica Chesta / Maria Martini</strong></div>
         </div>
 
-        <div class="prov-card correo">
-          <div class="prov-name">Yemari</div>
-          <div><span class="prov-tipo correo">🚚 Envío a domicilio</span></div>
+      </div>
+
+      <div class="prov-section-label">🌾 Granola y Frutos Secos — Lucas Di Stefano / Maria Martini</div>
+      <div class="prov-grid">
+
+        <div class="prov-card retiro">
+          <div class="prov-name">El Maiten (Granola y Frutos Secos)</div>
+          <div><span class="prov-tipo retiro">📍 Retiro en Mendiolaza / Villa Allende</span></div>
           <table class="prov-table">
-            <tr><td>Contacto</td><td>Carlos</td></tr>
-            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493415422181" target="_blank">+54 9 3415 42-2181</a></td></tr>
+            <tr><td>Contacto</td><td>Franco</td></tr>
+            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493515067561" target="_blank">+54 9 3515 06-7561</a></td></tr>
             <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
-            <tr><td>Despacho</td><td>El proveedor elige el correo y envía directo al colegio. No hay que ir a retirar.</td></tr>
-            <tr><td>Condiciones</td><td>El flete se paga en efectivo al recibir.</td></tr>
+            <tr><td>Lugar de retiro</td><td>Granola → Villa Allende (retira Maria Martini) · Frutos Secos → Mendiolaza</td></tr>
+            <tr><td>Condiciones</td><td>[COMPLETAR]</td></tr>
           </table>
-          <div class="prov-resp">Responsable: <strong>Maria Martini</strong></div>
+          <div class="prov-resp">Responsable: <strong>Lucas Di Stefano / Maria Martini</strong></div>
         </div>
+
+      </div>
+
+      <div class="prov-section-label">🧴 Limpieza — Maria Martini</div>
+      <div class="prov-grid">
 
         <div class="prov-card retiro">
           <div class="prov-name">Groen (Limpieza)</div>
@@ -747,29 +789,16 @@
         </div>
 
         <div class="prov-card retiro">
-          <div class="prov-name">El Maiten (Granola y Frutos Secos)</div>
-          <div><span class="prov-tipo retiro">📍 Retiro en Mendiolaza</span></div>
+          <div class="prov-name">Oddis</div>
+          <div><span class="prov-tipo retiro">📍 Retiro en Córdoba</span></div>
           <table class="prov-table">
-            <tr><td>Contacto</td><td>Franco</td></tr>
-            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493515067561" target="_blank">+54 9 3515 06-7561</a></td></tr>
+            <tr><td>Contacto</td><td>[COMPLETAR]</td></tr>
+            <tr><td>WhatsApp / mail</td><td>[COMPLETAR]</td></tr>
             <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
-            <tr><td>Lugar de retiro</td><td>Granola → Villa Allende (retira Maria Martini) · Frutos Secos → Mendiolaza</td></tr>
+            <tr><td>Lugar de retiro</td><td>[COMPLETAR]</td></tr>
             <tr><td>Condiciones</td><td>[COMPLETAR]</td></tr>
           </table>
-          <div class="prov-resp">Responsable: <strong>Lucas Di Stefano / Maria Martini</strong></div>
-        </div>
-
-        <div class="prov-card correo">
-          <div class="prov-name">Guardianes de la Colmena</div>
-          <div><span class="prov-tipo correo">🚚 Envío a domicilio</span></div>
-          <table class="prov-table">
-            <tr><td>Contacto</td><td>Alejandro Sanchez</td></tr>
-            <tr><td>WhatsApp / mail</td><td><a href="https://wa.me/5493513351025" target="_blank">+54 9 3513 35-1025</a></td></tr>
-            <tr><td>Cómo pedir</td><td>Por WhatsApp</td></tr>
-            <tr><td>Despacho</td><td>El proveedor entrega directo en el colegio. No hay que ir a retirar.</td></tr>
-            <tr><td>Condiciones</td><td>Sin costo de envío.</td></tr>
-          </table>
-          <div class="prov-resp">Responsable: <strong>Maria Martini</strong></div>
+          <div class="prov-resp">Responsable: <strong>[A definir]</strong></div>
         </div>
 
       </div>
