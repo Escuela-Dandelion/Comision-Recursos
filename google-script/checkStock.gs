@@ -29,7 +29,7 @@ const FGP_POR_MARCA = {
   'GROEN':                    { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '' },
   // PARAISA excluida — productos con stock infinito (null), no requieren alerta — contacto: Julia Denna +54 9 3515 31-7919
   'EL MAITEN':                { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493515067561', contacto: 'Franco' },
-  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez' }
+  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',      email: 'martinimaria39@gmail.com',   tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez', logistica: 'envio_domicilio', flete: 'sin_costo' }
 };
 
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
