@@ -328,6 +328,18 @@
   <div id="loadingSpinner">Cargando pedidos…</div>
   <div id="listaContent" style="display:none">
 
+    <!-- Resumen pendiente de pago -->
+    <div id="resumen-pendiente" style="display:none;background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:14px;border-left:4px solid #f59e0b;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Total pendiente de pago</div>
+        <div id="resumen-count" style="font-size:13px;color:#6b7280;margin-top:3px;"></div>
+      </div>
+      <div style="text-align:right;">
+        <div id="resumen-total" style="font-size:24px;font-weight:800;color:#92400e;line-height:1;"></div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;">estimado</div>
+      </div>
+    </div>
+
     <!-- Filtro bar sticky -->
     <div class="filter-bar">
       <!-- Filtro por estado -->
@@ -833,7 +845,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.ok && data.pedido) {
           var p = data.pedido.pedido || data.pedido;
           pedidoActual = p;
-          todosLosPedidos = [p];
           ocultarPageLoading();
           renderDetalle(p);
         } else {
@@ -1185,7 +1196,26 @@ function calcTotalProductos(productosStr) {
   return total;
 }
 
+function renderResumenPendiente() {
+  var el = document.getElementById('resumen-pendiente');
+  if (!el) return;
+  var pendientes = todosLosPedidos.filter(function(p) {
+    return p.estadoPago !== 'Pagado' && p.estado !== 'Cerrado' && p.estado !== 'Cancelado';
+  });
+  if (!pendientes.length) { el.style.display = 'none'; return; }
+  var total = 0;
+  pendientes.forEach(function(p) {
+    var t = calcTotalProductos(p.productos || '');
+    total += t > 0 ? t : (parseFloat(p.total) || 0);
+  });
+  el.style.display = 'flex';
+  document.getElementById('resumen-count').textContent =
+    pendientes.length + (pendientes.length === 1 ? ' orden activa sin pagar' : ' órdenes activas sin pagar');
+  document.getElementById('resumen-total').textContent = total > 0 ? formatPesosConDec(total) : '—';
+}
+
 function renderLista(pedidos) {
+  renderResumenPendiente();
   const container = document.getElementById('pedidosList');
   if (!pedidos.length) {
     container.innerHTML = '<div style="text-align:center;padding:32px;color:#9ca3af">No hay pedidos.</div>';
@@ -2153,8 +2183,11 @@ function volverALista() {
     history.pushState({}, '', baseUrl());
   }
   mostrar('listaView');
-  // Redibujar la lista con los datos actuales (pueden haber cambiado estados)
-  if (todosLosPedidos.length) renderLista(todosLosPedidos);
+  if (todosLosPedidos.length > 1) {
+    renderLista(todosLosPedidos);
+  } else {
+    cargarLista();
+  }
 }
 
 // ── ACCIONES DE ESTADO ────────────────────────────────────────
