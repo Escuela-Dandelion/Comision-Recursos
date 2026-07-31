@@ -23,12 +23,12 @@ const MESES_EXCLUIDOS = [0, 1, 2, 6];
 
 const FGP_POR_MARCA = {
   'LA YAYA':                  { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493516169370', contacto: 'Mariela' },
-  'ODDIS':                    { nombre: 'Lucas Di Stefano',  email: 'lmdestefano@gmail.com',      nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '' },
-  'CABALLO NEGRO':            { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493758446041', contacto: 'Susana', logistica: 'correo', retira: 'Dario Votta', tel_retira: '5493512414523', punto_retiro: 'Agencia Córdoba', tel_punto_retiro: '5493518738959', dir_punto_retiro: 'Av. Juan B Justo 3577, X5001GYA Córdoba', horario_punto_retiro: '9:00-12:30 y 14:00-17:30' },
-  'YEMARI':                   { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493415422181', contacto: 'Carlos', logistica: 'envio_domicilio', flete: 'efectivo_al_recibir' },
+  'ODDIS':                    { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '' },
+  'CABALLO NEGRO':            { nombre: 'Lucas Di Stefano',  email: 'lmdestefano@gmail.com',      nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493758446041', contacto: 'Susana', logistica: 'correo', retira: 'Dario Votta', tel_retira: '5493512414523', punto_retiro: 'Agencia Córdoba', tel_punto_retiro: '5493518738959', dir_punto_retiro: 'Av. Juan B Justo 3577, X5001GYA Córdoba', horario_punto_retiro: '9:00-12:30 y 14:00-17:30' },
+  'YEMARI':                   { nombre: 'Lucas Di Stefano',  email: 'lmdestefano@gmail.com',      nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493415422181', contacto: 'Carlos', logistica: 'envio_domicilio', flete: 'efectivo_al_recibir' },
   'GROEN':                    { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '', logistica: 'envio_domicilio', pedido: 'web', url: 'https://tiendagroen.com.ar/', flete: 'gratis', descuento: '5pct_transferencia' },
   // PARAISA excluida — productos con stock infinito (null), no requieren alerta — contacto: Julia Denna +54 9 3515 31-7919
-  'EL MAITEN':                { nombre: 'Lucas Di Stefano',  email: 'lmdestefano@gmail.com',      nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493515067561', contacto: 'Franco' },
+  'EL MAITEN':                { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493515067561', contacto: 'Franco' },
   'GUARDIANES DE LA COLMENA': { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez', logistica: 'envio_domicilio', flete: 'sin_costo' }
 };
 
