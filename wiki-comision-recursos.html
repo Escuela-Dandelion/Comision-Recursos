@@ -901,6 +901,13 @@
           <div class="step-body">
             <div class="step-title">Registrar el pedido en el sistema</div>
             <p class="step-desc">El responsable abre <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank" style="color:var(--green);font-weight:600">Admin → Nuevo Pedido ↗</a>, completa proveedor, responsable y productos con cantidades, y envía. El pedido queda registrado con estado <em>Solicitado</em>. Si el email de alerta tenía el botón "Hacer el pedido", los productos ya vienen cargados por defecto.</p>
+            <div class="callout callout-warn" style="margin-top:12px;">
+              <div class="icon">⚠️</div>
+              <div>
+                <div class="callout-title">No escribas el nombre del producto a mano</div>
+                Empezá a tipear y el sistema busca los productos de TiendaNube — seleccioná el que corresponde de la lista. Esto es importante: si el producto no queda vinculado correctamente, el semáforo de Estado de Inventario va a seguir mostrándolo en 🔴 rojo aunque ya haya un pedido en estado <em>Solicitado</em>. Al vincular bien el producto, el sistema sabe que ya hay un pedido activo para esa alerta.
+              </div>
+            </div>
             <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank">
               <img src="nuevo-pedido.png" alt="Pantalla de Nuevo Pedido" style="margin-top:12px;width:100%;max-width:480px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
             </a>
