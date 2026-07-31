@@ -64,37 +64,64 @@ function leerConfigAlertas() {
   }
 }
 
-// ── VELOCIDADES — lee el Sheet de Ventas (últimos 60 días, por nombre de producto) ──
+// ── VELOCIDADES — promedio de los últimos 3 meses completos no excluidos (o 2 o 1 si no hay más) ──
 function calcularVelocidades() {
   const velocidades = {};
-  var diasActivos = 0;
+  var diasActivos = 30;
   try {
     const ss    = SpreadsheetApp.openById(CONFIG_STOCK.VENTAS_SHEET_ID);
     const sheet = ss.getSheetByName('Ventas');
-    if (!sheet) return { velocidades: velocidades, diasActivos: CONFIG_STOCK.VELOCIDAD_DIAS };
-    const data   = sheet.getDataRange().getValues();
-    const hoy    = new Date();
-    const hace60 = new Date(hoy.getTime() - CONFIG_STOCK.VELOCIDAD_DIAS * 24 * 60 * 60 * 1000);
+    if (!sheet) return { velocidades: velocidades, diasActivos: diasActivos };
+    const data  = sheet.getDataRange().getValues();
+    const hoy   = new Date();
 
-    // Contar solo los días activos (no excluidos) dentro de la ventana de 60 días
-    for (var d = new Date(hace60.getTime()); d <= hoy; d.setDate(d.getDate() + 1)) {
-      if (MESES_EXCLUIDOS.indexOf(d.getMonth()) === -1) diasActivos++;
+    // Recolectar qué mes/año tienen datos en el Sheet (excluyendo el mes actual y los meses excluidos)
+    const mesesConDatos = {};
+    for (var i = 1; i < data.length; i++) {
+      const fecha = data[i][0] ? new Date(data[i][0]) : null;
+      if (!fecha) continue;
+      const mes = fecha.getMonth(), anio = fecha.getFullYear();
+      if (mes === hoy.getMonth() && anio === hoy.getFullYear()) continue; // mes actual incompleto
+      if (MESES_EXCLUIDOS.indexOf(mes) !== -1) continue;
+      mesesConDatos[anio * 12 + mes] = { mes: mes, anio: anio };
     }
 
-    for (var i = 1; i < data.length; i++) {
-      const fecha    = data[i][0] ? new Date(data[i][0]) : null;
-      if (!fecha || fecha < hace60 || fecha > hoy) continue;
-      if (MESES_EXCLUIDOS.indexOf(fecha.getMonth()) !== -1) continue; // saltar mes excluido
-      const nombre   = String(data[i][5] || '').trim();
-      const cantidad = parseInt(data[i][7]) || 0;
+    // Tomar los últimos 3 meses disponibles (orden descendente)
+    const mesesParaUsar = Object.values(mesesConDatos)
+      .sort(function(a, b) { return (b.anio * 12 + b.mes) - (a.anio * 12 + a.mes); })
+      .slice(0, 3);
+
+    if (mesesParaUsar.length === 0) {
+      return { velocidades: velocidades, diasActivos: diasActivos };
+    }
+
+    // Acumular ventas de esos meses
+    for (var j = 1; j < data.length; j++) {
+      const fecha = data[j][0] ? new Date(data[j][0]) : null;
+      if (!fecha) continue;
+      const mes = fecha.getMonth(), anio = fecha.getFullYear();
+      var enVentana = false;
+      for (var k = 0; k < mesesParaUsar.length; k++) {
+        if (mesesParaUsar[k].mes === mes && mesesParaUsar[k].anio === anio) { enVentana = true; break; }
+      }
+      if (!enVentana) continue;
+      const nombre   = String(data[j][5] || '').trim();
+      const cantidad = parseInt(data[j][7]) || 0;
       if (!nombre || cantidad <= 0) continue;
       velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
     }
-    Logger.log('Velocidades calculadas (' + diasActivos + ' días activos): ' + JSON.stringify(velocidades));
+
+    // diasActivos = N meses × 30 días → la fórmula (total / diasActivos) da el promedio diario correcto
+    const nMeses = mesesParaUsar.length;
+    diasActivos = nMeses * 30;
+
+    Logger.log('Velocidades calculadas (promedio ' + nMeses + ' mes/es: ' +
+      mesesParaUsar.map(function(m) { return (m.mes + 1) + '/' + m.anio; }).join(', ') +
+      '): ' + JSON.stringify(velocidades));
   } catch(e) {
     Logger.log('Error calculando velocidades: ' + e);
   }
-  return { velocidades: velocidades, diasActivos: diasActivos || CONFIG_STOCK.VELOCIDAD_DIAS };
+  return { velocidades: velocidades, diasActivos: diasActivos };
 }
 
 // ── VELOCIDADES CON CACHE — se recalcula una vez por mes en el 3er lunes ──
