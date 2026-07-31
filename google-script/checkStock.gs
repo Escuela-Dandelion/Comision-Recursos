@@ -111,9 +111,13 @@ function calcularVelocidades() {
       velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
     }
 
-    // diasActivos = N meses × 30 días → la fórmula (total / diasActivos) da el promedio diario correcto
+    // Convertir a promedio mensual: dividir el total por la cantidad de meses
     const nMeses = mesesParaUsar.length;
-    diasActivos = nMeses * 30;
+    Object.keys(velocidades).forEach(function(nombre) {
+      velocidades[nombre] = Math.round(velocidades[nombre] / nMeses);
+    });
+    // diasActivos = 30 → la fórmula (vel_mensual / 30) × leadTime × safety da el umbral correcto
+    diasActivos = 30;
 
     Logger.log('Velocidades calculadas (promedio ' + nMeses + ' mes/es: ' +
       mesesParaUsar.map(function(m) { return (m.mes + 1) + '/' + m.anio; }).join(', ') +

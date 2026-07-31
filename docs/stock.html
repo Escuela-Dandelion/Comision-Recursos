@@ -319,7 +319,7 @@ function renderTabla(prod) {
           ' placeholder="' + v.pisoMarca + '"' +
           ' oninput="onOvChange(\'' + v.clave + '\')">' +
       '</td>' +
-      '<td class="td-vel th-vel">' + v.velocidad + ' u.</td>' +
+      '<td class="td-vel th-vel">' + v.velocidad + ' u./mes</td>' +
       '<td class="td-save">' +
         '<button class="btn-save" id="btn-' + v.clave + '"' +
           ' onclick="guardarOverride(\'' + v.clave + '\',\'' + esc(v.nombre) + '\')">Guardar</button>' +
@@ -334,7 +334,7 @@ function renderTabla(prod) {
       '<th class="th-c">Stock</th>' +
       '<th class="th-c">Umbral</th>' +
       '<th class="th-c">Piso</th>' +
-      '<th class="th-c th-vel">Vel/60d</th>' +
+      '<th class="th-c th-vel">Vel/mes</th>' +
       '<th></th>' +
     '</tr></thead>' +
     '<tbody>' + filas + '</tbody>' +
@@ -343,10 +343,10 @@ function renderTabla(prod) {
 
 function umbralTip(v) {
   if (!v.velocidad)
-    return 'Sin ventas en los últimos ' + v.diasActivos + ' días activos → umbral por defecto (' + v.umbralCalc + ' u.)';
-  var dxd = (v.velocidad / v.diasActivos).toFixed(2);
-  return v.velocidad + ' u. / ' + v.diasActivos + ' días activos = ' + dxd + ' u./día × ' +
-    (v.leadTime || 14) + 'd Lead Time × 1.5 = ' + v.umbralCalc + ' u.';
+    return 'Sin ventas registradas → umbral por defecto (' + v.umbralCalc + ' u.)';
+  var dxd = (v.velocidad / 30).toFixed(2);
+  return v.velocidad + ' u./mes ÷ 30 días = ' + dxd + ' u./día × ' +
+    (v.leadTime || 14) + 'd lead time × 1.5 = ' + v.umbralCalc + ' u.';
 }
 
 // ── INTERACCIÓN ───────────────────────────────────────────
