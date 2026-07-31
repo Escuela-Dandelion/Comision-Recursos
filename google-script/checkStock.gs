@@ -35,13 +35,13 @@ const FGP_POR_MARCA = {
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
 function leerConfigAlertas() {
   const defaults = {
-    'CABALLO NEGRO':            { leadTime: 14, stockMinimo: 10 },
-    'YEMARI':                   { leadTime: 14, stockMinimo: 10 },
-    'LA YAYA':                  { leadTime: 14, stockMinimo: 10 },
-    'ODDIS':                    { leadTime: 14, stockMinimo: 10 },
-    'GROEN':                    { leadTime: 14, stockMinimo:  5 },
-    'EL MAITEN':                { leadTime: 14, stockMinimo: 10 },
-    'GUARDIANES DE LA COLMENA': { leadTime: 14, stockMinimo: 10 }
+    'CABALLO NEGRO':            { leadTime: 10, stockMinimo: 10 },
+    'YEMARI':                   { leadTime: 10, stockMinimo: 10 },
+    'LA YAYA':                  { leadTime: 10, stockMinimo: 10 },
+    'ODDIS':                    { leadTime: 10, stockMinimo: 10 },
+    'GROEN':                    { leadTime: 10, stockMinimo:  5 },
+    'EL MAITEN':                { leadTime: 10, stockMinimo: 10 },
+    'GUARDIANES DE LA COLMENA': { leadTime: 10, stockMinimo: 10 }
   };
   try {
     const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
@@ -53,7 +53,7 @@ function leerConfigAlertas() {
       const marca = String(data[i][0] || '').toUpperCase().trim();
       if (!marca) continue;
       config[marca] = {
-        leadTime:    parseInt(data[i][1]) || 14,
+        leadTime:    parseInt(data[i][1]) || 10,
         stockMinimo: data[i][2] !== '' && data[i][2] !== undefined ? (parseInt(data[i][2]) || CONFIG_STOCK.STOCK_MINIMO) : CONFIG_STOCK.STOCK_MINIMO
       };
     }

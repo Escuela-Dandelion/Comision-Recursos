@@ -346,7 +346,7 @@ function umbralTip(v) {
     return 'Sin ventas registradas — se usa umbral por defecto de ' + v.umbralCalc + ' u.';
   var lead = v.leadTime || 14;
   return '📦 Se venden ~' + v.velocidad + ' u. por mes\n' +
-    '🚚 El proveedor tarda ~' + lead + ' días en entregar\n' +
+    '🚚 El proveedor puede tardar hasta ~' + lead + ' días en entregar\n' +
     '⚠️ Hay que pedir cuando quedan ' + v.umbralCalc + ' u. — si esperás más, el stock se agota antes de que llegue el pedido';
 }
 

@@ -896,7 +896,7 @@ function invCalcUmbral(nombreProd, leadTime, velocidades, diasActivos, nombreVar
 function invLeerConfig() {
   const defaults = {};
   Object.keys(INV_FGP).forEach(function(m) {
-    defaults[m] = { leadTime: 14, stockMinimo: INV_PISO_MARCA[m] || INV_PISO_DEFAULT };
+    defaults[m] = { leadTime: 10, stockMinimo: INV_PISO_MARCA[m] || INV_PISO_DEFAULT };
   });
   try {
     const ss    = SpreadsheetApp.openById(INV_SHEET_ID);
@@ -998,7 +998,7 @@ function getStockDashboard() {
     const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
     const marca      = invDetectarMarca(nombreProd);
     const fgp        = marca ? INV_FGP[marca] : null;
-    const cfg        = configMarca[marca] || { leadTime: 14, stockMinimo: INV_PISO_DEFAULT };
+    const cfg        = configMarca[marca] || { leadTime: 10, stockMinimo: INV_PISO_DEFAULT };
 
     const variantes = [];
     (producto.variants || []).forEach(function(variante) {
