@@ -208,6 +208,23 @@ function esTercerLunes() {
 
 // ── FUNCIÓN PRINCIPAL ──────────────────────────────────────
 function checkStockBajo() {
+  try {
+    _checkStockBajoInterno();
+  } catch(e) {
+    Logger.log('ERROR CRÍTICO en checkStockBajo: ' + e.message + '\n' + e.stack);
+    try {
+      MailApp.sendEmail({
+        to: 'robertson.ine@gmail.com',
+        subject: '⚠️ Tienda DL: Error en alerta de stock',
+        body: 'El script de alertas de stock falló con el siguiente error:\n\n' +
+              e.message + '\n\n' + e.stack + '\n\n' +
+              '---\nRevisá el editor de GAS para más detalles.'
+      });
+    } catch(_) {}
+  }
+}
+
+function _checkStockBajoInterno() {
   const configMarca              = leerConfigAlertas();
   const { velocidades, diasActivos } = getVelocidades();
   const esLunes3                 = esTercerLunes();
