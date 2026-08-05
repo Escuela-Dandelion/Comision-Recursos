@@ -540,6 +540,16 @@
               <div id="d-fgp"></div>
             </div>
 <div id="d-quien-wrap" style="display:none"><div id="d-quien"></div></div>
+            <div class="det-info-item">
+              <div class="det-info-label">Estado de pago</div>
+              <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
+            </div>
+          </div>
+          <div id="d-comprobante-wrap" style="margin-top:10px;display:none;">
+            <a id="d-comprobante-link" href="#" target="_blank"
+              style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">
+              📎 Ver comprobante de pago
+            </a>
           </div>
         </div>
       </div>
@@ -1261,7 +1271,7 @@ function renderLista(pedidos) {
         <td class="col-pills">
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
           ${p.estadoPago === 'Pagado'
-            ? `<a href="${p.comprobante || '#'}" target="_blank" style="display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;text-decoration:none;">💳 Pagado${p.comprobante ? ' 📎' : ''}</a>`
+            ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>${p.comprobante ? `<a href="${p.comprobante}" target="_blank" style="display:inline-flex;align-items:center;gap:2px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;text-decoration:none;margin-left:3px;">📎 Comprobante</a>` : ''}`
             : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
         </td>
         <td class="col-accion">
@@ -1601,7 +1611,7 @@ function renderProdEdit(productosStr) {
   var tbody = document.getElementById('det-tbody-productos');
   tbody.innerHTML = rows.map(function(r) {
     return '<tr>' +
-      '<td style="min-width:160px"><input class="dp-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…" value="' + escHtml(r.nombre) + '" oninput="onNombreInput(this)"></td>' +
+      '<td style="min-width:160px"><input class="dp-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…" value="' + escHtml(r.nombre) + '" oninput="onNombreInput(this)"><div class="sku-hint" style="font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px;' + (r.sku ? '' : 'display:none') + '">' + escHtml(r.sku||'') + '</div></td>' +
       '<td><select class="dp-unid"><option' + (r.unidad==='Unidades'?' selected':'') + '>Unidades</option><option' + (r.unidad==='Kg'?' selected':'') + '>Kg</option><option' + (r.unidad==='Cajas'?' selected':'') + '>Cajas</option></select></td>' +
       '<td><input class="dp-cant" type="text" inputmode="numeric" placeholder="Cant." value="' + escHtml(r.cantidad) + '" oninput="recalcularTotalEdit()"></td>' +
       '<td><input class="dp-precio" type="text" inputmode="decimal" placeholder="$" value="' + escHtml(fmtPrecioEdit(r.precio)) + '" onblur="recalcularTotalEdit()"></td>' +
@@ -1963,17 +1973,25 @@ function cargarProductosTN() {
       _productosTN = data.productos;
       var list = document.getElementById('tn-productos-list');
       if (list) list.innerHTML = data.productos.map(function(p){
-        return '<option value="' + escHtml(p.nombre) + '">';
+        var label = p.sku ? p.nombre + ' · ' + p.sku : p.nombre;
+        return '<option value="' + escHtml(label) + '">';
       }).join('');
     }).catch(function(){});
 }
 
 function onNombreInput(input) {
   var val = input.value.trim();
-  var prod = _productosTN.find(function(p){ return p.nombre === val; });
+  var prod = _productosTN.find(function(p){
+    return p.nombre === val || (p.sku && val === p.nombre + ' · ' + p.sku);
+  });
+  var tr = input.closest('tr');
+  var hint = tr ? tr.querySelector('.sku-hint') : null;
   if (prod) {
-    var tr = input.closest('tr');
+    if (input.value.trim() !== prod.nombre) input.value = prod.nombre;
     if (tr) { var s = tr.querySelector('.dp-sku'); if (s) s.value = prod.sku || ''; }
+    if (hint) { hint.textContent = prod.sku || ''; hint.style.display = prod.sku ? '' : 'none'; }
+  } else {
+    if (hint) hint.style.display = 'none';
   }
 }
 
@@ -2075,6 +2093,18 @@ function renderDetalle(p) {
 
   if (p.quien) { document.getElementById('d-quien').textContent = p.quien; document.getElementById('d-quien-wrap').style.display = ''; }
   else { document.getElementById('d-quien-wrap').style.display = 'none'; }
+
+  var pagoEl = document.getElementById('d-estado-pago');
+  if (pagoEl) {
+    pagoEl.textContent = p.estadoPago || '—';
+    pagoEl.style.color = p.estadoPago === 'Pagado' ? '#15803d' : '#dc2626';
+  }
+  var compWrap = document.getElementById('d-comprobante-wrap');
+  var compLink = document.getElementById('d-comprobante-link');
+  if (compWrap && compLink) {
+    if (p.comprobante) { compLink.href = p.comprobante; compWrap.style.display = ''; }
+    else { compWrap.style.display = 'none'; }
+  }
 
   renderProdView(p.productos || '');
   document.getElementById('d-prod-view').style.display = 'block';
