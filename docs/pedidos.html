@@ -1271,7 +1271,7 @@ function renderLista(pedidos) {
         <td class="col-pills">
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
           ${p.estadoPago === 'Pagado'
-            ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>${p.comprobante ? `<a href="${p.comprobante}" target="_blank" style="display:inline-flex;align-items:center;gap:2px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;text-decoration:none;margin-left:3px;">📎 Comprobante</a>` : ''}`
+            ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>`
             : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
         </td>
         <td class="col-accion">
@@ -1282,8 +1282,11 @@ function renderLista(pedidos) {
               ${(SIGUIENTE_ESTADO[p.estado] || []).filter(e => e !== 'Cancelado').map(e =>
                 `<button class="dots-menu-item" onclick="closeMenus(); confirmarAccion('${p.norden}', '${e}')">${EMOJI_ESTADO[e] || '▶'} ${LABEL_ACCION[e] || e}</button>`
               ).join('')}
-              ${p.estado !== 'Cancelado' ? `
+              ${p.comprobante ? `
               <div class="dots-menu-sep"></div>
+              <a class="dots-menu-item" href="${p.comprobante}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">📎 Ver comprobante</a>` : ''}
+              ${p.estado !== 'Cancelado' ? `
+              ${!p.comprobante ? '<div class="dots-menu-sep"></div>' : ''}
               <button class="dots-menu-item" onclick="closeMenus(); abrirModalComprobante('${p.norden}')">📎 Adjuntar comprobante</button>` : ''}
               ${['Entregado en Escuela','Confirmado','En Camino'].includes(p.estado)
                 ? `<button class="dots-menu-item" onclick="closeMenus(); agendarPool('${p.norden}')">🚗 Agendar con el Pool</button>`
