@@ -328,9 +328,10 @@
       <a class="nav-item" href="dashboard-referentes.html" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
-      <button class="nav-item" data-view="inventario" data-roles="admin,staff,fgp" onclick="showView('inventario', this)">
-        <span class="nav-icon">🟢</span> Estado Inventario
-      </button>
+      <div class="nav-section-label">Recursos</div>
+      <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-comision-recursos.html#resumen" target="_blank" style="text-decoration:none">
+        <span class="nav-icon">📖</span> Wiki ↗
+      </a>
     </div>
   </nav>
 
@@ -521,7 +522,7 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCk
 var CONFIG_STAFF_TOKEN = 'test';
 
 // Roles: admin, staff, fgp, referente
-var ROLE_LABELS = { admin: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente' };
+var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente' };
 
 var SESSION_KEY = 'dl_admin_session';
 var currentUser = null;
