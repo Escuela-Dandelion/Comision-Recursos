@@ -573,8 +573,14 @@
               <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
             </div>
           </div>
-          <div id="d-comprobantes-wrap" style="margin-top:10px;display:none;">
-            <div id="d-comprobantes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+            <div id="d-comprobantes-wrap" style="display:none;">
+              <div id="d-comprobantes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+            <button id="btn-adjuntar-comprobante-det" onclick="abrirModalComprobante(pedidoActual.norden)"
+              style="display:none;padding:7px 14px;background:#f9fafb;border:1.5px dashed #d1d5db;border-radius:8px;font-size:13px;color:#6b7280;cursor:pointer;font-weight:600;">
+              + Adjuntar comprobante
+            </button>
           </div>
         </div>
       </div>
@@ -2191,6 +2197,8 @@ function renderDetalle(p) {
       compWrap.style.display = 'none';
     }
   }
+  var btnAdjDet = document.getElementById('btn-adjuntar-comprobante-det');
+  if (btnAdjDet) btnAdjDet.style.display = p.estado !== 'Cancelado' ? '' : 'none';
 
   renderProdView(p.productos || '');
   document.getElementById('d-prod-view').style.display = 'block';
