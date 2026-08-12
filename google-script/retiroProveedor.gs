@@ -672,8 +672,8 @@ function subirComprobanteEnDrive(data) {
   sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');
   sheet.getRange(fila, COL.FECHA_PAGO + 1).setValue(hoy);
 
-  Logger.log('Comprobante subido: ' + norden + ' → ' + url);
-  return { url: url };
+  Logger.log('Comprobante subido: ' + norden + ' → ' + newVal);
+  return { url: url, comprobante: newVal };
 }
 
 // ── MIGRACIÓN / MANTENIMIENTO ────────────────────────────────
