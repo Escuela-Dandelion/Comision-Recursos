@@ -1291,6 +1291,7 @@ function renderLista(pedidos) {
           ${p.estadoPago === 'Pagado'
             ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>`
             : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
+          ${p.comprobante ? `<span title="Tiene comprobante adjunto" style="font-size:13px;color:#9ca3af;vertical-align:middle;">📎</span>` : ''}
         </td>
         <td class="col-accion">
           <div class="dots-wrap">
@@ -2551,6 +2552,7 @@ async function ejecutarSubida() {
           pedidoActual.comprobante = todosLosPedidos[idx].comprobante;
           pedidoActual.fechaPago = hoy;
         }
+        aplicarFiltros(); // refresca fila e ícono 📎 y habilita "Ver comprobante" en menú
       }
       setTimeout(cerrarUpload, 2200);
     } else {
