@@ -129,7 +129,10 @@ function activarResumenNazareno() {
   Logger.log('Trigger activado: enviarResumenNazareno todos los jueves a las 9hs.');
 }
 
-// ── Test: probar manualmente sin esperar el jueves ───────────
+// ── Test: envía el mail a Inés en lugar de Franco ────────────
 function testResumenNazareno() {
+  var emailOriginal = NAZARENO_EMAIL;
+  NAZARENO_EMAIL = 'robertson.ine@gmail.com';
   enviarResumenNazareno();
+  NAZARENO_EMAIL = emailOriginal;
 }
