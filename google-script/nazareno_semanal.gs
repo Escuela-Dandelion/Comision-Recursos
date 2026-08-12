@@ -10,6 +10,22 @@ var NAZARENO_EMAIL       = 'francoalini@gmail.com';
 var NAZARENO_MARCA       = 'Productos_Stock_Infinito';  // tag de marca en TiendaNube / col 12 de Ventas
 var NAZARENO_CC          = 'robertson.ine@gmail.com';
 
+// Mapeo de palabras clave en el nombre del producto → nombre del proveedor
+// Agregar una entrada por cada proveedor de stock infinito nuevo
+var PROVEEDOR_KEYWORDS = [
+  { keyword: 'nazareno',       proveedor: 'Nazareno'         },
+  { keyword: 'pajarito',       proveedor: 'Pajarito Amarillo' },
+  { keyword: 'paraisa',        proveedor: 'Paraisa'           }
+];
+
+function detectarProveedor(nombreProducto) {
+  var lp = nombreProducto.toLowerCase();
+  for (var i = 0; i < PROVEEDOR_KEYWORDS.length; i++) {
+    if (lp.indexOf(PROVEEDOR_KEYWORDS[i].keyword) !== -1) return PROVEEDOR_KEYWORDS[i].proveedor;
+  }
+  return 'Otros';
+}
+
 // ── Función principal (corre cada jueves por trigger) ────────
 function enviarResumenNazareno() {
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
@@ -24,67 +40,68 @@ function enviarResumenNazareno() {
   var hace7   = new Date(hoy.getTime() - 7 * 864e5);
 
   // Columnas: 0=Fecha, 1=Pedido#, 3=Nombre, 4=Email, 5=Producto, 6=SKU, 7=Cantidad, 8=PrecioU, 12=Marca
-  var porProducto = {};  // { producto: { cant, familias: [{nombre, cant, pedido}] } }
-  var pedidosSet  = {};
+  // { proveedor: { productos: { nombre: {cant, familias} }, pedidosSet } }
+  var porProveedor = {};
+  var pedidosSetTotal = {};
 
   for (var r = 1; r < data.length; r++) {
     var row   = data[r];
     var fecha = row[0] ? new Date(row[0]) : null;
     if (!fecha || fecha < hace7) continue;
 
-    var marca = String(row[12] || '').toUpperCase().trim();
+    var marca = String(row[12] || '').trim();
     if (marca !== NAZARENO_MARCA) continue;
 
     var pedido   = String(row[1] || '');
     var familia  = String(row[3] || 'Sin nombre');
     var producto = String(row[5] || '');
     var cantidad = parseInt(row[7]) || 1;
-    var precioU  = parseFloat(row[8]) || 0;
 
-    if (!porProducto[producto]) porProducto[producto] = { cant: 0, precioU: precioU, familias: [] };
-    porProducto[producto].cant += cantidad;
-    porProducto[producto].familias.push({ nombre: familia, cant: cantidad, pedido: pedido });
-    pedidosSet[pedido] = true;
+    var prov = detectarProveedor(producto);
+    if (!porProveedor[prov]) porProveedor[prov] = { productos: {}, pedidosSet: {} };
+    if (!porProveedor[prov].productos[producto]) porProveedor[prov].productos[producto] = { cant: 0, familias: [] };
+    porProveedor[prov].productos[producto].cant += cantidad;
+    porProveedor[prov].productos[producto].familias.push({ nombre: familia, cant: cantidad, pedido: pedido });
+    porProveedor[prov].pedidosSet[pedido] = true;
+    pedidosSetTotal[pedido] = true;
   }
 
-  var productos = Object.keys(porProducto);
-  if (productos.length === 0) {
-    Logger.log('Sin pedidos Nazareno en los últimos 7 días — no se envía mail.');
+  var proveedores = Object.keys(porProveedor);
+  if (proveedores.length === 0) {
+    Logger.log('Sin pedidos de stock infinito en los últimos 7 días — no se envía mail.');
     return;
   }
 
-  var fechaStr = Utilities.formatDate(hoy, 'America/Argentina/Cordoba', 'dd/MM/yyyy');
-  var totalFamilias = Object.keys(pedidosSet).length;
+  var fechaStr      = Utilities.formatDate(hoy, 'America/Argentina/Cordoba', 'dd/MM/yyyy');
+  var totalFamilias = Object.keys(pedidosSetTotal).length;
+  var asuntoProvs   = proveedores.join(', ');
 
   // ── Armar cuerpo del mail ────────────────────────────────
-  var resumenProductos = '';
-  productos.forEach(function(prod) {
-    var p = porProducto[prod];
-    resumenProductos += '  • ' + prod + ' → ' + p.cant + ' u.\n';
-  });
+  var cuerpo = '';
+  proveedores.forEach(function(prov) {
+    var datos    = porProveedor[prov];
+    var products = Object.keys(datos.productos);
+    var nFamilias = Object.keys(datos.pedidosSet).length;
 
-  var detalleFamilias = '';
-  productos.forEach(function(prod) {
-    var p = porProducto[prod];
-    detalleFamilias += '\n' + prod + ':\n';
-    p.familias.forEach(function(f) {
-      detalleFamilias += '  - ' + f.nombre + ': ' + f.cant + ' u. (Pedido ' + f.pedido + ')\n';
+    cuerpo += '════════════════════════════\n';
+    cuerpo += prov.toUpperCase() + ' — ' + nFamilias + ' familia' + (nFamilias !== 1 ? 's' : '') + '\n';
+    cuerpo += '════════════════════════════\n';
+
+    products.forEach(function(prod) {
+      var p = datos.productos[prod];
+      cuerpo += '\n  ' + prod + ' → ' + p.cant + ' u. total\n';
+      p.familias.forEach(function(f) {
+        cuerpo += '    - ' + f.nombre + ': ' + f.cant + ' u. (Pedido ' + f.pedido + ')\n';
+      });
     });
+    cuerpo += '\n';
   });
 
   var body =
     'Hola Franco,\n\n' +
-    'Acá va el resumen de pedidos a gestionar esta semana (' + fechaStr + ').\n' +
-    'Son ' + totalFamilias + ' familias en total.\n\n' +
-    '────────────────────────────\n' +
-    'RESUMEN POR PRODUCTO\n' +
-    '────────────────────────────\n' +
-    resumenProductos + '\n' +
-    '────────────────────────────\n' +
-    'DETALLE POR FAMILIA\n' +
-    '────────────────────────────\n' +
-    detalleFamilias + '\n' +
-    '────────────────────────────\n\n' +
+    'Resumen de pedidos a gestionar esta semana (' + fechaStr + ').\n' +
+    'Total: ' + totalFamilias + ' familia' + (totalFamilias !== 1 ? 's' : '') + '.\n\n' +
+    cuerpo +
     'Recordá que estos productos se hacen a pedido — no acumulan stock.\n\n' +
     'Dashboard referentes: https://escuela-dandelion.github.io/Comision-Recursos/dashboard-referentes.html\n\n' +
     '---\nEnvío automático — Tienda Diente de León';
@@ -92,7 +109,7 @@ function enviarResumenNazareno() {
   MailApp.sendEmail({
     to:      NAZARENO_EMAIL,
     cc:      NAZARENO_CC,
-    subject: '📦 Pedidos semanales — ' + fechaStr,
+    subject: '📦 Pedidos ' + asuntoProvs + ' — ' + fechaStr,
     body:    body
   });
 
