@@ -1,12 +1,13 @@
 // ============================================================
-// RESUMEN SEMANAL — Alfajores Nazareno
-// Corre cada jueves y envía a Franco Alini la lista de pedidos
-// de la semana para que gestione el pedido a Nazareno.
+// RESUMEN SEMANAL — Productos Stock Infinito (a pedido)
+// Incluye: Alfajores Nazareno, Pizzas, Paraisa, y todo producto
+// sin stock acumulado que se gestiona semana a semana.
+// Corre cada jueves y envía a Franco Alini el resumen de pedidos.
 // Setup: correr activarResumenNazareno() UNA VEZ desde el editor.
 // ============================================================
 
 var NAZARENO_EMAIL       = 'francoalini@gmail.com';
-var NAZARENO_MARCA       = 'NAZARENO';  // nombre de marca en TiendaNube / col 12 de Ventas
+var NAZARENO_MARCA       = 'Productos_Stock_Infinito';  // tag de marca en TiendaNube / col 12 de Ventas
 var NAZARENO_CC          = 'robertson.ine@gmail.com';
 
 // ── Función principal (corre cada jueves por trigger) ────────
@@ -73,7 +74,7 @@ function enviarResumenNazareno() {
 
   var body =
     'Hola Franco,\n\n' +
-    'Acá va el resumen de pedidos de Alfajores Nazareno de esta semana (' + fechaStr + ').\n' +
+    'Acá va el resumen de pedidos a gestionar esta semana (' + fechaStr + ').\n' +
     'Son ' + totalFamilias + ' familias en total.\n\n' +
     '────────────────────────────\n' +
     'RESUMEN POR PRODUCTO\n' +
@@ -84,15 +85,14 @@ function enviarResumenNazareno() {
     '────────────────────────────\n' +
     detalleFamilias + '\n' +
     '────────────────────────────\n\n' +
-    'Con esta info podés gestionar el pedido a Nazareno para la semana.\n' +
-    'Recordá que los alfajores tienen vencimiento de 10 días — se pide solo lo necesario.\n\n' +
+    'Recordá que estos productos se hacen a pedido — no acumulan stock.\n\n' +
     'Dashboard referentes: https://escuela-dandelion.github.io/Comision-Recursos/dashboard-referentes.html\n\n' +
     '---\nEnvío automático — Tienda Diente de León';
 
   MailApp.sendEmail({
     to:      NAZARENO_EMAIL,
     cc:      NAZARENO_CC,
-    subject: '📦 Pedido Alfajores Nazareno — ' + fechaStr,
+    subject: '📦 Pedidos semanales — ' + fechaStr,
     body:    body
   });
 
