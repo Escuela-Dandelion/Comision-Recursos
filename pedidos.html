@@ -352,6 +352,12 @@
         <button class="filtro-btn" data-estado="Cerrado" onclick="filtrar(this)" id="filtro-cerrado" style="display:none">Cerrado</button>
         <button class="filtro-btn" id="btn-todos-incl-cerrados" onclick="mostrarTodos()" style="color:#6b7280">Todos</button>
       </div>
+      <!-- Filtro por pago -->
+      <div class="filtros" style="margin-top:6px" id="filtros-pago">
+        <button class="filtro-btn active" data-pago="Todos" onclick="filtrarPago(this)">💳 Todos</button>
+        <button class="filtro-btn" data-pago="Pagado" onclick="filtrarPago(this)">✅ Pagados</button>
+        <button class="filtro-btn" data-pago="No pagado" onclick="filtrarPago(this)">⏳ Pendientes</button>
+      </div>
     </div>
 
     <!-- Filtro por proveedor y producto -->
@@ -1382,11 +1388,19 @@ function claseEstado(estado) {
 
 // Estado activo del filtro
 let estadoFiltro = 'Todos';
+let pagoFiltro = 'Todos';
 
 function filtrar(btn) {
-  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   estadoFiltro = btn.dataset.estado;
+  aplicarFiltros();
+}
+
+function filtrarPago(btn) {
+  document.querySelectorAll('#filtros-pago .filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pagoFiltro = btn.dataset.pago;
   aplicarFiltros();
 }
 
@@ -1419,6 +1433,11 @@ function aplicarFiltros() {
   // Filtro estado
   if (estadoFiltro !== 'Todos') {
     resultado = resultado.filter(p => p.estado === estadoFiltro);
+  }
+
+  // Filtro pago
+  if (pagoFiltro !== 'Todos') {
+    resultado = resultado.filter(p => p.estadoPago === pagoFiltro);
   }
 
   // Filtro fechas
@@ -2193,7 +2212,7 @@ function mostrarTodos() {
   } else {
     // Ya están cargados, solo filtrar por Todos
     estadoFiltro = 'Todos';
-    document.querySelectorAll('.filtro-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
     document.getElementById('btn-todos-incl-cerrados').classList.add('active');
     document.getElementById('filtro-cerrado').style.display = '';
     renderLista(todosLosPedidos);
