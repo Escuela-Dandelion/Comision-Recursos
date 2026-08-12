@@ -554,6 +554,29 @@ function logout() {
 // ══════════════════════════════════════
 // GOOGLE SIGN-IN
 // ══════════════════════════════════════
+var _googleLibraryReady = false;
+var _pageLoaded = false;
+
+function _renderGoogleBtn() {
+  if (!_googleLibraryReady || !_pageLoaded) return;
+  var container = document.getElementById('google-btn-container');
+  if (!container || container.childElementCount > 0) return; // ya renderizado
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: onGoogleLogin
+  });
+  google.accounts.id.renderButton(
+    container,
+    { theme: 'outline', size: 'large', width: 280, text: 'signin_with', locale: 'es' }
+  );
+}
+
+// Google llama a esto cuando el script gsi/client termina de cargar
+window.onGoogleLibraryLoad = function() {
+  _googleLibraryReady = true;
+  _renderGoogleBtn();
+};
+
 window.onload = function() {
   // Modo QR directo (link del email del cliente): no requiere login
   var params = new URLSearchParams(window.location.search);
@@ -578,16 +601,9 @@ window.onload = function() {
   var session = getSession();
   if (session) { iniciarApp(session); return; }
 
-  if (typeof google !== 'undefined') {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: onGoogleLogin
-    });
-    google.accounts.id.renderButton(
-      document.getElementById('google-btn-container'),
-      { theme: 'outline', size: 'large', width: 280, text: 'signin_with', locale: 'es' }
-    );
-  }
+  _pageLoaded = true;
+  if (typeof google !== 'undefined') _googleLibraryReady = true;
+  _renderGoogleBtn();
 };
 
 function onGoogleLogin(response) {
