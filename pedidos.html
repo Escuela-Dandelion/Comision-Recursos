@@ -2569,6 +2569,18 @@ async function ejecutarSubida() {
           pedidoActual.estadoPago = 'Pagado';
           pedidoActual.comprobante = todosLosPedidos[idx].comprobante;
           pedidoActual.fechaPago = hoy;
+          // Refrescar comprobantes en el detalle abierto
+          const compWrap = document.getElementById('d-comprobantes-wrap');
+          const compList = document.getElementById('d-comprobantes-list');
+          if (compWrap && compList) {
+            const urls = pedidoActual.comprobante.split('|').filter(Boolean);
+            compList.innerHTML = urls.map((url, i) =>
+              `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
+            ).join('');
+            compWrap.style.display = '';
+          }
+          const pagoEl = document.getElementById('d-estado-pago');
+          if (pagoEl) { pagoEl.textContent = 'Pagado'; pagoEl.style.color = '#15803d'; }
         }
         aplicarFiltros(); // refresca fila e ícono 📎 y habilita "Ver comprobante" en menú
       }
