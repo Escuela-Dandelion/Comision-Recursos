@@ -468,7 +468,21 @@
           <div id="d-prod-feedback" style="font-size:12px;margin-top:6px;display:none;text-align:center;font-weight:600;"></div>
         </div>
 
-        <!-- Total -->
+        <!-- Envío + Total -->
+        <div id="d-envio-row" style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid #e5e7eb;gap:8px;">
+          <span style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Costo de envío</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="d-envio-view" style="font-size:14px;font-weight:700;color:#374151;">—</span>
+            <button id="btn-edit-envio" onclick="editarCostoEnvio()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#9ca3af;padding:2px 4px;" title="Editar costo de envío">✏️</button>
+          </div>
+        </div>
+        <div id="d-envio-edit" style="display:none;padding:8px 18px;border-top:1px solid #e5e7eb;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="input-costo-envio" type="text" inputmode="decimal" placeholder="$0"
+            style="width:130px;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;">
+          <button onclick="guardarCostoEnvio()" style="padding:7px 14px;background:#2d5a27;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Guardar</button>
+          <button onclick="cancelarEditarEnvio()" style="padding:7px 10px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+          <span id="d-envio-feedback" style="font-size:12px;font-weight:600;display:none;"></span>
+        </div>
         <div class="det-total-row">
           <span class="det-total-label">Total del pedido</span>
           <span class="det-total-value" id="d-total">—</span>
@@ -551,11 +565,8 @@
               <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
             </div>
           </div>
-          <div id="d-comprobante-wrap" style="margin-top:10px;display:none;">
-            <a id="d-comprobante-link" href="#" target="_blank"
-              style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">
-              📎 Ver comprobante de pago
-            </a>
+          <div id="d-comprobantes-wrap" style="margin-top:10px;display:none;">
+            <div id="d-comprobantes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
           </div>
         </div>
       </div>
@@ -1049,7 +1060,8 @@ function csvAObjetos(csv) {
         comprobante:  cols[12] || '',
         fechaRetiro:  cols[13] || '',  // N
         lugarRetiro:  cols[14] || '',  // O
-        fechaEscuela: cols[15] || ''   // P
+        fechaEscuela: cols[15] || '',  // P
+        costoEnvio:   cols[16] || ''   // Q
       };
       order.push(norden);
     }
@@ -1290,7 +1302,9 @@ function renderLista(pedidos) {
               ).join('')}
               ${p.comprobante ? `
               <div class="dots-menu-sep"></div>
-              <a class="dots-menu-item" href="${p.comprobante}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">📎 Ver comprobante</a>` : ''}
+              ${p.comprobante.split('|').map((url, i) =>
+                `<a class="dots-menu-item" href="${url}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">📎 Comprobante${p.comprobante.split('|').length > 1 ? ' ' + (i+1) : ''}</a>`
+              ).join('')}` : ''}
               ${p.estado !== 'Cancelado' ? `
               ${!p.comprobante ? '<div class="dots-menu-sep"></div>' : ''}
               <button class="dots-menu-item" onclick="closeMenus(); abrirModalComprobante('${p.norden}')">📎 Adjuntar comprobante</button>` : ''}
@@ -1634,12 +1648,26 @@ function renderProdView(productosStr) {
 }
 
 function recalcularTotalEdit() {
-  var total = 0;
+  var subtotal = 0;
   document.querySelectorAll('#det-tbody-productos tr').forEach(function(tr) {
-    var cant = parseFloat(tr.querySelector('.dp-cant').value) || 0;
-    var prec = parsePrecio(tr.querySelector('.dp-precio').value || '');
-    total += cant * prec;
+    var cant  = parseFloat(tr.querySelector('.dp-cant').value) || 0;
+    var prec  = parsePrecio(tr.querySelector('.dp-precio').value || '');
+    var unid  = tr.querySelector('.dp-unid') ? tr.querySelector('.dp-unid').value : 'Unidades';
+    var fila  = cant * prec;
+    subtotal += fila;
+    // Hint de subtotal de fila para Kg y Cajas
+    var hint = tr.querySelector('.dp-subtotal-hint');
+    if (hint) {
+      if ((unid === 'Kg' || unid === 'Cajas') && cant > 0 && prec > 0) {
+        hint.textContent = '= ' + formatPesosConDec(fila) + ' total';
+        hint.style.display = '';
+      } else {
+        hint.style.display = 'none';
+      }
+    }
   });
+  var envio = pedidoActual ? parsePrecio(String(pedidoActual.costoEnvio || '')) : 0;
+  var total = subtotal + envio;
   document.getElementById('d-total').textContent = total > 0 ? formatPesosConDec(total) : '—';
 }
 
@@ -1649,9 +1677,9 @@ function renderProdEdit(productosStr) {
   tbody.innerHTML = rows.map(function(r) {
     return '<tr>' +
       '<td style="min-width:160px"><input class="dp-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…" value="' + escHtml(r.nombre) + '" oninput="onNombreInput(this)"><div class="sku-hint" style="font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px;' + (r.sku ? '' : 'display:none') + '">' + escHtml(r.sku||'') + '</div></td>' +
-      '<td><select class="dp-unid"><option' + (r.unidad==='Unidades'?' selected':'') + '>Unidades</option><option' + (r.unidad==='Kg'?' selected':'') + '>Kg</option><option' + (r.unidad==='Cajas'?' selected':'') + '>Cajas</option></select></td>' +
+      '<td><select class="dp-unid" onchange="recalcularTotalEdit()"><option' + (r.unidad==='Unidades'?' selected':'') + '>Unidades</option><option' + (r.unidad==='Kg'?' selected':'') + '>Kg</option><option' + (r.unidad==='Cajas'?' selected':'') + '>Cajas</option></select></td>' +
       '<td><input class="dp-cant" type="text" inputmode="numeric" placeholder="Cant." value="' + escHtml(r.cantidad) + '" oninput="recalcularTotalEdit()"></td>' +
-      '<td><input class="dp-precio" type="text" inputmode="decimal" placeholder="$" value="' + escHtml(fmtPrecioEdit(r.precio)) + '" onblur="recalcularTotalEdit()"></td>' +
+      '<td><input class="dp-precio" type="text" inputmode="decimal" placeholder="$" value="' + escHtml(fmtPrecioEdit(r.precio)) + '" oninput="recalcularTotalEdit()" onblur="recalcularTotalEdit()"><div class="dp-subtotal-hint" style="font-size:10px;color:#9ca3af;margin-top:2px;display:none;"></div></td>' +
       '<input class="dp-sku" type="hidden" value="' + escHtml(r.sku||'') + '">' +
     '</tr>';
   }).join('');
@@ -2136,11 +2164,19 @@ function renderDetalle(p) {
     pagoEl.textContent = p.estadoPago || '—';
     pagoEl.style.color = p.estadoPago === 'Pagado' ? '#15803d' : '#dc2626';
   }
-  var compWrap = document.getElementById('d-comprobante-wrap');
-  var compLink = document.getElementById('d-comprobante-link');
-  if (compWrap && compLink) {
-    if (p.comprobante) { compLink.href = p.comprobante; compWrap.style.display = ''; }
-    else { compWrap.style.display = 'none'; }
+  // Comprobantes (múltiples, separados por |)
+  var compWrap = document.getElementById('d-comprobantes-wrap');
+  var compList = document.getElementById('d-comprobantes-list');
+  if (compWrap && compList) {
+    if (p.comprobante) {
+      const urls = p.comprobante.split('|').filter(Boolean);
+      compList.innerHTML = urls.map((url, i) =>
+        `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
+      ).join('');
+      compWrap.style.display = '';
+    } else {
+      compWrap.style.display = 'none';
+    }
   }
 
   renderProdView(p.productos || '');
@@ -2149,8 +2185,17 @@ function renderDetalle(p) {
   document.getElementById('btn-toggle-prods').textContent = '✏️ Editar';
 
   const totalCalcProd = calcTotalProductos(p.productos || '');
-  const totalNum = totalCalcProd > 0 ? totalCalcProd : parsePrecio(String(p.total || ''));
+  const subtotalNum = totalCalcProd > 0 ? totalCalcProd : parsePrecio(String(p.total || ''));
+  const envioNum = parsePrecio(String(p.costoEnvio || ''));
+  const totalNum = subtotalNum + envioNum;
   document.getElementById('d-total').textContent = totalNum > 0 ? formatPesosConDec(totalNum) : '—';
+
+  // Fila costo envío
+  var envioView = document.getElementById('d-envio-view');
+  if (envioView) envioView.textContent = envioNum > 0 ? formatPesosConDec(envioNum) : '—';
+  if (document.getElementById('d-envio-edit')) {
+    document.getElementById('d-envio-edit').style.display = 'none';
+  }
 
   document.getElementById('d-notas').textContent = p.notas || '—';
   document.getElementById('d-notas-wrap').style.display = '';
@@ -2294,6 +2339,45 @@ function guardarTotal() {
     refrescarPedidoActual();
   })
   .catch(function(){ btnTotal.disabled=false; btnTotal.style.opacity=''; mostrarTotalFeedback('❌ Error de conexión.', '#dc2626'); });
+}
+
+// ── COSTO ENVÍO ───────────────────────────────────────────────
+function editarCostoEnvio() {
+  document.getElementById('input-costo-envio').value = parsePrecio(String(pedidoActual.costoEnvio || '')) || '';
+  document.getElementById('d-envio-edit').style.display = 'flex';
+  document.getElementById('d-envio-feedback').style.display = 'none';
+  document.getElementById('input-costo-envio').focus();
+}
+
+function cancelarEditarEnvio() {
+  document.getElementById('d-envio-edit').style.display = 'none';
+}
+
+function guardarCostoEnvio() {
+  var raw   = document.getElementById('input-costo-envio').value.trim().replace(/[^\d.,]/g,'');
+  var valor = parseFloat(raw.replace(/\./g,'').replace(',','.')) || 0;
+  var fb = document.getElementById('d-envio-feedback');
+  fb.style.display = 'inline'; fb.style.color = '#6b7280'; fb.textContent = '⏳ Guardando…';
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'updateCostoEnvio', norden: pedidoActual.norden, costoEnvio: valor })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (!data.ok) { fb.style.color='#dc2626'; fb.textContent='❌ ' + (data.error||'Error'); return; }
+    pedidoActual.costoEnvio = String(valor);
+    const idx = todosLosPedidos.findIndex(function(p){ return p.norden === pedidoActual.norden; });
+    if (idx !== -1) todosLosPedidos[idx].costoEnvio = String(valor);
+    document.getElementById('d-envio-view').textContent = valor > 0 ? formatPesosConDec(valor) : '—';
+    // Recalcular total mostrado
+    const subtotal = calcTotalProductos(pedidoActual.productos || '') || parsePrecio(String(pedidoActual.total || ''));
+    const nuevoTotal = subtotal + valor;
+    document.getElementById('d-total').textContent = nuevoTotal > 0 ? formatPesosConDec(nuevoTotal) : '—';
+    document.getElementById('d-envio-edit').style.display = 'none';
+    fb.textContent = '';
+  })
+  .catch(function(){ fb.style.color='#dc2626'; fb.textContent='❌ Error de conexión.'; });
 }
 
 // ── EDITAR NOTAS ──────────────────────────────────────────────
@@ -2457,12 +2541,14 @@ async function ejecutarSubida() {
       const idx = todosLosPedidos.findIndex(p => p.norden === uploadNorden);
       if (idx !== -1) {
         todosLosPedidos[idx].estadoPago  = 'Pagado';
-        todosLosPedidos[idx].comprobante = data.url || '';
+        const prevUrl = todosLosPedidos[idx].comprobante || '';
+        const newUrl  = data.url || '';
+        todosLosPedidos[idx].comprobante = prevUrl ? prevUrl + '|' + newUrl : newUrl;
         const hoy = new Date().toLocaleDateString('es-AR');
         todosLosPedidos[idx].fechaPago   = hoy;
         if (pedidoActual && pedidoActual.norden === uploadNorden) {
           pedidoActual.estadoPago = 'Pagado';
-          pedidoActual.comprobante = data.url || '';
+          pedidoActual.comprobante = todosLosPedidos[idx].comprobante;
           pedidoActual.fechaPago = hoy;
         }
       }

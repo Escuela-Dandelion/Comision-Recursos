@@ -48,6 +48,8 @@ function doPost(e) {
       resultado = updateProductosPedido(data);
     } else if (action === 'updateProveedor') {
       resultado = updateProveedorPedido(data);
+    } else if (action === 'updateCostoEnvio') {
+      resultado = updateCostoEnvioPedido(data);
     } else if (action === 'saveStockOverride') {
       guardarOverrideStock(data.clave, data.nombre, data.umbralOverride, data.pisoOverride);
       resultado = { saved: true };
@@ -358,7 +360,8 @@ const COL = {
   COMPROBANTE:   12,  // M
   FECHA_RETIRO:  13,  // N
   LUGAR_RETIRO:  14,  // O
-  FECHA_ESCUELA: 15   // P
+  FECHA_ESCUELA: 15,  // P
+  COSTO_ENVIO:   16   // Q
 };
 
 function getPedidosSheet() {
@@ -397,7 +400,8 @@ function filaAObjeto(fila) {
     fechaPago:    fmtCelFecha(fila[COL.FECHA_PAGO]),
     fechaRetiro:  fmtCelFecha(fila[COL.FECHA_RETIRO]),
     lugarRetiro:  fila[COL.LUGAR_RETIRO] || '',
-    fechaEscuela: fmtCelFecha(fila[COL.FECHA_ESCUELA])
+    fechaEscuela: fmtCelFecha(fila[COL.FECHA_ESCUELA]),
+    costoEnvio:   fila[COL.COSTO_ENVIO]  || ''
   };
 }
 
@@ -520,6 +524,17 @@ function updateTotalPedido(data) {
   sheet.getRange(resultado.fila, COL.TOTAL + 1).setValue(parseFloat(total) || 0);
   Logger.log('Total actualizado: ' + norden + ' → ' + total);
   return 'Total actualizado: ' + norden;
+}
+
+function updateCostoEnvioPedido(data) {
+  const { norden, costoEnvio } = data;
+  if (!norden) throw new Error('Falta norden');
+  const resultado = leerPedidoPorId(norden);
+  if (!resultado) throw new Error('Pedido no encontrado: ' + norden);
+  const sheet = getPedidosSheet();
+  sheet.getRange(resultado.fila, COL.COSTO_ENVIO + 1).setValue(parseFloat(costoEnvio) || 0);
+  Logger.log('Costo envío actualizado: ' + norden + ' → ' + costoEnvio);
+  return 'Costo envío actualizado: ' + norden;
 }
 
 // data: { action:'updateProductos', norden, productos, total (opcional) }
@@ -651,7 +666,9 @@ function subirComprobanteEnDrive(data) {
   const fila  = encontrado.fila;
   const hoy   = Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy');
 
-  sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(url);
+  const existing = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
+  const newVal   = existing ? existing + '|' + url : url;
+  sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(newVal);
   sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');
   sheet.getRange(fila, COL.FECHA_PAGO + 1).setValue(hoy);
 
