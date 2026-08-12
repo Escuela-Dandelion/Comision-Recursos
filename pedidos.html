@@ -235,14 +235,19 @@
     .main-row .col-accion    { position: absolute; top: 12px; right: 14px; }
     .main-row .col-proveedor { grid-column: 1; grid-row: 2; }
     .main-row .col-productos { grid-column: 1; grid-row: 3; max-width: none; }
-    /* pills: columna derecha, filas 1-2 */
     .main-row .col-pills {
-      grid-column: 2; grid-row: 1 / span 2;
+      grid-column: 2; grid-row: 1;
       display: flex !important; flex-direction: column;
       align-items: flex-end; justify-content: flex-start;
-      gap: 6px; max-width: 132px;
-      align-self: start;
+      max-width: 132px; align-self: start;
       padding-top: 22px !important;
+    }
+    .main-row .col-pago {
+      grid-column: 2; grid-row: 2;
+      display: flex !important; flex-direction: column;
+      align-items: flex-end; justify-content: flex-start;
+      max-width: 132px; align-self: start;
+      text-align: right !important; vertical-align: top !important;
     }
 
     /* jerarquía tipográfica */
@@ -260,7 +265,8 @@
       max-width: 128px; display: inline-block !important;
     }
     tr.main-row .col-pills a,
-    tr.main-row .col-pills > span {
+    tr.main-row .col-pills > span,
+    tr.main-row .col-pago > span {
       font-size: 10px !important; padding: 2px 5px !important;
       display: inline-flex !important; white-space: nowrap;
     }
@@ -1290,6 +1296,8 @@ function renderLista(pedidos) {
         </td>
         <td class="col-pills">
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
+        </td>
+        <td class="col-pago" style="white-space:nowrap;text-align:center;vertical-align:middle;">
           ${p.estadoPago === 'Pagado'
             ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado${p.comprobante ? ' 📎' : ''}</span>`
             : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
