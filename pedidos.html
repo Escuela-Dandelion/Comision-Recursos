@@ -1387,13 +1387,28 @@ function claseEstado(estado) {
 }
 
 // Estado activo del filtro
-let estadoFiltro = 'Todos';
+let estadosFiltro = new Set(); // vacío = "En proceso" (todos)
 let pagoFiltro = 'Todos';
 
 function filtrar(btn) {
-  document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  estadoFiltro = btn.dataset.estado;
+  const estado = btn.dataset.estado;
+  if (estado === 'Todos') {
+    estadosFiltro.clear();
+    document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  } else {
+    document.querySelector('#filtros .filtro-btn[data-estado="Todos"]').classList.remove('active');
+    if (estadosFiltro.has(estado)) {
+      estadosFiltro.delete(estado);
+      btn.classList.remove('active');
+      if (estadosFiltro.size === 0) {
+        document.querySelector('#filtros .filtro-btn[data-estado="Todos"]').classList.add('active');
+      }
+    } else {
+      estadosFiltro.add(estado);
+      btn.classList.add('active');
+    }
+  }
   aplicarFiltros();
 }
 
@@ -1431,8 +1446,8 @@ function aplicarFiltros() {
   let resultado = todosLosPedidos;
 
   // Filtro estado
-  if (estadoFiltro !== 'Todos') {
-    resultado = resultado.filter(p => p.estado === estadoFiltro);
+  if (estadosFiltro.size > 0) {
+    resultado = resultado.filter(p => estadosFiltro.has(p.estado));
   }
 
   // Filtro pago
@@ -2211,7 +2226,7 @@ function mostrarTodos() {
     cargarLista(true);
   } else {
     // Ya están cargados, solo filtrar por Todos
-    estadoFiltro = 'Todos';
+    estadosFiltro = new Set();
     document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
     document.getElementById('btn-todos-incl-cerrados').classList.add('active');
     document.getElementById('filtro-cerrado').style.display = '';
