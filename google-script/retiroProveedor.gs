@@ -1043,6 +1043,7 @@ function getStockDashboard() {
       variantes.push({
         id: variante.id, clave: clave,
         nombre: nombreVar || nombreProd,
+        sku: variante.sku || '',
         stock: stock, velocidad: velocidad, diasActivos: diasActivos,
         leadTime: cfg.leadTime,
         umbralCalc: umbralCalc, umbralOverride: ov.umbralOverride !== undefined ? ov.umbralOverride : null,

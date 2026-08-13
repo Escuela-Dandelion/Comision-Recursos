@@ -131,10 +131,13 @@ body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #2d2d
 
 /* ── MOBILE ── */
 @media (max-width: 580px) {
-  .td-vel, .th-vel { display: none; }
-  .td-stock { font-size: 17px; }
-  .ov-input { width: 46px; font-size: 11px; }
+  .td-stock  { font-size: 16px; }
+  .td-umbral, .td-piso { width: 58px; }
+  .td-vel    { width: 52px; font-size: 10px; }
+  .ov-input  { width: 44px; font-size: 11px; }
   .page-wrap { padding: 10px; }
+  .var-table { font-size: 12px; }
+  .td-save   { width: 70px; }
 }
 </style>
 </head>
@@ -298,7 +301,7 @@ function renderTabla(prod) {
 
     return '<tr>' +
       '<td class="td-dot"><span class="dot dot-' + v.semaforo + '"></span></td>' +
-      (multiVar ? '<td class="td-nombre">' + esc(v.nombre) + '</td>' : '') +
+      (multiVar ? '<td class="td-nombre">' + esc(v.nombre) + (v.sku ? '<div style="font-size:9px;color:#d1d5db;font-family:monospace;margin-top:1px;">' + esc(v.sku) + '</div>' : '') + '</td>' : '') +
       '<td class="td-alerta">' + (v.alertaEnviada ? '⚠️' : '') + '</td>' +
       '<td class="td-stock ' + stockCls + '">' + v.stock + '</td>' +
       '<td class="td-umbral">' +

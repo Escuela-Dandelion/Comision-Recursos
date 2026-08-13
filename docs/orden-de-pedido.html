@@ -201,7 +201,8 @@
   const GAS_URL_RQ = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 
   var _proveedoresMap = {}; // nombre → tel
-  var _skuMap = {};         // nombre_upper → sku
+  var _skuMap   = {};       // nombre_upper|sku_upper → sku
+  var _nombreMap = {};      // sku_upper → nombre (para hint)
 
   // ── CARGAR SKUs DE TIENDANUBE ───────────────────────────────
   fetch(SCRIPT_URL + '?action=getProductosTN', { redirect: 'follow' })
@@ -210,12 +211,28 @@
       if (!data.ok || !data.productos) return;
       var list = document.getElementById('tn-productos-list');
       data.productos.forEach(function(p) {
-        _skuMap[p.nombre.toUpperCase()] = p.sku;
+        _skuMap[p.nombre.toUpperCase()] = p.sku;   // nombre → sku
+        if (p.sku) {
+          _skuMap[p.sku.toUpperCase()]   = p.sku;   // sku → sku (validación directa)
+          _nombreMap[p.sku.toUpperCase()] = p.nombre;
+        }
         if (list) {
           var opt = document.createElement('option');
-          opt.value = p.nombre;
+          opt.value = p.sku || p.nombre;
           list.appendChild(opt);
         }
+      });
+      // Inyectar hints y handlers en todas las filas de productos
+      document.querySelectorAll('.p-nombre').forEach(function(input) {
+        input.placeholder = 'Buscar SKU…';
+        var hint = document.createElement('div');
+        hint.style.cssText = 'font-size:10px;color:#9ca3af;margin-top:2px;display:none;';
+        input.parentNode.appendChild(hint);
+        input.addEventListener('input', function() {
+          var nombre = _nombreMap[input.value.trim().toUpperCase()];
+          hint.textContent = nombre || '';
+          hint.style.display = nombre ? '' : 'none';
+        });
       });
     }).catch(function(){});
 
