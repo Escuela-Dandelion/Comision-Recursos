@@ -364,7 +364,7 @@
       <div class="filtros" style="margin-top:6px" id="filtros-pago">
         <button class="filtro-btn active" data-pago="Todos" onclick="filtrarPago(this)">💳 Todos</button>
         <button class="filtro-btn" data-pago="Pagado" onclick="filtrarPago(this)">✅ Pagados</button>
-        <button class="filtro-btn" data-pago="No pagado" onclick="filtrarPago(this)">⏳ Pendientes</button>
+        <button class="filtro-btn" data-pago="No pagado" onclick="filtrarPago(this)">💳 No Pagados</button>
       </div>
     </div>
 
@@ -491,12 +491,12 @@
           <button onclick="cancelarEditarEnvio()" style="padding:7px 10px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
           <span id="d-envio-feedback" style="font-size:12px;font-weight:600;display:none;"></span>
         </div>
-        <div class="det-total-row" style="opacity:.7;">
-          <span class="det-total-label" style="font-weight:600;">Total Orden</span>
-          <span class="det-total-value" id="d-subtotal-orden" style="font-size:15px;">—</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px;background:#f9fafb;border-top:1px solid #e5e7eb;">
+          <span style="font-size:12px;font-weight:500;color:#9ca3af;">Total Orden (sin envío)</span>
+          <span id="d-subtotal-orden" style="font-size:14px;font-weight:600;color:#6b7280;">—</span>
         </div>
-        <div class="det-total-row">
-          <span class="det-total-label">Total con Envío</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#f0fdf4;border-top:2px solid #16a34a;">
+          <span style="font-size:15px;font-weight:700;color:#14532d;">Total con Envío</span>
           <span class="det-total-value" id="d-total">—</span>
         </div>
       </div>
@@ -725,6 +725,13 @@
     <div id="upload-preview" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #a3c4a8;">
       <div style="font-size:13px;font-weight:600;color:#2d5a27;" id="upload-filename"></div>
       <div style="font-size:11px;color:#6b7280;margin-top:2px;" id="upload-filesize"></div>
+    </div>
+    <div id="upload-tipo-pago-wrap" style="margin-top:14px;">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">¿Qué cubre este comprobante?</label>
+      <select id="upload-tipo-pago" style="width:100%;padding:9px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;">
+        <option value="completo">Pago completo del pedido</option>
+        <option value="parcial">Pago parcial</option>
+      </select>
     </div>
     <div id="upload-feedback" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;"></div>
     <div class="modal-btns">
@@ -1305,7 +1312,7 @@ function renderLista(pedidos) {
             ${unidStr ? `<span style="font-size:12px;color:#374151;white-space:nowrap;">${unidStr}</span>` : ''}
             ${totalStr ? `<span style="font-size:12px;font-weight:700;color:#2d5a27;white-space:nowrap;">${totalStr}</span>` : ''}
           </div>
-          ${totalConEnvioStr ? `<div style="margin-top:3px;font-size:11px;color:#6b7280;white-space:nowrap;">c/envío <strong style="color:#1d4ed8;">${totalConEnvioStr}</strong></div>` : ''}
+          ${totalConEnvioStr ? `<div style="margin-top:3px;font-size:12px;color:#6b7280;white-space:nowrap;">c/envío <strong style="color:#2d5a27;">${totalConEnvioStr}</strong></div>` : ''}
         </td>
         <td class="col-pills">
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
@@ -1703,7 +1710,7 @@ function renderProdEdit(productosStr) {
   var tbody = document.getElementById('det-tbody-productos');
   tbody.innerHTML = rows.map(function(r) {
     return '<tr>' +
-      '<td style="min-width:160px"><input class="dp-nombre" type="text" list="tn-productos-list" placeholder="Buscar producto…" value="' + escHtml(r.nombre) + '" oninput="onNombreInput(this)"><div class="sku-hint" style="font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px;' + (r.sku ? '' : 'display:none') + '">' + escHtml(r.sku||'') + '</div></td>' +
+      '<td style="min-width:160px"><input class="dp-nombre" type="text" list="tn-productos-list" placeholder="Buscar SKU…" value="' + escHtml(r.sku || r.nombre) + '" oninput="onNombreInput(this)"><div class="sku-hint" style="font-size:10px;color:#9ca3af;margin-top:2px;' + (r.nombre ? '' : 'display:none') + '">' + escHtml(r.nombre||'') + '</div></td>' +
       '<td><select class="dp-unid" onchange="recalcularTotalEdit()"><option' + (r.unidad==='Unidades'?' selected':'') + '>Unidades</option><option' + (r.unidad==='Kg'?' selected':'') + '>Kg</option><option' + (r.unidad==='Cajas'?' selected':'') + '>Cajas</option></select></td>' +
       '<td><input class="dp-cant" type="text" inputmode="numeric" placeholder="Cant." value="' + escHtml(r.cantidad) + '" oninput="recalcularTotalEdit()"></td>' +
       '<td><input class="dp-precio" type="text" inputmode="decimal" placeholder="$" value="' + escHtml(fmtPrecioEdit(r.precio)) + '" oninput="recalcularTotalEdit()" onblur="recalcularTotalEdit()"><div class="dp-subtotal-hint" style="font-size:10px;color:#9ca3af;margin-top:2px;display:none;"></div></td>' +
@@ -2065,23 +2072,22 @@ function cargarProductosTN() {
       _productosTN = data.productos;
       var list = document.getElementById('tn-productos-list');
       if (list) list.innerHTML = data.productos.map(function(p){
-        var label = p.sku ? p.nombre + ' · ' + p.sku : p.nombre;
-        return '<option value="' + escHtml(label) + '">';
+        return '<option value="' + escHtml(p.sku || p.nombre) + '">';
       }).join('');
     }).catch(function(){});
 }
 
 function onNombreInput(input) {
   var val = input.value.trim();
-  var prod = _productosTN.find(function(p){
-    return p.nombre === val || (p.sku && val === p.nombre + ' · ' + p.sku);
-  });
+  var prod = _productosTN.find(function(p){ return p.sku && p.sku === val; })
+          || _productosTN.find(function(p){ return p.nombre === val; });
   var tr = input.closest('tr');
   var hint = tr ? tr.querySelector('.sku-hint') : null;
   if (prod) {
-    if (input.value.trim() !== prod.nombre) input.value = prod.nombre;
+    var display = prod.sku || prod.nombre;
+    if (input.value.trim() !== display) input.value = display;
     if (tr) { var s = tr.querySelector('.dp-sku'); if (s) s.value = prod.sku || ''; }
-    if (hint) { hint.textContent = prod.sku || ''; hint.style.display = prod.sku ? '' : 'none'; }
+    if (hint) { hint.textContent = prod.nombre || ''; hint.style.display = prod.nombre ? '' : 'none'; }
   } else {
     if (hint) hint.style.display = 'none';
   }
@@ -2545,6 +2551,12 @@ function abrirModalComprobante(norden) {
   document.getElementById('upload-feedback').style.display = 'none';
   document.getElementById('btn-subir').disabled = true;
   document.getElementById('comprobante-file').value = '';
+  const pedido = todosLosPedidos.find(function(p){ return p.norden === norden; }) || pedidoActual;
+  const tieneEnvio = pedido && parsePrecio(String(pedido.costoEnvio || '')) > 0;
+  const sel = document.getElementById('upload-tipo-pago');
+  sel.innerHTML = '<option value="completo">Pago completo del pedido</option>'
+    + (tieneEnvio ? '<option value="envio">Solo envío</option>' : '')
+    + '<option value="parcial">Pago parcial</option>';
   document.getElementById('uploadOverlay').classList.add('open');
 }
 
@@ -2574,7 +2586,8 @@ function mostrarPreviewArchivo(file) {
 
 async function ejecutarSubida() {
   if (!uploadFile || !uploadNorden) return;
-  const btn = document.getElementById('btn-subir');
+  const btn      = document.getElementById('btn-subir');
+  const tipoPago = document.getElementById('upload-tipo-pago').value;
   btn.disabled = true;
   btn.textContent = 'Subiendo…';
   mostrarUploadFeedback('⏳ Subiendo comprobante…', 'info');
@@ -2589,37 +2602,43 @@ async function ejecutarSubida() {
         norden:   uploadNorden,
         filename: uploadFile.name,
         mimeType: uploadFile.type,
-        base64:   base64
+        base64:   base64,
+        tipoPago: tipoPago
       })
     });
     const data = await resp.json();
     if (data.ok) {
-      mostrarUploadFeedback('✅ Comprobante subido. Estado de pago actualizado a Pagado.', 'ok');
+      const msgs = { completo: '✅ Comprobante subido. Pedido marcado como Pagado.', envio: '✅ Comprobante de envío subido.', parcial: '✅ Comprobante de pago parcial subido.' };
+      mostrarUploadFeedback(msgs[tipoPago] || msgs.completo, 'ok');
       btn.textContent = 'Listo ✓';
-      const idx = todosLosPedidos.findIndex(p => p.norden === uploadNorden);
+      const idx = todosLosPedidos.findIndex(function(p){ return p.norden === uploadNorden; });
       if (idx !== -1) {
-        todosLosPedidos[idx].estadoPago  = 'Pagado';
         todosLosPedidos[idx].comprobante = data.comprobante || data.url || '';
-        const hoy = new Date().toLocaleDateString('es-AR');
-        todosLosPedidos[idx].fechaPago   = hoy;
+        if (tipoPago === 'completo') {
+          todosLosPedidos[idx].estadoPago = 'Pagado';
+          todosLosPedidos[idx].fechaPago  = new Date().toLocaleDateString('es-AR');
+        }
         if (pedidoActual && pedidoActual.norden === uploadNorden) {
-          pedidoActual.estadoPago = 'Pagado';
           pedidoActual.comprobante = todosLosPedidos[idx].comprobante;
-          pedidoActual.fechaPago = hoy;
-          // Refrescar comprobantes en el detalle abierto
+          if (tipoPago === 'completo') {
+            pedidoActual.estadoPago = 'Pagado';
+            pedidoActual.fechaPago  = todosLosPedidos[idx].fechaPago;
+          }
           const compWrap = document.getElementById('d-comprobantes-wrap');
           const compList = document.getElementById('d-comprobantes-list');
           if (compWrap && compList) {
             const urls = pedidoActual.comprobante.split('|').filter(Boolean);
-            compList.innerHTML = urls.map((url, i) =>
-              `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
-            ).join('');
+            compList.innerHTML = urls.map(function(url, i){
+              return '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante' + (urls.length > 1 ? ' ' + (i+1) : '') + '</a>';
+            }).join('');
             compWrap.style.display = '';
           }
-          const pagoEl = document.getElementById('d-estado-pago');
-          if (pagoEl) { pagoEl.textContent = 'Pagado'; pagoEl.style.color = '#15803d'; }
+          if (tipoPago === 'completo') {
+            const pagoEl = document.getElementById('d-estado-pago');
+            if (pagoEl) { pagoEl.textContent = 'Pagado'; pagoEl.style.color = '#15803d'; }
+          }
         }
-        aplicarFiltros(); // refresca fila e ícono 📎 y habilita "Ver comprobante" en menú
+        aplicarFiltros();
       }
       setTimeout(cerrarUpload, 2200);
     } else {

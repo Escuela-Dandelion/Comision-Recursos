@@ -639,11 +639,10 @@ function eliminarPedidoDeSheet(data) {
   return 'Pedido eliminado: ' + norden;
 }
 
-// data: { action:'subirComprobante', norden, filename, mimeType, base64 }
-// Sube el archivo a Google Drive (carpeta "Comprobantes DdL"), guarda el link en Sheet
-// y pasa el estado a Pagado.
+// data: { action:'subirComprobante', norden, filename, mimeType, base64, tipoPago }
+// tipoPago: 'completo' → marca Pagado | 'envio'|'parcial' → solo guarda el link
 function subirComprobanteEnDrive(data) {
-  const { norden, filename, mimeType, base64 } = data;
+  const { norden, filename, mimeType, base64, tipoPago } = data;
   if (!norden || !base64) throw new Error('Faltan datos: norden y base64 son requeridos');
 
   // Buscar o crear carpeta en Drive
@@ -669,10 +668,12 @@ function subirComprobanteEnDrive(data) {
   const existing = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
   const newVal   = existing ? existing + '|' + url : url;
   sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(newVal);
-  sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');
-  sheet.getRange(fila, COL.FECHA_PAGO + 1).setValue(hoy);
+  if (!tipoPago || tipoPago === 'completo') {
+    sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');
+    sheet.getRange(fila, COL.FECHA_PAGO + 1).setValue(hoy);
+  }
 
-  Logger.log('Comprobante subido: ' + norden + ' → ' + newVal);
+  Logger.log('Comprobante subido: ' + norden + ' → ' + newVal + ' (tipoPago: ' + (tipoPago||'completo') + ')');
   return { url: url, comprobante: newVal };
 }
 
