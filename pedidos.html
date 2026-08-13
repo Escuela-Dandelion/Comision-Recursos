@@ -357,7 +357,7 @@
         <button class="filtro-btn" data-estado="Confirmado" onclick="filtrar(this)">Confirmado</button>
         <button class="filtro-btn" data-estado="En Camino" onclick="filtrar(this)">En Camino</button>
         <button class="filtro-btn" data-estado="Entregado en Escuela" onclick="filtrar(this)">Entregado</button>
-        <button class="filtro-btn" data-estado="Cerrado" onclick="filtrar(this)" id="filtro-cerrado" style="display:none">Cerrado</button>
+        <button class="filtro-btn" data-estado="Cerrado" onclick="filtrarCerrado(this)" id="filtro-cerrado">🔒 Cerrado</button>
         <button class="filtro-btn" id="btn-todos-incl-cerrados" onclick="mostrarTodos()" style="color:#6b7280">Todos</button>
       </div>
       <!-- Filtro por pago -->
@@ -2295,6 +2295,24 @@ function toggleCerrados() {
   cargarLista(!_incluyeCerrados);
 }
 
+function filtrarCerrado(btn) {
+  if (!_incluyeCerrados) {
+    // Primero cargar cerrados, después aplicar filtro
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    cargarLista(true).then(function() {
+      btn.disabled = false;
+      btn.textContent = '🔒 Cerrado';
+      estadosFiltro = new Set(['Cerrado']);
+      document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      aplicarFiltros();
+    });
+  } else {
+    filtrar(btn);
+  }
+}
+
 function mostrarTodos() {
   // Incluir cerrados y mostrar filtro Cerrado
   if (!_incluyeCerrados) {
@@ -2304,7 +2322,6 @@ function mostrarTodos() {
     estadosFiltro = new Set();
     document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
     document.getElementById('btn-todos-incl-cerrados').classList.add('active');
-    document.getElementById('filtro-cerrado').style.display = '';
     renderLista(todosLosPedidos);
     actualizarContador();
   }
