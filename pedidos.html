@@ -2296,21 +2296,31 @@ function toggleCerrados() {
 }
 
 function filtrarCerrado(btn) {
-  if (!_incluyeCerrados) {
-    // Primero cargar cerrados, después aplicar filtro
-    btn.disabled = true;
-    btn.textContent = '⏳';
-    cargarLista(true).then(function() {
+  var aplicar = function() {
+    estadosFiltro = new Set(['Cerrado']);
+    document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    aplicarFiltros();
+  };
+  if (_incluyeCerrados) { aplicar(); return; }
+  // Traer cerrados sin tocar el spinner de la lista principal
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  fetch(SCRIPT_URL + '?action=getPedidos&incluirCerrados=1', { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok && data.pedidos) {
+        todosLosPedidos = data.pedidos;
+        _incluyeCerrados = true;
+      }
       btn.disabled = false;
       btn.textContent = '🔒 Cerrado';
-      estadosFiltro = new Set(['Cerrado']);
-      document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      aplicarFiltros();
+      aplicar();
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.textContent = '🔒 Cerrado';
     });
-  } else {
-    filtrar(btn);
-  }
 }
 
 function mostrarTodos() {
