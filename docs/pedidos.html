@@ -491,8 +491,12 @@
           <button onclick="cancelarEditarEnvio()" style="padding:7px 10px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
           <span id="d-envio-feedback" style="font-size:12px;font-weight:600;display:none;"></span>
         </div>
+        <div class="det-total-row" style="opacity:.7;">
+          <span class="det-total-label" style="font-weight:600;">Total Orden</span>
+          <span class="det-total-value" id="d-subtotal-orden" style="font-size:15px;">—</span>
+        </div>
         <div class="det-total-row">
-          <span class="det-total-label">Total del pedido</span>
+          <span class="det-total-label">Total con Envío</span>
           <span class="det-total-value" id="d-total">—</span>
         </div>
       </div>
@@ -1274,6 +1278,8 @@ function renderLista(pedidos) {
     const totalFromProds = calcTotalProductos(p.productos || '');
     const total = totalFromProds > 0 ? totalFromProds : (parseFloat(p.total) || 0);
     const totalStr = total > 0 ? formatPesosConDec(total) : '';
+    const envioNum = parsePrecio(String(p.costoEnvio || ''));
+    const totalConEnvioStr = (total > 0 && envioNum > 0) ? formatPesosConDec(total + envioNum) : '';
     // Sumar unidades totales usando parseProductos (igual que el detalle)
     const prodsParsed = parseProductos(p.productos || '').filter(function(r){ return r.nombre; });
     const totalUnidades = prodsParsed.reduce(function(sum, r) {
@@ -1299,6 +1305,7 @@ function renderLista(pedidos) {
             ${unidStr ? `<span style="font-size:12px;color:#374151;white-space:nowrap;">${unidStr}</span>` : ''}
             ${totalStr ? `<span style="font-size:12px;font-weight:700;color:#2d5a27;white-space:nowrap;">${totalStr}</span>` : ''}
           </div>
+          ${totalConEnvioStr ? `<div style="margin-top:3px;font-size:11px;color:#6b7280;white-space:nowrap;">c/envío <strong style="color:#1d4ed8;">${totalConEnvioStr}</strong></div>` : ''}
         </td>
         <td class="col-pills">
           <span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado] || ''} ${p.estado}</span>
@@ -1687,6 +1694,7 @@ function recalcularTotalEdit() {
   });
   var envio = pedidoActual ? parsePrecio(String(pedidoActual.costoEnvio || '')) : 0;
   var total = subtotal + envio;
+  document.getElementById('d-subtotal-orden').textContent = subtotal > 0 ? formatPesosConDec(subtotal) : '—';
   document.getElementById('d-total').textContent = total > 0 ? formatPesosConDec(total) : '—';
 }
 
@@ -2209,6 +2217,7 @@ function renderDetalle(p) {
   const subtotalNum = totalCalcProd > 0 ? totalCalcProd : parsePrecio(String(p.total || ''));
   const envioNum = parsePrecio(String(p.costoEnvio || ''));
   const totalNum = subtotalNum + envioNum;
+  document.getElementById('d-subtotal-orden').textContent = subtotalNum > 0 ? formatPesosConDec(subtotalNum) : '—';
   document.getElementById('d-total').textContent = totalNum > 0 ? formatPesosConDec(totalNum) : '—';
 
   // Fila costo envío
@@ -2394,6 +2403,7 @@ function guardarCostoEnvio() {
     // Recalcular total mostrado
     const subtotal = calcTotalProductos(pedidoActual.productos || '') || parsePrecio(String(pedidoActual.total || ''));
     const nuevoTotal = subtotal + valor;
+    document.getElementById('d-subtotal-orden').textContent = subtotal > 0 ? formatPesosConDec(subtotal) : '—';
     document.getElementById('d-total').textContent = nuevoTotal > 0 ? formatPesosConDec(nuevoTotal) : '—';
     document.getElementById('d-envio-edit').style.display = 'none';
     fb.textContent = '';

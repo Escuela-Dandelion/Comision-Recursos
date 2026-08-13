@@ -487,15 +487,29 @@ function registrarNuevaOrden(marca, fgp, items) {
 
 // ── TIENDANUBE API ─────────────────────────────────────────
 function obtenerProductos() {
-  const response = UrlFetchApp.fetch(
-    'https://api.tiendanube.com/v1/' + CONFIG_STOCK.STORE_ID + '/products?per_page=200', {
+  var url = 'https://api.tiendanube.com/v1/' + CONFIG_STOCK.STORE_ID + '/products?per_page=200';
+  var opts = {
     method: 'GET',
     headers: {
       'Authentication': 'bearer ' + CONFIG_STOCK.API_TOKEN,
       'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
+    },
+    muteHttpExceptions: true
+  };
+  var lastError;
+  for (var i = 0; i < 3; i++) {
+    try {
+      if (i > 0) Utilities.sleep(3000);
+      var response = UrlFetchApp.fetch(url, opts);
+      if (response.getResponseCode() === 200) {
+        return JSON.parse(response.getContentText());
+      }
+      lastError = 'HTTP ' + response.getResponseCode() + ': ' + response.getContentText().substring(0, 200);
+    } catch(e) {
+      lastError = e.message;
     }
-  });
-  return JSON.parse(response.getContentText());
+  }
+  throw new Error('TiendaNube API no disponible tras 3 intentos: ' + lastError);
 }
 
 // ── ALERTAS ────────────────────────────────────────────────
