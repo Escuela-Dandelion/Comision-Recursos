@@ -408,9 +408,9 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   } else if (tieneOrdenActiva) {
     // ── Caso: ya hay un pedido en proceso ──
     asunto      = 'Diente de León — Recordatorio stock (' + ordenInfo.estado + '): ' + marca;
-    intro       = 'El stock de <strong>' + marca + '</strong> sigue bajo. El pedido ' + _linkOrden + ' ya fue realizado y está en estado <strong>' + ordenInfo.estado + '</strong>. Podés <a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">actualizarlo aquí</a>.';
+    intro       = 'El stock de <strong>' + marca + '</strong> sigue bajo. El pedido ' + _linkOrden + ' ya fue realizado y está en estado <strong>' + ordenInfo.estado + '</strong>.';
     cuerpoExtra = '<p style="margin-top:12px">Cuando llegue el pedido, actualizá el stock en TiendaNube y cerrá la orden para que los avisos se detengan.</p>';
-    botonesHtml = '';
+    botonesHtml = '<p style="margin-top:16px">Podés <a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">ver la orden aquí</a>.</p>';
 
   } else {
     // ── Caso: sin orden activa — hay que hacer el pedido ──
