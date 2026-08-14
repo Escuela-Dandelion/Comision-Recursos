@@ -385,17 +385,24 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
 
   var asunto, intro, cuerpoExtra, botonesHtml;
 
+  const urlAdminOrden = ordenInfo
+    ? 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos&id=' + encodeURIComponent(ordenInfo.nOrden)
+    : null;
+  const _linkOrden = urlAdminOrden
+    ? '<a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">' + ordenInfo.nOrden + '</a>'
+    : '';
+
   if (tieneOrdenEntregada) {
     // ── Caso: pedido llegó pero el stock no fue actualizado en TiendaNube ──
-    asunto     = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
-    intro      = 'El pedido <strong>' + ordenInfo.nOrden + '</strong> de <strong>' + marca + '</strong> figura como Entregado, pero el stock en TiendaNube todavía no fue actualizado.';
-    cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente.</p>';
+    asunto      = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
+    intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado</strong>, pero el stock en TiendaNube todavía no fue actualizado.';
+    cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente. Podés <a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">ver la orden aquí</a>.</p>';
     botonesHtml = '';
 
   } else if (tieneOrdenActiva) {
     // ── Caso: ya hay un pedido en proceso ──
-    asunto     = 'Diente de León — Recordatorio stock (' + ordenInfo.estado + '): ' + marca;
-    intro      = 'El stock de <strong>' + marca + '</strong> sigue bajo. El pedido <strong>' + ordenInfo.nOrden + '</strong> ya fue realizado y está en estado <strong>' + ordenInfo.estado + '</strong>.';
+    asunto      = 'Diente de León — Recordatorio stock (' + ordenInfo.estado + '): ' + marca;
+    intro       = 'El stock de <strong>' + marca + '</strong> sigue bajo. El pedido ' + _linkOrden + ' ya fue realizado y está en estado <strong>' + ordenInfo.estado + '</strong>. Podés <a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">actualizarlo aquí</a>.';
     cuerpoExtra = '<p style="margin-top:12px">Cuando llegue el pedido, actualizá el stock en TiendaNube y cerrá la orden para que los avisos se detengan.</p>';
     botonesHtml = '';
 
