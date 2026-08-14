@@ -950,7 +950,7 @@ function renderProductos(rows){
 
     html+='<div class="prod-body" id="prod-'+pi+'">'+
       '<table class="tbl-inner"><thead><tr>'+
-        '<th>Familia</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th><th>Pedido</th><th>Fecha</th>'+
+        '<th>Familia</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th><th>Pedido</th>'+
       '</tr></thead><tbody>';
     famArr.forEach(function(fname){
       var f=prod.familias[fname];
@@ -959,15 +959,16 @@ function renderProductos(rows){
         var _fh=f.fechaMap&&f.fechaMap[pid]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[pid])+'</div>':'';
         return '<div style="white-space:nowrap">'+(_e?'✅':'⏳')+' #'+esc(String(pid))+_fh+'</div>';
       }).join('');
-      var _fechaDisplay=f.pedidos.length>0&&f.fechaMap?f.fechaMap[f.pedidos[0]]||'':'';
+      var _pid0=f.pedidos[0];
+      var _fh0=f.fechaMap&&_pid0&&f.fechaMap[_pid0]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[_pid0])+'</div>':'';
+      var _noRetPed=f.pedidos.length===1?'#'+_pid0+_fh0:f.pedidos.length+' pedidos';
       html+='<tr>'+
         '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
         '<td class="num">'+pesos(f.neto)+'</td>'+
-        '<td style="font-size:12px">'+(_hasRet?_pedHtml:'<span class="txt-sm">'+(f.pedidos.length===1?'#'+f.pedidos[0]:f.pedidos.length+' pedidos')+'</span>')+'</td>'+
-        '<td style="font-size:11px;color:#6b7280;white-space:nowrap">'+esc(_fechaDisplay)+'</td>'+
+        '<td style="font-size:12px">'+(_hasRet?_pedHtml:'<span class="txt-sm">'+_noRetPed+'</span>')+'</td>'+
       '</tr>';
     });
     html+='</tbody></table></div>';
