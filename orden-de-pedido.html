@@ -528,6 +528,11 @@
 
     const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/export?format=csv&gid=857535467';
     const input = document.getElementById('f-norden');
+    const btn   = document.getElementById('btn-registrar');
+    btn.disabled = true;
+    btn.textContent = 'Generando N° de orden…';
+    btn.style.opacity = '0.6';
+    btn.style.cursor  = 'not-allowed';
     try {
       const resp = await fetch(SHEET_CSV + '&t=' + Date.now());
       const text = await resp.text();
@@ -543,6 +548,11 @@
     } catch(e) {
       input.value = 'ORD-' + new Date().getFullYear() + '-???';
       input.placeholder = 'Error al leer el Sheet';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📋 Registrar Pedido';
+      btn.style.opacity = '';
+      btn.style.cursor  = '';
     }
   })();
 </script>

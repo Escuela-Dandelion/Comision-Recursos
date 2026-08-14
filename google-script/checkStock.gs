@@ -231,6 +231,13 @@ function _checkStockBajoInterno() {
   const productos       = obtenerProductos();
   const alertasEnviadas = obtenerAlertasEnviadas();
   const nuevasAlertas   = {};
+
+  var pedidosData = [];
+  try {
+    var ssPed = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
+    var shPed = ssPed.getSheetByName('Pedidos');
+    if (shPed) pedidosData = shPed.getDataRange().getValues();
+  } catch(e) { Logger.log('Error cargando pedidos para contexto de orden: ' + e); }
   const alertasPorGrupo = {};
 
   const hoy     = new Date();
@@ -312,7 +319,7 @@ function _checkStockBajoInterno() {
 
       const grupoKey = fgp.email + '|' + marca;
       if (!alertasPorGrupo[grupoKey]) {
-        alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [], _claves: {} };
+        alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [], _claves: {}, ordenInfo: buscarOrdenMarca(marca, pedidosData) };
       }
       if (!alertasPorGrupo[grupoKey]._claves[clave]) {
         alertasPorGrupo[grupoKey].items.push({
@@ -333,8 +340,7 @@ function _checkStockBajoInterno() {
   });
 
   Object.values(alertasPorGrupo).forEach(function(grupo) {
-    const urls = generarUrls(grupo.items, grupo.marca, grupo.fgp);
-    enviarAlertaStock(grupo.fgp, grupo.marca, grupo.items, urls);
+    enviarAlertaStock(grupo.fgp, grupo.marca, grupo.items, grupo.ordenInfo);
     Logger.log('Email enviado a ' + grupo.fgp.nombre + ' | ' + grupo.marca + ' | ' + grupo.items.length + ' ítem(s)');
   });
 
@@ -345,7 +351,8 @@ function _checkStockBajoInterno() {
 }
 
 // ── ENVÍO DE EMAIL ─────────────────────────────────────────
-function enviarAlertaStock(fgp, marca, items, urls) {
+// ordenInfo: null → sin orden activa | { nOrden, estado: 'Solicitado'|'En Camino'|'Entregado'|... }
+function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   const destinatario = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_EMAIL : fgp.email;
   const ccEmails = [];
   if (!CONFIG_STOCK.TEST_MODE) {
@@ -355,9 +362,9 @@ function enviarAlertaStock(fgp, marca, items, urls) {
   }
   const cc = ccEmails.join(',');
 
-  const intro = items.length === 1
-    ? 'El siguiente producto de <strong>' + marca + '</strong> tiene stock bajo:'
-    : 'Los siguientes productos de <strong>' + marca + '</strong> tienen stock bajo:';
+  const ESTADOS_ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
+  const tieneOrdenActiva    = ordenInfo && ESTADOS_ACTIVOS.indexOf(ordenInfo.estado) !== -1;
+  const tieneOrdenEntregada = ordenInfo && ordenInfo.estado === 'Entregado';
 
   const listaHtml = items.map(function(item) {
     var linea = '<li style="margin-bottom:10px"><strong>' + item.descripcion + '</strong> — ' + item.stock + ' unidades en stock';
@@ -376,7 +383,49 @@ function enviarAlertaStock(fgp, marca, items, urls) {
     return linea;
   }).join('');
 
-  const asunto   = 'Diente de León - Stock bajo: ' + marca;
+  var asunto, intro, cuerpoExtra, botonesHtml;
+
+  if (tieneOrdenEntregada) {
+    // ── Caso: pedido llegó pero el stock no fue actualizado en TiendaNube ──
+    asunto     = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
+    intro      = 'El pedido <strong>' + ordenInfo.nOrden + '</strong> de <strong>' + marca + '</strong> figura como Entregado, pero el stock en TiendaNube todavía no fue actualizado.';
+    cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente.</p>';
+    botonesHtml = '';
+
+  } else if (tieneOrdenActiva) {
+    // ── Caso: ya hay un pedido en proceso ──
+    asunto     = 'Diente de León — Recordatorio stock (' + ordenInfo.estado + '): ' + marca;
+    intro      = 'El stock de <strong>' + marca + '</strong> sigue bajo. El pedido <strong>' + ordenInfo.nOrden + '</strong> ya fue realizado y está en estado <strong>' + ordenInfo.estado + '</strong>.';
+    cuerpoExtra = '<p style="margin-top:12px">Cuando llegue el pedido, actualizá el stock en TiendaNube y cerrá la orden para que los avisos se detengan.</p>';
+    botonesHtml = '';
+
+  } else {
+    // ── Caso: sin orden activa — hay que hacer el pedido ──
+    asunto = 'Diente de León — Stock bajo: ' + marca;
+    intro  = items.length === 1
+      ? 'El siguiente producto de <strong>' + marca + '</strong> tiene stock bajo:'
+      : 'Los siguientes productos de <strong>' + marca + '</strong> tienen stock bajo:';
+    cuerpoExtra = '';
+
+    const telProveedor = fgp.tel_proveedor || leerTelProveedor(marca);
+    const productos    = items.map(function(i) { return i.descripcion; }).join('|');
+    const cantidades   = items.map(function(i) { return i.stock; }).join('|');
+    const precios      = items.map(function(i) { return i.precio || ''; }).join('|');
+    const paramsOrden  = { producto: productos, cantidad: cantidades, precio: precios, proveedor: marca, fgp: fgp.nombre };
+    if (telProveedor) paramsOrden.tel = telProveedor;
+    const paramsRetiro = { proveedor: marca, producto: productos.replace(/\|/g, '\n'), fgp: fgp.nombre };
+    const urlOrden  = buildUrl(CONFIG_STOCK.FORM_URL,   paramsOrden);
+    const urlRetiro = buildUrl(CONFIG_STOCK.RETIRO_URL, paramsRetiro);
+
+    botonesHtml = `
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
+        <p><strong>📋 1. Hacer el pedido al proveedor:</strong></p>
+        <p><a href="${urlOrden}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Hacer el pedido</a></p>
+        <br>
+        <p><strong>📅 2. Agendar el retiro (cuando el proveedor confirme):</strong></p>
+        <p><a href="${urlRetiro}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Agendar el retiro</a></p>`;
+  }
+
   const cuerpoHtml = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a2e">
       <div style="background:#3a7d44;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center">
@@ -386,12 +435,8 @@ function enviarAlertaStock(fgp, marca, items, urls) {
       <div style="background:#f7f8fa;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px">
         <p>Hola <strong>${fgp.nombre}</strong>! ${intro}</p>
         <ul style="margin:16px 0;padding-left:20px;line-height:1.8">${listaHtml}</ul>
-        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
-        <p><strong>📋 1. Hacer el pedido al proveedor:</strong></p>
-        <p><a href="${urls.orden}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Hacer el pedido</a></p>
-        <br>
-        <p><strong>📅 2. Agendar el retiro (cuando el proveedor confirme):</strong></p>
-        <p><a href="${urls.retiro}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Agendar el retiro</a></p>
+        ${cuerpoExtra}
+        ${botonesHtml}
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
         <p style="font-size:12px;color:#6b7280">Este mensaje fue generado automáticamente por el sistema Diente de León.</p>
       </div>
@@ -400,7 +445,8 @@ function enviarAlertaStock(fgp, marca, items, urls) {
   const opciones = { htmlBody: cuerpoHtml };
   if (cc) opciones.cc = cc;
 
-  Logger.log('Enviando email a: ' + destinatario + (cc ? ' | CC: ' + cc : ''));
+  const contexto = tieneOrdenEntregada ? 'entregado-sin-actualizar' : tieneOrdenActiva ? 'orden-activa-' + ordenInfo.estado : 'sin-orden';
+  Logger.log('Enviando email a: ' + destinatario + (cc ? ' | CC: ' + cc : '') + ' | contexto: ' + contexto);
   MailApp.sendEmail(destinatario, asunto, '', opciones);
   Logger.log('Email enviado OK');
 }
@@ -533,6 +579,22 @@ function obtenerAlertasEnviadas() {
   return raw ? JSON.parse(raw) : {};
 }
 
+function buscarOrdenMarca(marca, pedidosData) {
+  const ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
+  var ordenActiva = null, ordenEntregada = null;
+  for (var i = pedidosData.length - 1; i >= 1; i--) {
+    const fila   = pedidosData[i];
+    const filaMarca = String(fila[2] || '').toUpperCase().trim();
+    if (filaMarca !== marca.toUpperCase().trim()) continue;
+    const estado = String(fila[5] || '').trim();
+    const nOrden = String(fila[0] || '');
+    if (!ordenActiva    && ACTIVOS.indexOf(estado) !== -1) ordenActiva    = { nOrden: nOrden, estado: estado };
+    if (!ordenEntregada && estado === 'Entregado')         ordenEntregada = { nOrden: nOrden, estado: estado };
+    if (ordenActiva && ordenEntregada) break;
+  }
+  return ordenActiva || ordenEntregada || null;
+}
+
 function resetearAlertas() {
   PropertiesService.getScriptProperties().deleteProperty('ALERTAS_ENVIADAS');
   Logger.log('Alertas reseteadas.');
@@ -572,9 +634,6 @@ function enviarEmailDePrueba() {
     }
   ];
 
-  // generarUrls registra una orden real en el Sheet → el link del email funciona
-  const urls = generarUrls(items, marca, fgp);
-
   const destinatariosPrueba = [
     CONFIG_STOCK.TEST_EMAIL,
     'monicachesta@gmail.com',
@@ -587,7 +646,7 @@ function enviarEmailDePrueba() {
   CONFIG_STOCK.TEST_EMAIL = destinatariosPrueba;
   CONFIG_STOCK.TEST_MODE  = true;
   try {
-    enviarAlertaStock(fgp, marca, items, urls);
+    enviarAlertaStock(fgp, marca, items, null); // null = sin orden activa → muestra botones de hacer pedido
   } finally {
     CONFIG_STOCK.TEST_EMAIL = emailAnterior;
     CONFIG_STOCK.TEST_MODE  = modoAnterior;
