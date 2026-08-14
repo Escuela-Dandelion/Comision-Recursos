@@ -240,11 +240,14 @@ function _checkStockBajoInterno() {
   } catch(e) { Logger.log('Error cargando pedidos para contexto de orden: ' + e); }
   const alertasPorGrupo = {};
 
-  const hoy     = new Date();
-  const yyyyM   = hoy.getFullYear() + '_' + hoy.getMonth();
+  const hoy      = new Date();
+  const yyyyM    = hoy.getFullYear() + '_' + hoy.getMonth();
   const yyyyMMdd = hoy.getFullYear() + '_' + (hoy.getMonth()+1) + '_' + hoy.getDate();
+  const bucket48h = Math.floor(hoy.getTime() / (48 * 60 * 60 * 1000));
+  const ordenInfoPorMarca = {};
+  const ESTADOS_ACTIVOS_AO = ['Solicitado', 'Confirmado', 'En Camino'];
 
-  // Limpiar claves diarias de más de 14 días para no acumular basura
+  // Limpiar claves diarias de más de 14 días y claves _ao_ de más de 14 buckets (~28 días)
   const haceDosSemanas = new Date(hoy.getTime() - 14 * 24 * 60 * 60 * 1000);
   Object.keys(alertasEnviadas).forEach(function(k) {
     if (k.indexOf('_d_') !== -1) {
@@ -252,6 +255,11 @@ function _checkStockBajoInterno() {
         var parts = k.split('_d_')[1].split('_');
         var kFecha = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
         if (kFecha < haceDosSemanas) delete alertasEnviadas[k];
+      } catch(e) {}
+    } else if (k.indexOf('_ao_') !== -1) {
+      try {
+        var b = parseInt(k.split('_ao_').pop());
+        if (bucket48h - b > 14) delete alertasEnviadas[k];
       } catch(e) {}
     }
   });
@@ -282,15 +290,24 @@ function _checkStockBajoInterno() {
       const stock      = parseInt(variante.stock);
       const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
       const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
-      const claveHoy   = clave + '_d_' + yyyyMMdd;
+      const claveHoy    = clave + '_d_' + yyyyMMdd;
       const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
+
+      // Determinar contexto de orden para esta marca (cacheado por marca)
+      if (!ordenInfoPorMarca.hasOwnProperty(marca)) ordenInfoPorMarca[marca] = buscarOrdenMarca(marca, pedidosData);
+      const ordenInfoMarca       = ordenInfoPorMarca[marca];
+      const tieneOrdenActivaLocal = ordenInfoMarca && ESTADOS_ACTIVOS_AO.indexOf(ordenInfoMarca.estado) !== -1;
+      // Con orden activa: gate de 48h; sin orden o entregada: gate diario
+      const claveGate = tieneOrdenActivaLocal ? clave + '_ao_' + bucket48h : claveHoy;
+
       Logger.log(
         '[CHECK] ' + descripcion +
         ' | stock=' + stock +
         ' | vel60d=' + velocidad +
         ' | umbral=' + umbral +
         ' | piso=' + stockMinimo +
-        ' | alertadoHoy=' + !!alertasEnviadas[claveHoy] +
+        ' | gate=' + (tieneOrdenActivaLocal ? '48h' : 'diario') +
+        ' | alertado=' + !!alertasEnviadas[claveGate] +
         ' | clave=' + clave
       );
       // ── FIN DEBUG ──────────────────────────────────────────
@@ -306,20 +323,20 @@ function _checkStockBajoInterno() {
         }
         return;
       }
-      // Condición A: stock bajo y no alertado hoy (re-alerta diaria mientras siga bajo)
-      const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[claveHoy];
+      // Condición A: stock bajo y no alertado en el período correspondiente (diario o 48h)
+      const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[claveGate];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
       const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, diasActivos, nombreVar) : null;
       const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
       if (!condA && !condB) {
-        Logger.log('  [HOY YA ALERTADO] ' + descripcion + ' — próxima alerta mañana si sigue bajo');
+        Logger.log('  [' + (tieneOrdenActivaLocal ? '48H YA ALERTADO' : 'HOY YA ALERTADO') + '] ' + descripcion + ' — próxima alerta ' + (tieneOrdenActivaLocal ? 'en 48h' : 'mañana') + ' si sigue bajo');
         return;
       }
 
       const grupoKey = fgp.email + '|' + marca;
       if (!alertasPorGrupo[grupoKey]) {
-        alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [], _claves: {}, ordenInfo: buscarOrdenMarca(marca, pedidosData) };
+        alertasPorGrupo[grupoKey] = { fgp: fgp, marca: marca, items: [], _claves: {}, ordenInfo: ordenInfoMarca };
       }
       if (!alertasPorGrupo[grupoKey]._claves[clave]) {
         alertasPorGrupo[grupoKey].items.push({
@@ -333,9 +350,12 @@ function _checkStockBajoInterno() {
         });
         alertasPorGrupo[grupoKey]._claves[clave] = true;
       }
-      if (condA) { nuevasAlertas[clave] = hoy.toISOString(); nuevasAlertas[claveHoy] = hoy.toISOString(); }
+      if (condA) {
+        nuevasAlertas[claveGate] = hoy.toISOString();
+        if (!tieneOrdenActivaLocal) nuevasAlertas[clave] = hoy.toISOString();
+      }
       if (condB) nuevasAlertas[claveLunes] = hoy.toISOString();
-      Logger.log('  ⚠️ ' + (condA ? 'condA' : '') + (condB ? ' condB(mensual:' + umbralMensual + ')' : '') + ': ' + clave + ' (' + stock + ')');
+      Logger.log('  ⚠️ ' + (condA ? 'condA(' + (tieneOrdenActivaLocal ? '48h' : 'diario') + ')' : '') + (condB ? ' condB(mensual:' + umbralMensual + ')' : '') + ': ' + clave + ' (' + stock + ')');
     });
   });
 
