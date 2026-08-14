@@ -846,7 +846,7 @@ function renderFamilias(rows){
 
     html+='<div class="fam-body" id="fam-'+fi+'">'+
       '<table class="tbl-inner"><thead><tr>'+
-        '<th>Producto</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th><th>Fecha</th><th></th>'+
+        '<th>Producto</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th>'+
       '</tr></thead><tbody>';
     // Agrupar por pedido para mostrar el descuento al final del grupo
     var pedidoGroups={};
@@ -863,7 +863,7 @@ function renderFamilias(rows){
       var _bg=_entr?'#f0fdf4':'#fef9c3';
       var _fechaHora=grupo[0].fechaHora||grupo[0].fecha||'';
       html+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
-        '<td colspan="7" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
+        '<td colspan="5" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
           _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+(_entr?'Entregado':'Pendiente de entrega')+
         '</td>'+
       '</tr>';
@@ -874,17 +874,14 @@ function renderFamilias(rows){
           '<td class="num" style="color:#999">'+pesos(p.subtotal_bruto)+'</td>'+
           '<td class="num"><strong>'+pesos(p.total_pagado)+'</strong></td>'+
           '<td class="num">'+pesos(p.neto)+'</td>'+
-          '<td style="white-space:nowrap"><span class="txt-sm">'+esc(p.fecha||'—')+'</span></td>'+
-          '<td></td>'+
         '</tr>';
       });
       var disc=grupo[0].order_discount||0;
       if(disc>0.01){
         html+='<tr style="background:#fff8f8">'+
-          '<td colspan="4" style="padding:4px 48px;font-size:11px;color:#e63946">'+
+          '<td colspan="5" style="padding:4px 48px;font-size:11px;color:#e63946">'+
             '🏷 Descuento en pedido #'+esc(ped)+': <strong>–'+pesos(disc)+'</strong>'+
           '</td>'+
-          '<td colspan="3"></td>'+
         '</tr>';
       }
     });
