@@ -633,6 +633,34 @@ function resetearAlertas() {
   Logger.log('Alertas reseteadas.');
 }
 
+// ── FORZAR ALERTA PARA MARCAS ESPECÍFICAS ─────────────────
+// Editar la lista de marcas y correr desde el editor GAS.
+// Solo dispara emails para las marcas listadas; las demás no se tocan.
+function forzarAlertasMarca() {
+  var marcas = ['GROEN', 'YEMARI', 'EL MAITEN']; // ← editar según necesidad
+
+  // Identificar claves de variantes de esas marcas llamando a TiendaNube
+  var productos = obtenerProductos();
+  var clavesMarca = {};
+  productos.forEach(function(p) {
+    if (marcas.indexOf((p.brand || '').toUpperCase()) === -1) return;
+    p.variants.forEach(function(v) { clavesMarca[p.id + '_' + v.id] = true; });
+  });
+
+  // Borrar entradas de alertasEnviadas para esas marcas (diario, 48h y lunes)
+  var alertasEnviadas = obtenerAlertasEnviadas();
+  var borradas = 0;
+  Object.keys(alertasEnviadas).forEach(function(k) {
+    var base = k.replace(/_d_.*$/, '').replace(/_ao_.*$/, '').replace(/_tlunes_.*$/, '');
+    if (clavesMarca[base]) { delete alertasEnviadas[k]; borradas++; }
+  });
+  PropertiesService.getScriptProperties().setProperty('ALERTAS_ENVIADAS', JSON.stringify(alertasEnviadas));
+  Logger.log('Claves borradas: ' + borradas + ' | Marcas: ' + marcas.join(', '));
+
+  // Correr el check — solo las marcas limpiadas van a disparar (las demás siguen gateadas)
+  _checkStockBajoInterno();
+}
+
 function resetearVelocidades() {
   const props = PropertiesService.getScriptProperties();
   props.deleteProperty('VELOCIDADES_CACHE');
