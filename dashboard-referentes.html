@@ -2,6 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <script>(function(){var V='20260814';if(location.search.indexOf('appv='+V)===-1){var p=new URLSearchParams(location.search);p.set('appv',V);location.replace(location.pathname+'?'+p.toString()+(location.hash||''));}})()</script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Referentes — Diente de León</title>
   <style>
@@ -388,9 +392,9 @@
       <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
-      <div class="filter-label">Marca</div>
+      <div class="filter-label">Marca / Proveedor</div>
       <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
-        <option value="">Todas las marcas</option>
+        <option value="">Todos los proveedores</option>
       </select>
 
       <hr class="sidebar-divider">
@@ -606,7 +610,7 @@ function initDashboard(d){
   try { localStorage.setItem(DASH_CACHE_KEY, JSON.stringify(d)); } catch(e){}
   document.getElementById('loading-dash').style.display='none';
   var _ahora=new Date(); var _fmtFecha=_ahora.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+_ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha;
+  document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha+' · build 3';
   ALL_ROWS        = (d.rows||[]).map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
   ALL_MESES       = d.meses_todos||[];
   ALL_RETIROS_MAP = d.retiros_map||{};
@@ -649,7 +653,7 @@ function initDashboard(d){
   ALL_ROWS.forEach(function(r){ if(r.marca) marcaSet[r.marca]=true; });
   var marcas=Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
   var selP=document.getElementById('filtro-marca');
-  selP.innerHTML='<option value="">Todas las marcas</option>';
+  selP.innerHTML='<option value="">Todos los proveedores</option>';
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   document.getElementById('contenido').style.display='block';
@@ -708,6 +712,7 @@ function render(){
 
   // KPIs
   var totalVendido=0,totalNeto=0,totalDescuentos=0,totalUnidades=0,pedidosSet={},familiasSet={};
+  var familiasPorGrado={};
   rows.forEach(function(r){
     totalVendido    +=(r.total_pagado_linea||r.total_linea||0);
     totalNeto       +=(r.neto_linea||r.total_pagado_linea||r.total_linea||0);
@@ -715,6 +720,18 @@ function render(){
     totalUnidades   +=(r.cantidad||0);
     if(r.pedido) pedidosSet[r.pedido]=true;
     if(r.familia) familiasSet[r.familia]=true;
+    if(r.grado && r.familia){
+      if(!familiasPorGrado[r.grado]) familiasPorGrado[r.grado]={};
+      familiasPorGrado[r.grado][r.familia]=true;
+    }
+  });
+  // Actualizar badges de grados con familias únicas del filtro actual
+  var todosEl=document.getElementById('nav-todos');
+  if(todosEl){ var b=todosEl.querySelector('.grado-badge'); if(b) b.textContent=Object.keys(familiasSet).length+' fam.'; }
+  document.querySelectorAll('.grado-item[data-grado]').forEach(function(el){
+    var b=el.querySelector('.grado-badge');
+    var cnt=familiasPorGrado[el.dataset.grado]?Object.keys(familiasPorGrado[el.dataset.grado]).length:0;
+    if(b) b.textContent=cnt+' fam.';
   });
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
@@ -752,7 +769,7 @@ function render(){
   if(Object.keys(ALL_RETIROS_MAP).length>0){
     html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:13px;font-weight:600">'+
       '<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:20px;padding:4px 12px">✅ '+Math.round(_uEntr)+' u. entregadas</span>'+
-      '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:20px;padding:4px 12px">⏳ '+Math.round(_uPend)+' u. pendientes</span>'+
+      '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:20px;padding:4px 12px">⏳ '+Math.round(_uPend)+' u. pendientes entregar</span>'+
     '</div>';
   }
 
@@ -820,7 +837,7 @@ function renderFamilias(rows){
     var prodMap={};
     fam.items.forEach(function(item){
       var key=item.producto+'||'+item.pedido;
-      if(!prodMap[key]) prodMap[key]={nombre:item.producto,marca:item.marca||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedido:item.pedido,fecha:item.fecha,order_discount:item.order_discount||0};
+      if(!prodMap[key]) prodMap[key]={nombre:item.producto,marca:item.marca||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedido:item.pedido,fecha:item.fecha,fechaHora:item.fechaHora||item.fecha,order_discount:item.order_discount||0};
       prodMap[key].cantidad+=(item.cantidad||0);
       prodMap[key].subtotal_bruto+=(item.total_linea||0);
       prodMap[key].total_pagado+=(item.total_pagado_linea||item.total_linea||0);
@@ -844,9 +861,10 @@ function renderFamilias(rows){
       var _icon=_entr?'✅':'⏳';
       var _color=_entr?'#15803d':'#92400e';
       var _bg=_entr?'#f0fdf4':'#fef9c3';
+      var _fechaHora=grupo[0].fechaHora||grupo[0].fecha||'';
       html+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
         '<td colspan="7" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
-          _icon+' Pedido #'+esc(String(ped))+' — '+(_entr?'Entregado':'Pendiente de entrega')+
+          _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+(_entr?'Entregado':'Pendiente de entrega')+
         '</td>'+
       '</tr>';
       grupo.forEach(function(p){
@@ -889,12 +907,15 @@ function renderProductos(rows){
     if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') productos[p].u_entr+=(r.cantidad||0);
     else productos[p].u_pend+=(r.cantidad||0);
     var f=r.familia||'Sin nombre';
-    if(!productos[p].familias[f]) productos[p].familias[f]={email:r.email||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedidos:[]};
+    if(!productos[p].familias[f]) productos[p].familias[f]={email:r.email||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedidos:[],fechaMap:{}};
     productos[p].familias[f].cantidad+=(r.cantidad||0);
     productos[p].familias[f].subtotal_bruto+=(r.total_linea||0);
     productos[p].familias[f].total_pagado+=(r.total_pagado_linea||r.total_linea||0);
     productos[p].familias[f].neto+=(r.neto_linea||r.total_pagado_linea||r.total_linea||0);
-    if(r.pedido && productos[p].familias[f].pedidos.indexOf(r.pedido)===-1) productos[p].familias[f].pedidos.push(r.pedido);
+    if(r.pedido && productos[p].familias[f].pedidos.indexOf(r.pedido)===-1){
+      productos[p].familias[f].pedidos.push(r.pedido);
+      productos[p].familias[f].fechaMap[r.pedido]=r.fechaHora||r.fecha||'';
+    }
   });
   var prodArr=Object.values(productos).sort(function(a,b){ return b.unidades-a.unidades; });
   var totalUnidadesRetiro=prodArr.reduce(function(s,p){ return s+p.unidades; },0);
@@ -935,8 +956,10 @@ function renderProductos(rows){
       var f=prod.familias[fname];
       var _pedHtml=f.pedidos.map(function(pid){
         var _e=ALL_RETIROS_MAP[String(pid)]==='Entregado';
-        return '<span style="white-space:nowrap">'+(_e?'✅':'⏳')+' #'+esc(String(pid))+'</span>';
-      }).join(' ');
+        var _fh=f.fechaMap&&f.fechaMap[pid]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[pid])+'</div>':'';
+        return '<div style="white-space:nowrap">'+(_e?'✅':'⏳')+' #'+esc(String(pid))+_fh+'</div>';
+      }).join('');
+      var _fechaDisplay=f.pedidos.length>0&&f.fechaMap?f.fechaMap[f.pedidos[0]]||'':'';
       html+='<tr>'+
         '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
@@ -944,7 +967,7 @@ function renderProductos(rows){
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
         '<td class="num">'+pesos(f.neto)+'</td>'+
         '<td style="font-size:12px">'+(_hasRet?_pedHtml:'<span class="txt-sm">'+(f.pedidos.length===1?'#'+f.pedidos[0]:f.pedidos.length+' pedidos')+'</span>')+'</td>'+
-        '<td></td>'+
+        '<td style="font-size:11px;color:#6b7280;white-space:nowrap">'+esc(_fechaDisplay)+'</td>'+
       '</tr>';
     });
     html+='</tbody></table></div>';
@@ -1021,7 +1044,7 @@ function exportarPDF(){
   html+='<div class="print-section">'+
     '<div class="print-section-title">Resumen de retiro</div>'+
     '<table class="print-tbl"><thead><tr>'+
-      '<th>#</th><th>Producto</th><th>Marca</th><th class="num">Unidades</th><th class="num">Recaudado</th><th class="num">Familias</th>'+
+      '<th>#</th><th>Producto</th><th>Marca/Proveedor</th><th class="num">Unidades</th><th class="num">Recaudado</th><th class="num">Familias</th>'+
     '</tr></thead><tbody>';
   prodArr.forEach(function(p,i){
     html+='<tr>'+
@@ -1080,7 +1103,7 @@ function exportarPDF(){
         ' — <span style="color:#2e7d32">'+pesos(fam.total)+'</span>'+
       '</div>'+
       '<table class="print-tbl"><thead><tr>'+
-        '<th>Producto</th><th>Marca</th><th class="num">Cant.</th><th class="num">Subtotal</th>'+
+        '<th>Producto</th><th>Marca/Proveedor</th><th class="num">Cant.</th><th class="num">Subtotal</th>'+
       '</tr></thead><tbody>';
     Object.values(prodMap).forEach(function(p){
       html+='<tr>'+

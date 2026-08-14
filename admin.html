@@ -2,6 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+  <script>(function(){var V='20260814';if(location.search.indexOf('appv='+V)===-1){var p=new URLSearchParams(location.search);p.set('appv',V);location.replace(location.pathname+'?'+p.toString()+(location.hash||''));}})()</script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diente de León — Admin</title>
 <link rel="icon" type="image/png" href="favicon.png">
@@ -322,10 +326,10 @@
       </button>
 
       <div class="nav-section-label">Reportes</div>
-      <a class="nav-item" href="dashboard-general.html" target="_blank" data-roles="admin,staff,fgp" style="text-decoration:none">
+      <a class="nav-item" href="dashboard-general.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp" style="text-decoration:none">
         <span class="nav-icon">📊</span> Dashboard General ↗
       </a>
-      <a class="nav-item" href="dashboard-referentes.html" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
+      <a class="nav-item" href="dashboard-referentes.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
       <div class="nav-section-label">Recursos</div>
@@ -702,18 +706,22 @@ function aplicarPermisos(role) {
 }
 
 function renderWelcomeCards(role) {
+  var APP_V = '20260814';
   var cards = [
-    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'] },
-    { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'] },
-    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'] },
-    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'] },
-    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'] },
+    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'],                      url:null },
+    { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'],                url:null },
+    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'],           url:null },
+    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'],                      url:'dashboard-general.html?appv='+APP_V },
+    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'],           url:'dashboard-referentes.html?appv='+APP_V },
   ];
 
   var html = cards
     .filter(function(c) { return c.roles.indexOf(role.toLowerCase()) !== -1; })
     .map(function(c) {
-      return '<div class="welcome-card" onclick="showView(\'' + c.view + '\')">' +
+      var action = c.url
+        ? 'window.open(\'' + c.url + '\',\'_blank\')'
+        : 'showView(\'' + c.view + '\')';
+      return '<div class="welcome-card" onclick="' + action + '">' +
         '<div class="wc-icon">' + c.icon + '</div>' +
         '<div class="wc-name">' + c.name + '</div>' +
         '<div class="wc-desc">' + c.desc + '</div>' +
