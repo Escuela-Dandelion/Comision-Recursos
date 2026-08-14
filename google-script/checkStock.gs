@@ -597,7 +597,10 @@ function enviarEmailDePrueba() {
 
 // ── TRIGGER ────────────────────────────────────────────────
 function crearTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'checkStockBajo') ScriptApp.deleteTrigger(t);
+  });
   ScriptApp.newTrigger('checkStockBajo')
-    .timeBased().everyHours(6).create();
-  Logger.log('Trigger creado: cada 6 horas.');
+    .timeBased().everyHours(12).create();
+  Logger.log('Trigger creado: cada 12 horas.');
 }
