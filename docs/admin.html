@@ -706,18 +706,22 @@ function aplicarPermisos(role) {
 }
 
 function renderWelcomeCards(role) {
+  var APP_V = '20260814';
   var cards = [
-    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'] },
-    { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'] },
-    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'] },
-    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'] },
-    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'] },
+    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'],                      url:null },
+    { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'],                url:null },
+    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'],           url:null },
+    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'],                      url:'dashboard-general.html?appv='+APP_V },
+    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'],           url:'dashboard-referentes.html?appv='+APP_V },
   ];
 
   var html = cards
     .filter(function(c) { return c.roles.indexOf(role.toLowerCase()) !== -1; })
     .map(function(c) {
-      return '<div class="welcome-card" onclick="showView(\'' + c.view + '\')">' +
+      var action = c.url
+        ? 'window.open(\'' + c.url + '\',\'_blank\')'
+        : 'showView(\'' + c.view + '\')';
+      return '<div class="welcome-card" onclick="' + action + '">' +
         '<div class="wc-icon">' + c.icon + '</div>' +
         '<div class="wc-name">' + c.name + '</div>' +
         '<div class="wc-desc">' + c.desc + '</div>' +
