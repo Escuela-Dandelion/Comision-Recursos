@@ -1474,6 +1474,7 @@ function apiDashboard(pin, email) {
 
     rows.push({
       fecha:               fecha ? fecha.toLocaleDateString('es-AR') : '',
+      fechaHora:           fecha ? (('0'+fecha.getDate()).slice(-2)+'/'+('0'+(fecha.getMonth()+1)).slice(-2)+'/'+String(fecha.getFullYear()).slice(-2)+' '+('0'+fecha.getHours()).slice(-2)+':'+('0'+fecha.getMinutes()).slice(-2)) : '',
       mes:                 mes,
       pedido:              pedido,
       familia:             nombre,
