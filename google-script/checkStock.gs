@@ -233,8 +233,21 @@ function _checkStockBajoInterno() {
   const nuevasAlertas   = {};
   const alertasPorGrupo = {};
 
-  const hoy   = new Date();
-  const yyyyM = hoy.getFullYear() + '_' + hoy.getMonth();
+  const hoy     = new Date();
+  const yyyyM   = hoy.getFullYear() + '_' + hoy.getMonth();
+  const yyyyMMdd = hoy.getFullYear() + '_' + (hoy.getMonth()+1) + '_' + hoy.getDate();
+
+  // Limpiar claves diarias de más de 14 días para no acumular basura
+  const haceDosSemanas = new Date(hoy.getTime() - 14 * 24 * 60 * 60 * 1000);
+  Object.keys(alertasEnviadas).forEach(function(k) {
+    if (k.indexOf('_d_') !== -1) {
+      try {
+        var parts = k.split('_d_')[1].split('_');
+        var kFecha = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        if (kFecha < haceDosSemanas) delete alertasEnviadas[k];
+      } catch(e) {}
+    }
+  });
 
   Logger.log('Productos: ' + productos.length + ' | Es 3er lunes: ' + esLunes3);
 
@@ -262,7 +275,7 @@ function _checkStockBajoInterno() {
       const stock      = parseInt(variante.stock);
       const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
       const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
-      const yaAlertado = !!alertasEnviadas[clave];
+      const claveHoy   = clave + '_d_' + yyyyMMdd;
       const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
       Logger.log(
         '[CHECK] ' + descripcion +
@@ -270,29 +283,30 @@ function _checkStockBajoInterno() {
         ' | vel60d=' + velocidad +
         ' | umbral=' + umbral +
         ' | piso=' + stockMinimo +
-        ' | yaAlertado=' + yaAlertado +
+        ' | alertadoHoy=' + !!alertasEnviadas[claveHoy] +
         ' | clave=' + clave
       );
       // ── FIN DEBUG ──────────────────────────────────────────
 
-      // Reset alerta regular si el stock se repuso por encima de umbral Y piso
-      if (stock > umbral && stock >= stockMinimo && alertasEnviadas[clave]) {
-        delete alertasEnviadas[clave];
-        nuevasAlertas['__reset__'] = true;
-        Logger.log('  [RESET] ' + descripcion + ' (' + stock + ' > umbral=' + umbral + ' y >= piso=' + stockMinimo + ')');
+      // Reset al recuperarse el stock
+      if (stock > umbral && stock >= stockMinimo) {
+        if (alertasEnviadas[clave]) {
+          delete alertasEnviadas[clave];
+          nuevasAlertas['__reset__'] = true;
+          Logger.log('  [RESET] ' + descripcion + ' stock recuperado (' + stock + ' > umbral=' + umbral + ')');
+        } else {
+          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ', piso=' + stockMinimo + ')');
+        }
+        return;
       }
-      // Condición A (cualquier día): stock bajo (umbral dinámico O piso absoluto) y no alertado aún
-      const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[clave];
+      // Condición A: stock bajo y no alertado hoy (re-alerta diaria mientras siga bajo)
+      const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[claveHoy];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
       const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, diasActivos, nombreVar) : null;
       const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
       if (!condA && !condB) {
-        if (stock > umbral && stock >= stockMinimo) {
-          Logger.log('  [OK] stock suficiente (' + stock + ' > ' + umbral + ', piso=' + stockMinimo + ')');
-        } else if (yaAlertado) {
-          Logger.log('  [BLOQUEADO] alerta ya enviada — resetear con resetearAlertas() para re-alertar');
-        }
+        Logger.log('  [HOY YA ALERTADO] ' + descripcion + ' — próxima alerta mañana si sigue bajo');
         return;
       }
 
@@ -312,7 +326,7 @@ function _checkStockBajoInterno() {
         });
         alertasPorGrupo[grupoKey]._claves[clave] = true;
       }
-      if (condA) nuevasAlertas[clave]      = hoy.toISOString();
+      if (condA) { nuevasAlertas[clave] = hoy.toISOString(); nuevasAlertas[claveHoy] = hoy.toISOString(); }
       if (condB) nuevasAlertas[claveLunes] = hoy.toISOString();
       Logger.log('  ⚠️ ' + (condA ? 'condA' : '') + (condB ? ' condB(mensual:' + umbralMensual + ')' : '') + ': ' + clave + ' (' + stock + ')');
     });
@@ -337,6 +351,7 @@ function enviarAlertaStock(fgp, marca, items, urls) {
   if (!CONFIG_STOCK.TEST_MODE) {
     if (fgp.email2 && fgp.email2 !== fgp.email) ccEmails.push(fgp.email2);
     if (CONFIG_STOCK.ADMIN_EMAIL !== fgp.email && CONFIG_STOCK.ADMIN_EMAIL !== fgp.email2) ccEmails.push(CONFIG_STOCK.ADMIN_EMAIL);
+    if ('robertson.ine@gmail.com' !== fgp.email && ccEmails.indexOf('robertson.ine@gmail.com') === -1) ccEmails.push('robertson.ine@gmail.com');
   }
   const cc = ccEmails.join(',');
 
