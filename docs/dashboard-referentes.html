@@ -785,7 +785,22 @@ function render(){
     html+=renderProductos(rows);
   }
 
+  // Guardar estado abierto antes de re-renderizar
+  var _openFam={}, _openProd={};
+  document.querySelectorAll('[id^="fam-"].open').forEach(function(el){ _openFam[el.id.replace('fam-','')]=true; });
+  document.querySelectorAll('[id^="prod-"].open').forEach(function(el){ _openProd[el.id.replace('prod-','')]=true; });
+
   cont.innerHTML=html;
+
+  // Restaurar estado abierto
+  Object.keys(_openFam).forEach(function(i){
+    var el=document.getElementById('fam-'+i); if(el) el.classList.add('open');
+    var arr=document.getElementById('arr-fam-'+i); if(arr) arr.textContent='▼';
+  });
+  Object.keys(_openProd).forEach(function(i){
+    var el=document.getElementById('prod-'+i); if(el) el.classList.add('open');
+    var arr=document.getElementById('arr-prod-'+i); if(arr) arr.textContent='▼';
+  });
 }
 
 // ── VISTA POR FAMILIA ──
