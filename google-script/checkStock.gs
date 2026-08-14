@@ -396,8 +396,12 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
     // ── Caso: pedido llegó pero el stock no fue actualizado en TiendaNube ──
     asunto      = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
     intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado</strong>, pero el stock en TiendaNube todavía no fue actualizado.';
+    const urlInventario = 'https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM';
     cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente. Podés <a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">ver la orden aquí</a>.</p>';
-    botonesHtml = '';
+    botonesHtml = `
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
+        <p><strong>📦 Actualizá el stock en TiendaNube:</strong></p>
+        <p><a href="${urlInventario}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Ir al Inventario</a></p>`;
 
   } else if (tieneOrdenActiva) {
     // ── Caso: ya hay un pedido en proceso ──
