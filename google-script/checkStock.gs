@@ -371,7 +371,7 @@ function _checkStockBajoInterno() {
 }
 
 // ── ENVÍO DE EMAIL ─────────────────────────────────────────
-// ordenInfo: null → sin orden activa | { nOrden, estado: 'Solicitado'|'En Camino'|'Entregado'|... }
+// ordenInfo: null → sin orden activa | { nOrden, estado: 'Solicitado'|'En Camino'|'Entregado en Escuela'|... }
 function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   const destinatario = CONFIG_STOCK.TEST_MODE ? CONFIG_STOCK.TEST_EMAIL : fgp.email;
   const ccEmails = [];
@@ -384,7 +384,7 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
 
   const ESTADOS_ACTIVOS = ['Solicitado', 'Confirmado', 'En Camino'];
   const tieneOrdenActiva    = ordenInfo && ESTADOS_ACTIVOS.indexOf(ordenInfo.estado) !== -1;
-  const tieneOrdenEntregada = ordenInfo && ordenInfo.estado === 'Entregado';
+  const tieneOrdenEntregada = ordenInfo && ordenInfo.estado === 'Entregado en Escuela';
 
   const listaHtml = items.map(function(item) {
     var linea = '<li style="margin-bottom:10px"><strong>' + item.descripcion + '</strong> — ' + item.stock + ' unidades en stock';
@@ -415,7 +415,7 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   if (tieneOrdenEntregada) {
     // ── Caso: pedido llegó pero el stock no fue actualizado en TiendaNube ──
     asunto      = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
-    intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado</strong>, pero el stock en TiendaNube todavía no fue actualizado.';
+    intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado en Escuela</strong>, pero el stock en TiendaNube todavía no fue actualizado.';
     const urlInventario = 'https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM';
     cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente.</p>';
     botonesHtml = `
@@ -622,8 +622,8 @@ function buscarOrdenMarca(marca, pedidosData) {
     if (filaMarca !== marca.toUpperCase().trim()) continue;
     const estado = String(fila[5] || '').trim();
     const nOrden = String(fila[0] || '');
-    if (!ordenActiva    && ACTIVOS.indexOf(estado) !== -1) ordenActiva    = { nOrden: nOrden, estado: estado };
-    if (!ordenEntregada && estado === 'Entregado')         ordenEntregada = { nOrden: nOrden, estado: estado };
+    if (!ordenActiva    && ACTIVOS.indexOf(estado) !== -1)    ordenActiva    = { nOrden: nOrden, estado: estado };
+    if (!ordenEntregada && estado === 'Entregado en Escuela') ordenEntregada = { nOrden: nOrden, estado: estado };
     if (ordenActiva && ordenEntregada) break;
   }
   return ordenActiva || ordenEntregada || null;

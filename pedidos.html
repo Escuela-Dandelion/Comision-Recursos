@@ -2208,7 +2208,7 @@ function renderDetalle(p) {
     if (p.comprobante) {
       const urls = p.comprobante.split('|').filter(Boolean);
       compList.innerHTML = urls.map((url, i) =>
-        `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
+        `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Ver Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
       ).join('');
       compWrap.style.display = '';
     } else {
@@ -2532,6 +2532,8 @@ function confirmarAccion(norden, nuevoEstado) {
   document.getElementById('modal-desc').textContent = SUBTITULO_ESTADO[nuevoEstado] || '';
 
   const btn = document.getElementById('modalConfirm');
+  btn.disabled = false;
+  btn.style.opacity = '';
   btn.textContent = nuevoEstado === 'Cancelado' ? 'Sí, cancelar' : 'Confirmar';
   btn.style.background = nuevoEstado === 'Cancelado' ? '#dc2626' : '#2d5a27';
   btn.onclick = ejecutarAccion;
