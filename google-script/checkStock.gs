@@ -378,7 +378,7 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   if (!CONFIG_STOCK.TEST_MODE) {
     if (fgp.email2 && fgp.email2 !== fgp.email) ccEmails.push(fgp.email2);
     if (CONFIG_STOCK.ADMIN_EMAIL !== fgp.email && CONFIG_STOCK.ADMIN_EMAIL !== fgp.email2) ccEmails.push(CONFIG_STOCK.ADMIN_EMAIL);
-    if ('robertson.ine@gmail.com' !== fgp.email && ccEmails.indexOf('robertson.ine@gmail.com') === -1) ccEmails.push('robertson.ine@gmail.com');
+    // Ines va en BCC para monitorear sin exponer su email a los FGPs
   }
   const cc = ccEmails.join(',');
 
@@ -406,7 +406,7 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   var asunto, intro, cuerpoExtra, botonesHtml;
 
   const urlAdminOrden = ordenInfo
-    ? 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos&id=' + encodeURIComponent(ordenInfo.nOrden)
+    ? 'https://escuela-dandelion.github.io/Comision-Recursos/pedidos.html?id=' + encodeURIComponent(ordenInfo.nOrden)
     : null;
   const _linkOrden = urlAdminOrden
     ? '<a href="' + urlAdminOrden + '" style="color:#3a7d44;font-weight:700">' + ordenInfo.nOrden + '</a>'
@@ -477,6 +477,7 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
 
   const opciones = { htmlBody: cuerpoHtml };
   if (cc) opciones.cc = cc;
+  if (!CONFIG_STOCK.TEST_MODE && fgp.email !== 'robertson.ine@gmail.com') opciones.bcc = 'robertson.ine@gmail.com';
 
   const contexto = tieneOrdenEntregada ? 'entregado-sin-actualizar' : tieneOrdenActiva ? 'orden-activa-' + ordenInfo.estado : 'sin-orden';
   Logger.log('Enviando email a: ' + destinatario + (cc ? ' | CC: ' + cc : '') + ' | contexto: ' + contexto);
