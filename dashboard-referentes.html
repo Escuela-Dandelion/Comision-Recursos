@@ -397,6 +397,13 @@
         <option value="">Todos los proveedores</option>
       </select>
 
+      <div class="filter-label" id="lbl-estado" style="display:none">Estado de entrega</div>
+      <select class="filter-select" id="filtro-estado" onchange="aplicarFiltros()" style="display:none">
+        <option value="">Todos</option>
+        <option value="Entregado">✅ Entregado</option>
+        <option value="Pendiente">⏳ Pendiente</option>
+      </select>
+
       <hr class="sidebar-divider">
       <div class="sidebar-section">
         <div class="sidebar-label">Grado <span style="font-size:9px;font-weight:400;color:#ccc;letter-spacing:0">· tap para seleccionar</span></div>
@@ -424,6 +431,7 @@ var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
 var currentMarca    = '';
+var currentEstado   = ''; // '' | 'Entregado' | 'Pendiente'
 var selectedGrados = []; // [] = todos
 var currentVista  = 'familia'; // 'familia' | 'producto'
 
@@ -615,6 +623,12 @@ function initDashboard(d){
   ALL_MESES       = d.meses_todos||[];
   ALL_RETIROS_MAP = d.retiros_map||{};
 
+  // Mostrar filtro de estado solo si hay datos de entregas
+  if(Object.keys(ALL_RETIROS_MAP).length>0){
+    document.getElementById('lbl-estado').style.display='block';
+    document.getElementById('filtro-estado').style.display='block';
+  }
+
   var sel=document.getElementById('filtro-mes');
   while(sel.options.length > 1) sel.remove(1); // limpiar opciones previas (evita duplicados)
   ALL_MESES.forEach(function(m){
@@ -682,6 +696,7 @@ function aplicarFiltros(){
   currentDesde=document.getElementById('filtro-desde').value;
   currentHasta=document.getElementById('filtro-hasta').value;
   currentMarca=document.getElementById('filtro-marca').value;
+  currentEstado=document.getElementById('filtro-estado').value;
   render();
 }
 function setVista(v){ currentVista=v; render(); }
@@ -699,6 +714,13 @@ function getRows(){
   });
   if(currentMarca) rows=rows.filter(function(r){ return r.marca===currentMarca; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
+  if(currentEstado && Object.keys(ALL_RETIROS_MAP).length>0){
+    rows=rows.filter(function(r){
+      var est=ALL_RETIROS_MAP[String(r.pedido)];
+      if(currentEstado==='Entregado') return est==='Entregado';
+      else return est!=='Entregado';
+    });
+  }
   return rows;
 }
 
