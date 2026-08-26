@@ -189,6 +189,13 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'getStockValorizacion') {
+      const val = getStockValorizacion();
+      return ContentService
+        .createTextOutput(JSON.stringify(val))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // Health check
     return ContentService
       .createTextOutput(JSON.stringify({ ok: true, updated: false, status: 'DdL Retiro API activa' }))
@@ -1122,6 +1129,34 @@ function debugMarcasTN() {
   });
   Logger.log('Marcas en TiendaNube: ' + JSON.stringify(marcas, null, 2));
   Logger.log('Marcas en INV_FGP: ' + JSON.stringify(Object.keys(INV_FGP)));
+}
+
+// ── STOCK VALORIZACION ────────────────────────────────────
+function getStockValorizacion() {
+  const productos = invObtenerProductosTN();
+  var total = 0;
+  var items = [];
+
+  productos.forEach(function(prod) {
+    var nombre = (prod.name && prod.name.es) ? prod.name.es : String(prod.name || '');
+    (prod.variants || []).forEach(function(v) {
+      var stock = parseInt(v.stock || 0);
+      var costo = parseFloat(v.cost || 0);
+      if (stock <= 0) return;
+      var valor = stock * costo;
+      total += valor;
+      var varNombre = '';
+      if (v.values && v.values.length > 0) {
+        varNombre = v.values.map(function(vv) {
+          return vv.es || vv.pt || Object.values(vv)[0] || '';
+        }).join(' / ');
+      }
+      items.push({ nombre: nombre, variante: varNombre, stock: stock, costo: costo, valor: valor });
+    });
+  });
+
+  items.sort(function(a, b) { return b.valor - a.valor; });
+  return { ok: true, total: Math.round(total), items: items, ts: new Date().toLocaleString('es-AR') };
 }
 
 // ── TEST ───────────────────────────────────────────────────

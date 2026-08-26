@@ -129,6 +129,36 @@
     /* Grid 2 columnas */
     .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
 
+    /* ── ACTIVOS ── */
+    .activos-card { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px; margin-bottom:20px; }
+    .activos-title { font-size:14px; font-weight:700; color:#14532d; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .activos-total { font-size:28px; font-weight:800; color:#15803d; margin-bottom:4px; }
+    .activos-sub   { font-size:12px; color:#4ade80; margin-bottom:16px; }
+    .activos-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+    .activo-tile { background:#fff; border:1px solid #d1fae5; border-radius:10px; padding:12px 14px; }
+    .activo-tile-label { font-size:10px; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; }
+    .activo-tile-value { font-size:18px; font-weight:700; color:#14532d; }
+    .activo-tile-sub   { font-size:10px; color:#6b7280; margin-top:2px; }
+    .activo-tile.caja  { border-color:#bfdbfe; }
+    .activo-tile.caja .activo-tile-label { color:#2563eb; }
+    .activo-tile.caja .activo-tile-value { color:#1e40af; }
+    .activo-tile.jardin { border-color:#fde68a; }
+    .activo-tile.jardin .activo-tile-label { color:#b45309; }
+    .activo-tile.jardin .activo-tile-value { color:#92400e; }
+    #caja-input { font-size:18px; font-weight:700; color:#1e40af; border:none; outline:none; background:transparent; width:100%; padding:0; }
+    .activos-toggle { font-size:12px; color:#059669; cursor:pointer; text-decoration:underline; margin-bottom:10px; display:inline-block; }
+    table.tbl-activos { width:100%; border-collapse:collapse; font-size:12px; }
+    table.tbl-activos th { padding:7px 10px; text-align:left; font-size:10px; text-transform:uppercase; color:#059669; border-bottom:1px solid #d1fae5; font-weight:700; }
+    table.tbl-activos th.num { text-align:right; }
+    table.tbl-activos td { padding:8px 10px; border-bottom:1px solid #f0fdf4; }
+    table.tbl-activos td.num { text-align:right; font-variant-numeric:tabular-nums; }
+    table.tbl-activos tr:last-child td { border-bottom:none; }
+    table.tbl-activos tr:hover td { background:rgba(255,255,255,.6); }
+    @media (max-width:700px) {
+      .activos-tiles { grid-template-columns:1fr 1fr; }
+      .activos-total { font-size:22px; }
+    }
+
     /* Tabla de rentabilidad */
     .tbl-wrap { overflow-x:auto; }
     table.tbl-rent { width:100%; border-collapse:collapse; font-size:13px; }
@@ -352,6 +382,39 @@
           <div class="section-card">
             <div class="section-title">Recaudación por Nivel Escolar <span>$ · % del total</span></div>
             <canvas id="chart-grados"></canvas>
+          </div>
+        </div>
+
+        <!-- Activos y balance -->
+        <div class="activos-card" id="activos-section">
+          <div class="activos-title">📦 Activos y balance estimado</div>
+          <div class="activos-total" id="activos-total">—</div>
+          <div class="activos-sub">stock + caja</div>
+          <div class="activos-tiles">
+            <div class="activo-tile">
+              <div class="activo-tile-label">Stock en mano</div>
+              <div class="activo-tile-value" id="activo-stock">cargando…</div>
+              <div class="activo-tile-sub" id="activo-stock-sub">al costo TiendaNube</div>
+            </div>
+            <div class="activo-tile caja">
+              <div class="activo-tile-label">Caja <span style="font-weight:400;text-transform:none;font-size:9px">(click para editar)</span></div>
+              <input type="text" id="caja-input" placeholder="$ 0" inputmode="numeric">
+              <div class="activo-tile-sub">saldo en cuenta</div>
+            </div>
+            <div class="activo-tile jardin">
+              <div class="activo-tile-label">Donado al Jardín 2026</div>
+              <div class="activo-tile-value" id="activo-jardin">—</div>
+              <div class="activo-tile-sub">15% ventas brutas 2026</div>
+            </div>
+          </div>
+          <span class="activos-toggle" onclick="toggleDesglose()">▶ Ver desglose de stock</span>
+          <div id="activos-desglose" style="display:none">
+            <table class="tbl-activos">
+              <thead><tr>
+                <th>Producto</th><th class="num">Stock</th><th class="num">Costo unit.</th><th class="num">Valor</th>
+              </tr></thead>
+              <tbody id="activos-tbody"></tbody>
+            </table>
           </div>
         </div>
 
@@ -616,6 +679,9 @@ function initDashboard(d) {
 
   document.getElementById('contenido').style.display = 'block';
   render();
+  updateJardinCard();
+  initCaja();
+  fetchStockValorizacion();
 }
 
 function poblarMeses(anio) {
@@ -1004,6 +1070,74 @@ function renderTablaRentabilidad(rows) {
   });
   document.getElementById('tbl-rent-body').innerHTML = html ||
     '<tr><td colspan="6" style="text-align:center;color:#ccc;padding:30px">Sin datos para el período seleccionado</td></tr>';
+}
+
+// ── ACTIVOS ──────────────────────────────────────────────
+var CAJA_KEY = 'dl_caja_estimada';
+var _stockTotal = 0;
+
+function initCaja() {
+  var input = document.getElementById('caja-input');
+  var saved = parseFloat(localStorage.getItem(CAJA_KEY) || '0');
+  input.value = saved ? '$ ' + Math.round(saved).toLocaleString('es-AR') : '';
+  input.addEventListener('focus', function(){ this.value = String(Math.round(parseFloat(localStorage.getItem(CAJA_KEY)||'0'))||''); });
+  input.addEventListener('blur', function(){
+    var v = parseFloat(this.value.replace(/[^0-9.,-]/g,'').replace(',','.')) || 0;
+    localStorage.setItem(CAJA_KEY, v);
+    this.value = v ? '$ ' + Math.round(v).toLocaleString('es-AR') : '';
+    actualizarTotalActivos();
+  });
+  input.addEventListener('keydown', function(e){ if (e.key === 'Enter') this.blur(); });
+  actualizarTotalActivos();
+}
+
+function actualizarTotalActivos() {
+  var caja = parseFloat(localStorage.getItem(CAJA_KEY) || '0') || 0;
+  var total = _stockTotal + caja;
+  document.getElementById('activos-total').textContent = '$ ' + Math.round(total).toLocaleString('es-AR');
+}
+
+function updateJardinCard() {
+  var rows2026 = ALL_ROWS.filter(function(r){ return r.mes && r.mes.startsWith('2026'); });
+  var ventas2026 = rows2026.reduce(function(s,r){ return s + (r.total_pagado_linea||r.total_linea||0); }, 0);
+  var jardin = Math.round(ventas2026 * 0.15);
+  document.getElementById('activo-jardin').textContent = '$ ' + jardin.toLocaleString('es-AR');
+}
+
+function fetchStockValorizacion() {
+  document.getElementById('activo-stock').textContent = 'cargando…';
+  fetch(APPS_URL + '?action=getStockValorizacion', { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) { document.getElementById('activo-stock').textContent = 'Error'; return; }
+      _stockTotal = d.total || 0;
+      document.getElementById('activo-stock').textContent = '$ ' + Math.round(_stockTotal).toLocaleString('es-AR');
+      document.getElementById('activo-stock-sub').textContent = 'al costo · ' + (d.ts || '');
+      actualizarTotalActivos();
+
+      var html = '';
+      (d.items || []).forEach(function(item){
+        if (!item.stock) return;
+        var label = item.nombre + (item.variante ? ' (' + item.variante + ')' : '');
+        var costo_txt = item.costo ? '$ ' + Math.round(item.costo).toLocaleString('es-AR') : '(sin costo)';
+        var valor_txt = item.valor ? '$ ' + Math.round(item.valor).toLocaleString('es-AR') : '—';
+        html += '<tr><td>' + esc(label) + '</td>' +
+          '<td class="num">' + item.stock + '</td>' +
+          '<td class="num">' + costo_txt + '</td>' +
+          '<td class="num"><strong>' + valor_txt + '</strong></td>' +
+          '</tr>';
+      });
+      document.getElementById('activos-tbody').innerHTML = html || '<tr><td colspan="4" style="color:#ccc;text-align:center">Sin datos</td></tr>';
+    })
+    .catch(function(){ document.getElementById('activo-stock').textContent = 'Error de conexión'; });
+}
+
+function toggleDesglose() {
+  var el = document.getElementById('activos-desglose');
+  var btn = document.querySelector('.activos-toggle');
+  var visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+  btn.textContent = (visible ? '▶' : '▼') + ' Ver desglose de stock';
 }
 </script>
 </body>
