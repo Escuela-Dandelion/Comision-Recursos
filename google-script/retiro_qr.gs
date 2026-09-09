@@ -12,6 +12,23 @@ var CONFIG = {
     'wire_transfer': 0.01815,  // Transferencia bancaria vía Pago Nube: 1.815%
   },
 
+  // Datos de pago por proveedor (alias/CBU para transferencia)
+  // Clave = nombre de marca en TiendaNube (uppercase) o nombre del proveedor
+  ALIAS_PAGO: {
+    'YEMARI':             { alias: 'Yerba.yemari',        titular: 'Claudio Daniel Avila Moyano', banco: 'Mercado Pago', cbu: '00000031000040988897724' },
+    'LA YAYA':            { alias: 'MUNDO.TACO.LANA',     titular: 'Mariela Isabel Conci', banco: 'Banco Galicia', cbu: '0070362630004011663770' },
+    'PARAISA':            { alias: 'Paraisabiocosmetica',  titular: '',                    banco: '',              cbu: '' },
+    'CABALLO NEGRO':      { alias: 'TOPE.POROTO.RUBIO',    titular: 'Gabriel Alejandro Michalec', banco: '', cbu: '2850006540094869600518' },
+    'GUARDIANES COLMENA': { alias: '',                      titular: 'Alejandro Sánchez Penak', banco: 'Mercado Pago', cbu: '0000003100017116879020' },
+    'EL MAITEN':          { alias: 'El.maiten2025',          titular: '',                    banco: '',              cbu: '' },
+    'ODDIS':              { alias: '',                      titular: 'Rece SA',             banco: 'Mercado Pago',  cbu: '0000003100008850705997' },
+    'NAZARENO':           { alias: 'Lapaz293',              titular: 'Franco Alini (intermediario)', banco: '', cbu: '' },
+    'GROEN':              { alias: '',                      titular: 'Daniel Elías González', banco: 'Banco Santander Río', cbu: '0720242388000036973204' }
+  },
+
+  // Tel de Inés para WhatsApp de "Solicitar Pago"
+  INES_TEL: '5493512112050',
+
   STAFF_PINS: {
     'Yuliana.Longhi ':   'PYL26',   // Jardín
     'Maria.Martini ':    'PMM26',   // Jardín
@@ -272,6 +289,21 @@ function procesarPedido(order) {
 // ──────────────────────────────────────────────────────────
 // TIENDANUBE API
 // ──────────────────────────────────────────────────────────
+
+// Trae pedidos de TiendaNube con payment_status=pending (cliente aún no pagó)
+function fetchPendingPaymentOrders() {
+  var url = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders?payment_status=pending&per_page=50';
+  var resp = UrlFetchApp.fetch(url, {
+    headers: {
+      'Authentication': 'bearer ' + CONFIG.API_TOKEN,
+      'User-Agent': CONFIG.TIENDA_NOMBRE + ' (retiro-automatico)'
+    },
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() !== 200) return [];
+  var orders = JSON.parse(resp.getContentText());
+  return (orders || []).filter(function(o) { return o.status !== 'cancelled'; });
+}
 
 function fetchOrder(orderId) {
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders/' + orderId;
@@ -847,6 +879,8 @@ function paginaPortalStaff(mostrarExito) {
   var data      = sheet.getDataRange().getValues();
   var webAppUrl = ScriptApp.getService().getUrl();
 
+  var pagosClientePendientes = fetchPendingPaymentOrders();
+
   var pendientes = [];
   var entregados = [];
 
@@ -894,6 +928,50 @@ function paginaPortalStaff(mostrarExito) {
       '</tr>';
   }
 
+  function filaHtmlPagoCliente(order) {
+    var prods = (order.products || []).map(function(p) {
+      var n = (p.name && typeof p.name === 'object') ? (p.name.es || p.name.pt || Object.values(p.name)[0] || '') : (p.name || '');
+      return p.quantity + 'x ' + n;
+    });
+    var prodsCorto = prods.join(', ');
+    var prodsLargo = prods.join('\n');
+
+    // Buscar alias del proveedor según la marca del primer producto
+    var marcaKey = '';
+    if (order.products && order.products[0] && order.products[0].brand) {
+      marcaKey = String(order.products[0].brand).toUpperCase();
+    }
+    var pagoInfo = CONFIG.ALIAS_PAGO[marcaKey];
+    var aliasLine = pagoInfo ? '\nAlias: ' + pagoInfo.alias + (pagoInfo.cbu ? '\nCBU: ' + pagoInfo.cbu : '') + (pagoInfo.titular ? '\nTitular: ' + pagoInfo.titular : '') : '';
+
+    var msg = encodeURIComponent(
+      '🌼 Diente de León — Pago pendiente de cliente\n\n' +
+      'Pedido #' + order.number + '\n' +
+      'Cliente: ' + (order.contact_name || '') + ' (' + (order.contact_email || '') + ')\n' +
+      'Productos:\n' + prodsLargo + '\n' +
+      'Total: $' + order.total +
+      aliasLine
+    );
+    var waLink = 'https://wa.me/' + CONFIG.INES_TEL + '?text=' + msg;
+
+    return '<tr style="background:#fff;border-bottom:1px solid #eee">' +
+      '<td style="padding:12px 8px">' +
+        '<strong>Pedido #' + order.number + '</strong><br>' +
+        '<span style="color:#555;font-size:13px">' + (order.contact_name || '') + '</span><br>' +
+        '<span style="color:#888;font-size:12px">' + prodsCorto + '</span>' +
+      '</td>' +
+      '<td style="padding:12px 8px;text-align:right;white-space:nowrap">' +
+        '<strong>$' + order.total + '</strong><br>' +
+        '<span style="background:#fdecea;color:#c62828;padding:2px 8px;border-radius:12px;font-size:12px">sin pagar</span><br>' +
+        '<div style="margin-top:6px"><a href="' + waLink + '" style="color:#fff;background:#25D366;font-size:12px;text-decoration:none;padding:6px 10px;border-radius:6px">💬 Solicitar pago</a></div>' +
+      '</td>' +
+      '</tr>';
+  }
+
+  var filasPagoCliente = pagosClientePendientes.length > 0
+    ? pagosClientePendientes.map(filaHtmlPagoCliente).join('')
+    : '';
+
   var filasPendientes = pendientes.length > 0
     ? pendientes.map(function(i) { return filaHtml(i, false); }).join('')
     : '<tr><td colspan="2" style="padding:20px;text-align:center;color:#aaa">Sin pedidos pendientes</td></tr>';
@@ -918,6 +996,7 @@ function paginaPortalStaff(mostrarExito) {
     '<p>Portal de retiros — ' + new Date().toLocaleDateString('es-AR') + '</p>' +
     '</div>' +
     (mostrarExito ? '<div style="background:#00A650;color:#fff;padding:14px 20px;text-align:center;font-weight:bold;font-size:16px">&#x2705; Pedido marcado como entregado</div>' : '') +
+    (filasPagoCliente ? '<div class="section" style="color:#c62828">⚠️ Sin pagar<span class="badge-count" style="background:#c62828">' + pagosClientePendientes.length + '</span></div><table>' + filasPagoCliente + '</table>' : '') +
     '<div class="section">Pendientes de entrega' +
     (pendientes.length > 0 ? '<span class="badge-count">' + pendientes.length + '</span>' : '') +
     '</div>' +

@@ -29,7 +29,8 @@ const FGP_POR_MARCA = {
   'GROEN':                    { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '', logistica: 'envio_domicilio', pedido: 'web', url: 'https://tiendagroen.com.ar/', flete: 'gratis', descuento: '5pct_transferencia' },
   // PARAISA excluida — productos con stock infinito (null), no requieren alerta — contacto: Julia Denna +54 9 3515 31-7919
   'EL MAITEN':                { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493515067561', contacto: 'Franco' },
-  'GUARDIANES DE LA COLMENA': { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez', logistica: 'envio_domicilio', flete: 'sin_costo' }
+  'GUARDIANES DE LA COLMENA': { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com',     nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '5493513351025', contacto: 'Alejandro Sanchez', logistica: 'envio_domicilio', flete: 'sin_costo' },
+  'MIX Y FRUTOS SECOS':       { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '' }
 };
 
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
@@ -41,7 +42,8 @@ function leerConfigAlertas() {
     'ODDIS':                    { leadTime: 10, stockMinimo: 10 },
     'GROEN':                    { leadTime: 10, stockMinimo:  5 },
     'EL MAITEN':                { leadTime: 10, stockMinimo: 10 },
-    'GUARDIANES DE LA COLMENA': { leadTime: 10, stockMinimo: 10 }
+    'GUARDIANES DE LA COLMENA': { leadTime: 10, stockMinimo: 10 },
+    'MIX Y FRUTOS SECOS':       { leadTime: 10, stockMinimo: 10 }
   };
   try {
     const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
