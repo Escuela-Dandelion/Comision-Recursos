@@ -643,6 +643,7 @@ function initDashboard(d){
   ALL_ROWS.forEach(function(r){ gradosMap[r.grado]=(gradosMap[r.grado]||0)+1; });
   var grados=sortGrados(Object.keys(gradosMap));
   var nav=document.getElementById('grados-nav');
+  nav.innerHTML='';
 
   // "Todos los grados" primero
   var divTodos=document.createElement('div');
