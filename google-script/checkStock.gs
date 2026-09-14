@@ -183,6 +183,25 @@ function calcularUmbral(nombreProducto, leadTime, velocidades, diasActivos, nomb
   return Math.ceil((total / diasActivos) * leadTime * CONFIG_STOCK.SAFETY_FACTOR);
 }
 
+function leerOverridesStock() {
+  const map = {};
+  try {
+    const ss    = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
+    const sheet = ss.getSheetByName('ConfigStock');
+    if (!sheet) return map;
+    const data  = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      const clave = String(data[i][0] || '').trim();
+      if (!clave) continue;
+      map[clave] = {
+        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
+        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null
+      };
+    }
+  } catch(e) { Logger.log('leerOverridesStock error: ' + e); }
+  return map;
+}
+
 // ── UMBRAL MENSUAL (demanda proyectada del mes siguiente, 3er lunes) ──
 function calcularUmbralMensual(nombreProducto, velocidades, diasActivos, nombreVariante) {
   const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
@@ -228,6 +247,7 @@ function checkStockBajo() {
 
 function _checkStockBajoInterno() {
   const configMarca              = leerConfigAlertas();
+  const overrides                = leerOverridesStock();
   const { velocidades, diasActivos } = getVelocidades();
   const esLunes3                 = esTercerLunes();
   const productos       = obtenerProductos();
@@ -291,9 +311,14 @@ function _checkStockBajoInterno() {
       }
       const stock      = parseInt(variante.stock);
       const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
-      const umbral     = calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
+      const ov         = overrides[clave] || {};
+      const umbral     = (ov.umbralOverride !== null && ov.umbralOverride !== undefined)
+                           ? ov.umbralOverride
+                           : calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
       const claveHoy    = clave + '_d_' + yyyyMMdd;
-      const stockMinimo = cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO;
+      const stockMinimo = (ov.pisoOverride !== null && ov.pisoOverride !== undefined)
+                           ? ov.pisoOverride
+                           : (cfg.stockMinimo !== undefined ? cfg.stockMinimo : CONFIG_STOCK.STOCK_MINIMO);
 
       // Determinar contexto de orden para esta marca (cacheado por marca)
       if (!ordenInfoPorMarca.hasOwnProperty(marca)) ordenInfoPorMarca[marca] = buscarOrdenMarca(marca, pedidosData);
