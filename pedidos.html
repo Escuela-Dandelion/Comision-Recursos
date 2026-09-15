@@ -1750,10 +1750,12 @@ function solicitarPago(norden) {
   if (!p) return;
   var key = String(p.proveedor || '').toUpperCase().trim();
   var datos = ALIAS_PAGO[key] || {};
+  var linkOrden = 'https://escuela-dandelion.github.io/Comision-Recursos/pedidos.html?id=' + p.norden;
   var lineas = [
     '💸 *Pago pendiente a proveedor*',
     '',
     '📦 Orden: ' + p.norden,
+    '🔗 ' + linkOrden,
     '🏪 Proveedor: ' + p.proveedor,
     '💰 Monto: ' + (p.total ? '$ ' + p.total : '(sin monto cargado)'),
     '',
