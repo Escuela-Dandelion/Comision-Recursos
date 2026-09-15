@@ -2305,6 +2305,9 @@ function renderDetalle(p) {
   }
   if (sig.includes('Cancelado')) botonesTop += `<button class="btn-accion-top btn-cancelar-ord" onclick="confirmarAccion('${p.norden}','Cancelado')">Cancelar pedido</button>`;
   if (p.estado === 'Solicitado' && esAdmin()) botonesTop += `<button class="btn-accion-top btn-cancelar-ord" onclick="eliminarPedido('${p.norden}')">🗑️ Eliminar</button>`;
+  if (p.estadoPago !== 'Pagado' && p.estado !== 'Cancelado') {
+    botonesTop += `<button class="btn-accion-top" style="background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;" onclick="solicitarPago('${p.norden}')">💬 Solicitar pago</button>`;
+  }
   document.getElementById('d-acciones-top').innerHTML = botonesTop;
 
   // CTA sticky al pie — acción principal (primera acción no Cancelar)
@@ -2337,7 +2340,16 @@ function renderDetalle(p) {
     ctaBtn.onclick = function(){ confirmarAccion(p.norden, accionPrincipal); };
     ctaWrap.style.display = 'block';
   } else if (ctaWrap) {
-    ctaWrap.style.display = 'none';
+    if (p.estadoPago !== 'Pagado' && p.estado !== 'Cancelado') {
+      ctaBtn.textContent = '💬 Solicitar pago';
+      ctaBtn.className = '';
+      ctaBtn.style.background = '#2d5a27';
+      ctaBtn.style.color = '#fff';
+      ctaBtn.onclick = function(){ solicitarPago(p.norden); };
+      ctaWrap.style.display = 'block';
+    } else {
+      ctaWrap.style.display = 'none';
+    }
   }
 }
 
