@@ -88,7 +88,7 @@
   .dots-wrap { position: relative; display: inline-block; }
   .btn-dots { background: none; border: 1px solid transparent; border-radius: 6px; cursor: pointer; padding: 4px 8px; font-size: 18px; color: #6b7280; line-height: 1; transition: all 0.15s; font-family: 'Inter', sans-serif; }
   .btn-dots:hover { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
-  .dots-menu { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.10); z-index: 50; min-width: 200px; padding: 4px 0; }
+  .dots-menu { display: none; position: fixed; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.10); z-index: 1000; min-width: 200px; padding: 4px 0; }
   .dots-menu.open { display: block; }
   .dots-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 14px; background: none; border: none; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #111827; text-align: left; transition: background 0.1s; white-space: nowrap; }
   .dots-menu-item:hover { background: #f9fafb; }
@@ -1167,10 +1167,27 @@ function eliminarPedido(norden) {
 // ── DOTS MENU ─────────────────────────────────────────────────
 function toggleMenu(e, norden) {
   e.stopPropagation();
+  const btn  = e.currentTarget;
   const menu = document.getElementById('menu-' + norden);
   const isOpen = menu.classList.contains('open');
   closeMenus();
-  if (!isOpen) menu.classList.add('open');
+  if (!isOpen) {
+    const rect = btn.getBoundingClientRect();
+    const menuW = 210;
+    const left  = Math.max(8, rect.right - menuW);
+    menu.style.left = left + 'px';
+    menu.style.right = '';
+    menu.style.top  = '';
+    menu.style.bottom = '';
+    menu.classList.add('open');
+    // Calcular si se va por abajo y abrir hacia arriba
+    const menuH = menu.offsetHeight;
+    if (rect.bottom + menuH + 4 > window.innerHeight) {
+      menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+    }
+  }
 }
 function closeMenus() {
   document.querySelectorAll('.dots-menu.open').forEach(m => m.classList.remove('open'));
