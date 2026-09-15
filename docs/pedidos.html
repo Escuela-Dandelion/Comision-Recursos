@@ -1341,6 +1341,9 @@ function renderLista(pedidos) {
               ${p.comprobante.split('|').map((url, i) =>
                 `<a class="dots-menu-item" href="${url}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">📎 Comprobante${p.comprobante.split('|').length > 1 ? ' ' + (i+1) : ''}</a>`
               ).join('')}` : ''}
+              ${p.estadoPago !== 'Pagado' && p.estado !== 'Cancelado' ? `
+              <div class="dots-menu-sep"></div>
+              <button class="dots-menu-item" onclick="closeMenus(); solicitarPago('${p.norden}')">💬 Solicitar pago</button>` : ''}
               ${p.estado !== 'Cancelado' ? `
               ${!p.comprobante ? '<div class="dots-menu-sep"></div>' : ''}
               <button class="dots-menu-item" onclick="closeMenus(); abrirModalComprobante('${p.norden}')">📎 Adjuntar comprobante</button>` : ''}
@@ -1726,6 +1729,44 @@ function renderProdEdit(productosStr) {
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── SOLICITAR PAGO ────────────────────────────────────────────
+var ALIAS_PAGO = {
+  'YEMARI':             { alias: 'Yerba.yemari',       titular: 'Claudio Daniel Avila Moyano', banco: 'Mercado Pago', cbu: '00000031000040988897724' },
+  'LA YAYA':            { alias: 'MUNDO.TACO.LANA',    titular: 'Mariela Isabel Conci',        banco: 'Banco Galicia', cbu: '0070362630004011663770' },
+  'PARAISA':            { alias: 'Paraisabiocosmetica', titular: '',                            banco: '', cbu: '' },
+  'CABALLO NEGRO':      { alias: 'TOPE.POROTO.RUBIO',  titular: 'Gabriel Alejandro Michalec', banco: '', cbu: '2850006540094869600518' },
+  'EL MAITEN':          { alias: 'El.maiten2025',       titular: '',                            banco: '', cbu: '' },
+  'GUARDIANES COLMENA': { alias: '',                    titular: 'Alejandro Sánchez Penak',    banco: 'Mercado Pago', cbu: '0000003100017116879020' },
+  'GUARDIANES DE LA COLMENA': { alias: '',              titular: 'Alejandro Sánchez Penak',    banco: 'Mercado Pago', cbu: '0000003100017116879020' },
+  'ODDIS':              { alias: '',                    titular: 'Rece SA',                    banco: 'Mercado Pago', cbu: '0000003100008850705997' },
+  'NAZARENO':           { alias: 'Lapaz293',            titular: 'Franco Alini (intermediario)', banco: '', cbu: '' },
+  'GROEN':              { alias: '',                    titular: 'Daniel Elías González',      banco: 'Banco Santander Río', cbu: '0720242388000036973204' }
+};
+var INES_TEL = '5493512112050';
+
+function solicitarPago(norden) {
+  var p = todosLosPedidos.find(function(x) { return x.norden === norden; });
+  if (!p) return;
+  var key = String(p.proveedor || '').toUpperCase().trim();
+  var datos = ALIAS_PAGO[key] || {};
+  var lineas = [
+    '💸 *Pago pendiente a proveedor*',
+    '',
+    '📦 Orden: ' + p.norden,
+    '🏪 Proveedor: ' + p.proveedor,
+    '💰 Monto: ' + (p.total ? '$ ' + p.total : '(sin monto cargado)'),
+    '',
+    '🏦 *Datos de pago:*'
+  ];
+  if (datos.alias)   lineas.push('Alias: ' + datos.alias);
+  if (datos.cbu)     lineas.push('CBU: ' + datos.cbu);
+  if (datos.titular) lineas.push('Titular: ' + datos.titular);
+  if (datos.banco)   lineas.push('Banco: ' + datos.banco);
+  if (!datos.alias && !datos.cbu) lineas.push('(datos de pago no cargados aún)');
+  if (p.productos)   lineas.push('', '📋 Productos: ' + p.productos);
+  window.open('https://wa.me/' + INES_TEL + '?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
 
 // ── EDITAR PROVEEDOR ──────────────────────────────────────────
 // ── RETIRO ────────────────────────────────────────────────────
