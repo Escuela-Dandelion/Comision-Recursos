@@ -464,7 +464,7 @@ function sortGrados(arr){
   return arr.slice().sort(function(a,b){ var ai=gradoIdx(a),bi=gradoIdx(b); return ai!==bi?ai-bi:String(a).localeCompare(String(b),'es'); });
 }
 function pesos(n)    { return '$ '+(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function pesosCard(n){ var v=(n||0); if(Math.abs(v)>=1000000) return '$ '+(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; if(Math.abs(v)>=1000) return '$ '+(v/1000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'K'; return pesos(v); }
+function pesosCard(n){ return pesos(n); }
 function mesLabel(m) { var p=m.split('-'),n=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; return n[parseInt(p[1])]+' '+p[0].slice(2); }
 function esc(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function parseFechaRow(s) {

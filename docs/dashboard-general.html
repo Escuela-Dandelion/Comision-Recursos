@@ -501,7 +501,7 @@ function sortGrados(arr) {
   });
 }
 function pesos(n) { return '$ ' + (n||0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
-function pesosCard(n) { var v=(n||0); if(Math.abs(v)>=1000000) return '$ '+(v/1000000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; if(Math.abs(v)>=1000) return '$ '+(v/1000).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'K'; return pesos(v); }
+function pesosCard(n) { return pesos(n); }
 function mesLabel(m) {
   var p = m.split('-');
   var n = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
