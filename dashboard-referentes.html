@@ -645,11 +645,11 @@ function initDashboard(d){
   var nav=document.getElementById('grados-nav');
   nav.innerHTML='';
 
-  // "Todos los grados" primero
+  // "Todos" primero
   var divTodos=document.createElement('div');
   divTodos.id='nav-todos';
   divTodos.className='grado-item active';
-  divTodos.innerHTML='<span>Todos los grados</span><span class="grado-badge">'+ALL_ROWS.length+'</span>';
+  divTodos.innerHTML='<span>Todos</span><span class="grado-badge">'+ALL_ROWS.length+'</span>';
   divTodos.onclick=function(){ toggleGrado(null); };
   nav.appendChild(divTodos);
 
@@ -677,7 +677,7 @@ function initDashboard(d){
 
 function toggleGrado(g){
   if(g===null){
-    // Todos los grados
+    // Todos
     selectedGrados=[];
   } else {
     var idx=selectedGrados.indexOf(g);
@@ -763,7 +763,7 @@ function render(){
   });
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
-  var gradoTexto=selectedGrados.length===0?'Todos los grados':selectedGrados.join(' · ');
+  var gradoTexto=selectedGrados.length===0?'Todos':selectedGrados.join(' · ');
   var nFam=Object.keys(familiasSet).length;
   var nPed=Object.keys(pedidosSet).length;
 
@@ -1049,7 +1049,7 @@ function exportarPDF(){
   if(!rows.length){ alert('Sin datos para exportar.'); return; }
 
   var mesTexto=currentMes?mesLabel(currentMes):'Todos los meses';
-  var gradoTexto=selectedGrados.length===0?'Todos los grados':selectedGrados.join(' · ');
+  var gradoTexto=selectedGrados.length===0?'Todos':selectedGrados.join(' · ');
 
   // Armar productos
   var productos={};
