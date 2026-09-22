@@ -736,6 +736,7 @@ function render(){
   // KPIs
   var totalVendido=0,totalNeto=0,totalDescuentos=0,totalUnidades=0,pedidosSet={},familiasSet={};
   var familiasPorGrado={};
+  var aportesPorGrado={}, totalAporteFondo=0;
   rows.forEach(function(r){
     totalVendido    +=(r.total_pagado_linea||r.total_linea||0);
     totalNeto       +=(r.neto_linea||r.total_pagado_linea||r.total_linea||0);
@@ -746,6 +747,10 @@ function render(){
     if(r.grado && r.familia){
       if(!familiasPorGrado[r.grado]) familiasPorGrado[r.grado]={};
       familiasPorGrado[r.grado][r.familia]=true;
+    }
+    if(r.aporte_grado>0 && r.grado && r.grado!=='(Sin observaciones)'){
+      aportesPorGrado[r.grado]=(aportesPorGrado[r.grado]||0)+r.aporte_grado;
+      totalAporteFondo+=r.aporte_grado;
     }
   });
   // Actualizar badges de grados con familias únicas del filtro actual
@@ -782,6 +787,23 @@ function render(){
     '<div class="card teal"><div class="card-label">Familias</div><div class="card-value">'+nFam+'</div></div>'+
     '<div class="card purple"><div class="card-label">Unidades</div><div class="card-value">'+Math.round(totalUnidades).toLocaleString('es-AR')+'</div></div>'+
   '</div>';
+
+  // Fondo por grado
+  if(totalAporteFondo>0){
+    var gradosConAporte=sortGrados(Object.keys(aportesPorGrado));
+    var fondoHtml='<div style="background:#f0f7e6;border:1px solid #c8e6c9;border-radius:10px;padding:12px 16px;margin-bottom:14px">';
+    fondoHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    fondoHtml+='<span style="font-size:13px;font-weight:700;color:#2e7d32">Aportes a grados</span>';
+    fondoHtml+='<span style="font-size:14px;font-weight:700;color:#1a5c2a">'+pesos(totalAporteFondo)+'</span>';
+    fondoHtml+='</div>';
+    fondoHtml+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    gradosConAporte.forEach(function(g){
+      fondoHtml+='<span style="background:#fff;border:1px solid #c8e6c9;border-radius:20px;padding:3px 10px;font-size:12px;color:#2e7d32">';
+      fondoHtml+=esc(g)+' · <strong>'+pesos(aportesPorGrado[g])+'</strong></span>';
+    });
+    fondoHtml+='</div></div>';
+    html+=fondoHtml;
+  }
 
   // Resumen compacto de entregas (en unidades, igual que las filas)
   var _uEntr=0, _uPend=0;

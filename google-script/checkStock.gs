@@ -360,6 +360,11 @@ function _checkStockBajoInterno() {
         Logger.log('  [' + (tieneOrdenActivaLocal ? '48H YA ALERTADO' : 'HOY YA ALERTADO') + '] ' + descripcion + ' — próxima alerta ' + (tieneOrdenActivaLocal ? 'en 48h' : 'mañana') + ' si sigue bajo');
         return;
       }
+      // Si ya hay un pedido activo en curso (Solicitado/Confirmado/En Camino), no alertar — el pedido ya fue hecho
+      if (tieneOrdenActivaLocal) {
+        Logger.log('  [ORDEN ACTIVA] ' + descripcion + ' — pedido ' + (ordenInfoMarca ? ordenInfoMarca.nOrden : '') + ' en estado ' + (ordenInfoMarca ? ordenInfoMarca.estado : '') + ', sin alerta');
+        return;
+      }
 
       const grupoKey = fgp.email + '|' + marca;
       if (!alertasPorGrupo[grupoKey]) {
