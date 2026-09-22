@@ -861,6 +861,22 @@ function reprocesarAportesVentas() {
   Logger.log('Filas procesadas: ' + aporteData.length);
 }
 
+function limpiarNAenGradoDestino() {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) { Logger.log('No existe hoja Ventas'); return; }
+  var data    = sheet.getDataRange().getValues();
+  var limpios = 0;
+  for (var i = 1; i < data.length; i++) {
+    var v = String(data[i][21] || '').trim().toLowerCase();
+    if (v === 'na' || v === 'n/a' || v === 'no aplica' || v === 'ninguno' || v === 'ninguna') {
+      sheet.getRange(i + 1, 22).clearContent();
+      limpios++;
+    }
+  }
+  Logger.log('Celdas limpiadas: ' + limpios);
+}
+
 function testReprocesarFila() {
   // Testea la lógica de una fila específica sin tocar el sheet
   var config      = leerConfigProductos();
