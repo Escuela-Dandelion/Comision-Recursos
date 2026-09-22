@@ -1793,7 +1793,8 @@ function apiDashboard(pin, email) {
     var orderDiscount       = parseFloat(row[18]) || 0;
     var aporteGrado         = parseFloat(row[20]) || 0;
     var mes         = fecha ? (fecha.getFullYear() + '-' + ('0' + (fecha.getMonth()+1)).slice(-2)) : '';
-    var grado       = comentario || '(Sin observaciones)';
+    var gradoNorm   = normalizarGradoGAS(comentario);
+    var grado       = (gradoNorm && gradoNorm !== '(Sin observaciones)') ? gradoNorm : '(Sin observaciones)';
 
     var costoUnit  = parseFloat(row[13]) || 0;
     var costoLinea = costoUnit * cantidad;
