@@ -601,6 +601,9 @@ function normalizarGradoGAS(g) {
     .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
     .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/ñ/g,'n');
 
+  // Sin grado
+  if (l === 'na' || l === 'n/a' || l === 'no aplica' || l === 'ninguno' || l === 'ninguna' || l === '-') return '(Sin observaciones)';
+
   // Jardín
   if (l.indexOf('jard') !== -1 || l.indexOf('inic') !== -1 || l === 'j') return 'J';
 
