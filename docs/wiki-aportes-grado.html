@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aportes por Grado — Wiki Tienda Diente de León</title>
+<style>
+  :root {
+    --green:       #3a7d44;
+    --green-light: #e8f5e9;
+    --green-mid:   #c8e6c9;
+    --earth:       #6d4c41;
+    --earth-light: #efebe9;
+    --amber:       #f59e0b;
+    --amber-light: #fef3c7;
+    --blue:        #1976d2;
+    --blue-light:  #e3f2fd;
+    --red-light:   #fdecea;
+    --red:         #c62828;
+    --text:        #1a1a2e;
+    --muted:       #6b7280;
+    --border:      #e0e0e0;
+    --bg:          #f7f8fa;
+    --card:        #ffffff;
+    --sidebar-w:   260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); line-height: 1.6; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w);
+    height: 100vh; background: var(--card); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; display: flex; flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 20px 16px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-logo .logo-icon { font-size: 28px; }
+  .sidebar-logo .logo-text { font-size: 13px; font-weight: 700; color: var(--green); line-height: 1.3; }
+  .sidebar-logo .logo-sub  { font-size: 10px; color: var(--muted); font-style: italic; }
+  .sidebar-section { padding: 10px 16px 4px; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .sidebar a {
+    display: block; padding: 6px 16px; font-size: 13px; color: var(--text);
+    text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar a:hover  { background: var(--green-light); color: var(--green); border-left-color: var(--green); }
+  .sidebar a.active { background: var(--green-light); color: var(--green); border-left-color: var(--green); font-weight: 600; }
+  .sidebar a.sub    { padding-left: 28px; font-size: 12px; color: var(--muted); }
+  .sidebar a.sub:hover { color: var(--green); }
+  .sidebar-cta {
+    margin: 12px 16px 4px;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    background: var(--green); color: #fff; font-size: 13px; font-weight: 700;
+    padding: 10px 14px; border-radius: 8px; text-decoration: none;
+    box-shadow: 0 2px 8px rgba(58,125,68,.3); transition: background .15s;
+  }
+  .sidebar-cta:hover { background: #2d6435; color: #fff !important; border-left-color: transparent !important; }
+
+  /* ── MOBILE TOGGLE ── */
+  .menu-toggle {
+    display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+    background: var(--green); color: #fff; border: none; border-radius: 6px;
+    width: 26px; height: 26px; font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90;
+  }
+  .sidebar-overlay.visible { display: block; }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 32px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar a { color: var(--muted); text-decoration: none; }
+  .topbar a:hover { color: var(--green); }
+  .topbar .sep { color: #ccc; }
+  .content { max-width: 900px; padding: 32px 40px 80px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .page-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .badge-active  { background: var(--green-light);  color: var(--green); }
+  .badge-new     { background: var(--blue-light);   color: var(--blue); }
+  .page-title { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 6px; }
+  .page-tagline { font-size: 15px; color: var(--green); font-style: italic; margin-bottom: 12px; }
+  .page-attrs { display: flex; gap: 24px; flex-wrap: wrap; }
+  .attr { font-size: 12px; color: var(--muted); }
+  .attr strong { color: var(--text); }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 40px; scroll-margin-top: 60px; }
+  h2 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--green-mid); display: flex; align-items: center; gap: 8px; }
+  h2 .icon { font-size: 18px; }
+  h3 { font-size: 15px; font-weight: 600; color: var(--earth); margin: 20px 0 8px; }
+  p  { margin-bottom: 10px; color: #374151; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; color: #374151; }
+  strong { color: var(--text); }
+
+  /* ── CALLOUTS ── */
+  .callout { border-radius: 8px; padding: 14px 16px; margin: 16px 0; display: flex; gap: 12px; }
+  .callout .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-info    { background: var(--blue-light);  border-left: 4px solid var(--blue); }
+  .callout-warn    { background: var(--amber-light); border-left: 4px solid var(--amber); }
+  .callout-tip     { background: var(--green-light); border-left: 4px solid var(--green); }
+  .callout-title   { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    background: var(--green-light); border: 1px solid var(--green-mid);
+    border-radius: 10px; padding: 20px 24px; margin: 20px 0;
+  }
+  .highlight-box .big-pct {
+    font-size: 48px; font-weight: 800; color: var(--green); line-height: 1;
+    margin-bottom: 4px;
+  }
+  .highlight-box .pct-label { font-size: 14px; color: #374151; }
+  .highlight-box .pct-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ── STEPS ── */
+  .steps { margin: 16px 0; }
+  .step { display: flex; gap: 16px; margin-bottom: 6px; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--green); color: white; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-body { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .step-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .step-desc  { font-size: 12px; color: var(--muted); margin: 0; }
+  .step-connector { width: 30px; display: flex; justify-content: center; margin: -2px 0; flex-shrink: 0; }
+  .step-connector::before { content: ''; width: 2px; height: 16px; background: var(--green-mid); display: block; }
+
+  /* ── TABLES ── */
+  .wiki-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .wiki-table th { background: var(--green-light); color: var(--green); font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--green-mid); }
+  .wiki-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .wiki-table tr:last-child td { border-bottom: none; }
+  .wiki-table tr:hover td { background: #fafafa; }
+
+  /* ── FAQ ── */
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .faq-q {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; font-weight: 600; font-size: 13px; cursor: pointer;
+    background: var(--card); user-select: none;
+  }
+  .faq-q:hover { background: var(--green-light); }
+  .faq-q .arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
+  .faq-body { padding: 12px 16px; font-size: 13px; color: #374151; background: #fafafa; border-top: 1px solid var(--border); display: none; }
+  .faq-item.open .faq-body { display: block; }
+  .faq-item.open .arrow { transform: rotate(90deg); }
+
+  /* ── SCREENSHOT PLACEHOLDER ── */
+  .screenshot-placeholder {
+    background: #f0f4f8; border: 2px dashed #b0bec5; border-radius: 10px;
+    margin: 16px 0; overflow: hidden;
+  }
+  .screenshot-placeholder .ph-label {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 32px 20px; flex-direction: column; color: var(--muted); text-align: center;
+  }
+  .screenshot-placeholder .ph-icon { font-size: 32px; }
+  .screenshot-placeholder .ph-title { font-size: 14px; font-weight: 700; color: #546e7a; }
+  .screenshot-placeholder .ph-sub   { font-size: 12px; color: var(--muted); }
+  .screenshot-placeholder img { display: block; width: 100%; height: auto; border-radius: 8px; }
+
+  /* ── CHIPS ── */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .chip { background: var(--card); border: 1px solid var(--green-mid); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--green); }
+  .chip strong { color: #1a5c2a; }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .menu-toggle  { display: flex; align-items: center; justify-content: center; }
+    .sidebar      { transform: translateX(-100%); transition: transform .25s ease; z-index: 100; }
+    .sidebar.open { transform: translateX(0); }
+    .main         { margin-left: 0 !important; width: 100%; }
+    .topbar       { padding-left: 44px; flex-wrap: wrap; }
+    .content      { padding: 16px 16px 60px; max-width: 100%; }
+    .wiki-table   { display: block; overflow-x: auto; font-size: 12px; }
+    .page-title   { font-size: 22px; }
+    h2            { font-size: 16px; }
+    .highlight-box .big-pct { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌱</div>
+    <div>
+      <div class="logo-text">Diente de León</div>
+      <div class="logo-sub">Cultivando juntos un futuro consciente</div>
+    </div>
+  </div>
+
+  <a href="https://tiendadientedeleon.mitiendanube.com/" target="_blank" class="sidebar-cta">🛍️ Ir a la Tienda</a>
+
+  <div class="sidebar-section">En esta página</div>
+  <a href="#que-es" class="active">¿Qué es el aporte?</a>
+  <a href="#calculo">Cómo se calcula</a>
+  <a href="#elegir-grado">Elegir el grado</a>
+  <a href="#mail">Lo que ves en el mail</a>
+  <a href="#dashboard">El fondo acumulado</a>
+  <a href="#liquidacion">Liquidación</a>
+  <a href="#faq">Preguntas frecuentes</a>
+
+  <div class="sidebar-section">Otras wikis</div>
+  <a href="wiki-diente-de-leon.html">Proyecto DdL</a>
+  <a href="wiki-comision-recursos.html">Comisión de Recursos</a>
+  <a href="sef-wiki.html">Dashboard SEF</a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <a href="wiki-diente-de-leon.html">Wiki</a><span class="sep">›</span>
+    <a href="#">Tienda Diente de León</a><span class="sep">›</span>
+    <span>Aportes por Grado</span>
+  </div>
+
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-meta">
+        <span class="badge badge-active">Activo</span>
+        <span class="badge badge-new">Vigente desde 01/09/2026</span>
+      </div>
+      <div class="page-title">Aportes por Grado</div>
+      <div class="page-tagline">Cada compra en la Tienda genera un aporte real al grado que elijas.</div>
+      <div class="page-attrs">
+        <div class="attr"><strong>Área:</strong> Tienda Diente de León</div>
+        <div class="attr"><strong>Actualizado:</strong> Septiembre 2026</div>
+        <div class="attr"><strong>Responsable:</strong> Comisión de Recursos</div>
+      </div>
+    </div>
+
+    <!-- QUE ES -->
+    <div class="section" id="que-es">
+      <h2><span class="icon">🌻</span> ¿Qué es el aporte por grado?</h2>
+      <p>Desde septiembre de 2026, cada compra en la Tienda Diente de León genera automáticamente un <strong>aporte económico al grado</strong> que el comprador elija. No es un costo adicional: es parte del margen de cada producto, redistribuido hacia la comunidad educativa.</p>
+      <p>Este mecanismo reemplaza al modelo anterior de prosumidor SEF. La Tienda deja de operar como prosumidor del Sistema Económico Fraterno y pasa a ser un <strong>emprendimiento comunitario de la Escuela Dandelion</strong>, con un circuito propio de aportes hacia los grados.</p>
+
+      <div class="highlight-box">
+        <div class="big-pct">15%</div>
+        <div class="pct-label">del total de cada compra va al grado que elegiste.</div>
+        <div class="pct-sub">Calculado sobre el precio final pagado, con descuentos ya aplicados.</div>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="icon">💡</span>
+        <div>
+          <div class="callout-title">¿Qué pasa si no elijo un grado?</div>
+          El aporte queda destinado a la Escuela en general. Siempre hay un destino para el margen de tu compra.
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCULO -->
+    <div class="section" id="calculo">
+      <h2><span class="icon">🧮</span> Cómo se calcula</h2>
+      <p>El porcentaje se aplica sobre el <strong>precio final pagado</strong>, es decir, ya descontados cupones, descuentos por convenio u otros beneficios. No se calcula sobre el precio de lista.</p>
+
+      <table class="wiki-table">
+        <thead>
+          <tr>
+            <th>Ejemplo</th>
+            <th>Precio lista</th>
+            <th>Con descuento</th>
+            <th>Aporte al grado (15%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Compra sin descuento</td>
+            <td>$10.000</td>
+            <td>$10.000</td>
+            <td>$1.500</td>
+          </tr>
+          <tr>
+            <td>Compra con cupón 20%</td>
+            <td>$10.000</td>
+            <td>$8.000</td>
+            <td>$1.200</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <span class="icon">ℹ️</span>
+        <div>
+          <div class="callout-title">Productos con reglas específicas</div>
+          Algunos proveedores tienen porcentajes acordados distintos al 15% estándar. En esos casos, el sistema aplica automáticamente el porcentaje correspondiente a ese producto. El comprador siempre ve el monto real en su mail de confirmación.
+        </div>
+      </div>
+    </div>
+
+    <!-- ELEGIR GRADO -->
+    <div class="section" id="elegir-grado">
+      <h2><span class="icon">🎓</span> Cómo elegir el grado</h2>
+      <p>Al finalizar la compra en TiendaNube, el campo <strong>"Observaciones del pedido"</strong> es donde se indica el grado de destino.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Agregá los productos al carrito</div>
+            <div class="step-desc">Como siempre, seleccioná los productos que querés comprar.</div>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">En el checkout, buscá el campo "Observaciones"</div>
+            <div class="step-desc">Escribí el grado al que querés destinar el aporte. Ejemplo: <em>"Jardín"</em>, <em>"1er grado"</em>, <em>"6to grado"</em>.</div>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Completá el pago</div>
+            <div class="step-desc">El sistema registra automáticamente el grado elegido junto con el monto del aporte.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="icon">⚠️</span>
+        <div>
+          <div class="callout-title">Próximamente: selección directa</div>
+          Estamos trabajando para que el grado se pueda elegir desde un menú desplegable durante el checkout, sin necesidad de escribirlo manualmente. Mientras tanto, el campo de observaciones es el método vigente.
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIL -->
+    <div class="section" id="mail">
+      <h2><span class="icon">📧</span> Lo que ves en el mail de confirmación</h2>
+      <p>Al completar la compra, recibís un mail con el <strong>código QR para retirar tu pedido</strong>. En ese mismo mail aparece el detalle del aporte generado:</p>
+      <ul>
+        <li>Monto total del aporte</li>
+        <li>Grado de destino</li>
+        <li>Desglose por producto (si compraste varios)</li>
+      </ul>
+
+      <div class="screenshot-placeholder" id="ph-mail">
+        <div class="ph-label">
+          <span class="ph-icon">📸</span>
+          <span class="ph-title">Captura: sección de aporte en el mail QR</span>
+          <span class="ph-sub">Reemplazar con screenshot del mail de confirmación mostrando el bloque de aporte al grado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="section" id="dashboard">
+      <h2><span class="icon">📊</span> El fondo acumulado</h2>
+      <p>Cada aporte queda registrado automáticamente en el sistema. Los referentes de cada grado pueden ver en el <strong>Dashboard de Referentes</strong> el fondo acumulado para su grado, con el detalle de las compras que lo generaron.</p>
+
+      <div class="screenshot-placeholder" id="ph-dashboard">
+        <div class="ph-label">
+          <span class="ph-icon">📸</span>
+          <span class="ph-title">Captura: sección "Fondo por grado" del Dashboard de Referentes</span>
+          <span class="ph-sub">Reemplazar con screenshot del dashboard mostrando los chips de aporte por grado</span>
+        </div>
+      </div>
+
+      <p>El dashboard muestra:</p>
+      <div class="chip-row">
+        <span class="chip">Total acumulado por grado</span>
+        <span class="chip">Detalle de compras</span>
+        <span class="chip">Distribución entre grados</span>
+        <span class="chip">Filtro por período</span>
+      </div>
+
+      <div class="callout callout-info">
+        <span class="icon">ℹ️</span>
+        <div>
+          <div class="callout-title">Acceso al dashboard</div>
+          El link al Dashboard de Referentes es compartido por la Comisión de Recursos con los referentes de cada grado. Si no lo tenés, solicitalo a los responsables de la Tienda.
+        </div>
+      </div>
+    </div>
+
+    <!-- LIQUIDACION -->
+    <div class="section" id="liquidacion">
+      <h2><span class="icon">💸</span> Liquidación de fondos</h2>
+      <p>Los aportes acumulados durante el mes se transfieren a cada grado <strong>durante los primeros días del mes siguiente</strong>, por transferencia bancaria al CBU del referente registrado.</p>
+
+      <table class="wiki-table">
+        <thead>
+          <tr>
+            <th>Aspecto</th>
+            <th>Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Frecuencia</strong></td>
+            <td>Mensual — los primeros días de cada mes</td>
+          </tr>
+          <tr>
+            <td><strong>Período</strong></td>
+            <td>Ventas del mes anterior</td>
+          </tr>
+          <tr>
+            <td><strong>Medio</strong></td>
+            <td>Transferencia bancaria al CBU del referente de grado</td>
+          </tr>
+          <tr>
+            <td><strong>Quién gestiona</strong></td>
+            <td>Los responsables de Diente de León (control, autorización y transferencia)</td>
+          </tr>
+          <tr>
+            <td><strong>Mínimo para transferir</strong></td>
+            <td>A definir por la Comisión de Recursos</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <span class="icon">📋</span>
+        <div>
+          <div class="callout-title">Registro del CBU</div>
+          Si el CBU de tu grado no está registrado o hubo cambios, contactá a los responsables de la Tienda antes del cierre del mes para asegurar la transferencia.
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="section" id="faq">
+      <h2><span class="icon">❓</span> Preguntas frecuentes</h2>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Desde cuándo aplica este sistema?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          Desde el <strong>1° de septiembre de 2026</strong>. Las compras realizadas antes de esa fecha no tienen aporte registrado, ya que el mecanismo no existía.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Puedo cambiar el grado después de hacer la compra?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          No es posible modificarlo una vez confirmado el pedido. El grado queda registrado en el momento del pago según lo que escribiste en el campo de observaciones.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿El aporte es un cargo adicional a mi compra?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          No. El aporte sale del margen del producto, no de tu bolsillo. Pagás exactamente lo mismo que siempre.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Qué pasa si tengo un cupón de descuento?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          El aporte se calcula sobre el precio final después del descuento. Si pagás menos, el aporte también es menor — pero el porcentaje (15%) se mantiene igual.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Qué pasa si no indico ningún grado?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          El aporte queda destinado a la <strong>Escuela en general</strong>. Estos fondos son gestionados por la Comisión de Recursos de la misma forma que los aportes por grado.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Puedo comprar para varios grados en un mismo pedido?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          Por ahora, un pedido tiene un único grado de destino. Próximamente se habilitará la posibilidad de distribuir el aporte entre distintos grados — esto requiere trabajo adicional en el sistema de gestión.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Los prosumidores SEF de la Tienda también aplican este sistema?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          La Tienda Diente de León dejó de operar como prosumidor SEF. Los grados y familias que eran prosumidores SEF a través de la tienda pasan a participar como compradores del nuevo modelo de aportes.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Cómo sé cuánto acumuló mi grado?
+          <span class="arrow">›</span>
+        </div>
+        <div class="faq-body">
+          Los referentes de grado tienen acceso al Dashboard de Referentes donde se muestra el fondo acumulado en tiempo real. Si sos referente y no tenés el link, contactá a los responsables de la Tienda.
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // Mobile sidebar
+  var toggle = document.getElementById('menuToggle');
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  toggle.addEventListener('click', function() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('visible');
+  });
+  overlay.addEventListener('click', function() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+  });
+
+  // Sidebar active link on scroll
+  var sections = document.querySelectorAll('.section');
+  var sideLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+  window.addEventListener('scroll', function() {
+    var scrollY = window.scrollY + 80;
+    sections.forEach(function(sec) {
+      if (sec.offsetTop <= scrollY) {
+        sideLinks.forEach(function(a) { a.classList.remove('active'); });
+        var link = document.querySelector('.sidebar a[href="#' + sec.id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  });
+
+  // FAQ toggle
+  function toggleFaq(el) {
+    el.parentElement.classList.toggle('open');
+  }
+</script>
+</body>
+</html>
