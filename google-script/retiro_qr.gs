@@ -406,8 +406,9 @@ function calcularAporteGrado(order) {
 function enviarEmail(email, nombre, order, qrBlob, productos) {
   var asunto = 'Diente de Leon - Tu QR para retirar el pedido #' + order.number;
 
-  var aporte = calcularAporteGrado(order);
   var bloqueGrado = '';
+  var mostrarAporte = new Date() >= new Date('2026-10-01');
+  var aporte = mostrarAporte ? calcularAporteGrado(order) : null;
   if (aporte && aporte.montoGrado > 0) {
     var totalCompra = parseFloat(order.total || 0);
     bloqueGrado =
@@ -2191,4 +2192,128 @@ function testEnviarEmailAporte() {
   // Redirigir a email de prueba en lugar del comprador real
   enviarEmail('robertson.ine@gmail.com', nombre, order, qrBlob, productos);
   Logger.log('[TEST] Mail enviado a robertson.ine@gmail.com — pedido #' + order.number);
+}
+
+// ── INFORME MENSUAL ─────────────────────────────────────────────────────────
+
+// Ejecutar una vez para activar el trigger automático el 1ro de cada mes
+function configurarTriggerMensual() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'enviarInformeMensual') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('enviarInformeMensual')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(9)
+    .create();
+  Logger.log('Trigger configurado: enviarInformeMensual el 1ro de cada mes a las 9hs.');
+}
+
+function enviarInformeMensual() {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) { Logger.log('Sheet Ventas no encontrada.'); return; }
+
+  var data = sheet.getDataRange().getValues();
+
+  var hoy       = new Date();
+  var mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  var mesNum    = mesPasado.getMonth();
+  var anioNum   = mesPasado.getFullYear();
+  var mesNombre = mesPasado.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  var mesLabel  = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+
+  var porGrado      = {};
+  var emailsSet     = {};
+  var totalAporte   = 0;
+  var totalUnidades = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row   = data[i];
+    var fecha = new Date(row[0]);
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha.getMonth() !== mesNum || fecha.getFullYear() !== anioNum) continue;
+
+    var email       = String(row[4]  || '').trim();
+    var qty         = parseInt(row[7])      || 0;
+    var aporteGrado = parseFloat(row[20])   || 0;
+    var grado       = normalizarGradoGAS(String(row[21] || ''));
+
+    if (email && email.indexOf('@') > -1) emailsSet[email] = true;
+
+    totalUnidades += qty;
+    totalAporte   += aporteGrado;
+
+    if (grado && grado !== '(Sin observaciones)') {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporteGrado;
+      porGrado[grado].unidades += qty;
+    }
+  }
+
+  var grados = Object.keys(porGrado).sort(function(a, b) { return a.localeCompare(b, 'es'); });
+
+  if (grados.length === 0 && totalUnidades === 0) {
+    Logger.log('Sin ventas en ' + mesLabel + '. No se envía mail.');
+    return;
+  }
+
+  var filasGrado = grados.map(function(g) {
+    var d = porGrado[g];
+    return '<tr>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + g + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var html =
+    '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;max-width:560px;margin:auto;padding:24px;color:#1a1a2e">' +
+    '<div style="text-align:center;padding:0 0 24px 0">' +
+    '<img src="' + LOGO_B64 + '" style="max-width:200px;width:55%" alt="Diente de León">' +
+    '</div>' +
+    '<h2 style="color:#3a7d44;margin:0 0 8px 0;font-size:20px">Resumen de aportes · ' + mesLabel + '</h2>' +
+    '<p style="color:#555;margin:0 0 20px 0;font-size:14px;line-height:1.6">Gracias a las compras de toda la comunidad Dandelion, este mes se generaron aportes para cada grado. Acá compartimos el resumen:</p>' +
+
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #c8e6c9">' +
+    '<thead><tr style="background:#3a7d44">' +
+    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:13px;font-weight:600">Grado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Aporte recaudado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Unidades vendidas</th>' +
+    '</tr></thead>' +
+    '<tbody>' + filasGrado + '</tbody>' +
+    '<tfoot><tr style="background:#e8f5e9">' +
+    '<td style="padding:11px 14px;font-weight:700;font-size:14px">Total</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#1a5c2a">$' + Math.round(totalAporte).toLocaleString('es-AR') + '</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#555">' + totalUnidades + '</td>' +
+    '</tr></tfoot>' +
+    '</table>' +
+
+    '<p style="font-size:13px;color:#555;line-height:1.6">Los aportes se transfieren a cada grado durante los primeros días del mes. Si tenés alguna consulta o querés verificar el destino de tu aporte, <a href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-aportes-grado.html" style="color:#3a7d44">visitá nuestra wiki</a>.</p>' +
+    '<p style="font-size:11px;color:#aaa;margin-top:24px;padding-top:14px;border-top:1px solid #eee;text-align:center">Tienda Diente de León · Escuela Dandelion Pedagogía Waldorf · Córdoba</p>' +
+    '</div>';
+
+  var asunto  = 'Tienda Diente de León — Aportes de ' + mesLabel;
+  var emails  = Object.keys(emailsSet);
+  var enviados = 0;
+
+  emails.forEach(function(email) {
+    try {
+      GmailApp.sendEmail(email, asunto, '', {
+        htmlBody:    html,
+        from:        'tiendavirtual.dientedeleon@gmail.com',
+        name:        'Tienda Diente de León'
+      });
+      enviados++;
+    } catch(e) {
+      Logger.log('Error enviando a ' + email + ': ' + e.message);
+    }
+  });
+
+  Logger.log('Informe ' + mesLabel + ' enviado a ' + enviados + '/' + emails.length + ' destinatarios. Aporte total: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
+}
+
+// Test: corre la función manualmente para el mes anterior
+function testEnviarInformeMensual() {
+  enviarInformeMensual();
 }

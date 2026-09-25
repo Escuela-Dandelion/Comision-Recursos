@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe de Aportes — Diente de León</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌼</text></svg>">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --green:       #2e7d32;
+    --green-dark:  #1b5e20;
+    --green-light: #e8f5e9;
+    --green-mid:   #c8e6c9;
+    --text:        #1a1a2e;
+    --muted:       #6b7280;
+    --border:      #e0e0e0;
+    --bg:          #f4f6f9;
+    --card:        #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #login {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--bg);
+  }
+  .login-card {
+    background: var(--card); border-radius: 16px; padding: 40px 36px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; max-width: 360px; width: 100%;
+  }
+  .login-card img { height: 70px; margin-bottom: 16px; }
+  .login-card h2  { font-size: 18px; color: var(--green); margin-bottom: 6px; }
+  .login-card p   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 28px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-left  { display: flex; align-items: center; gap: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .topbar img   { height: 32px; }
+  .topbar-title { font-size: 15px; font-weight: 700; color: var(--green); }
+  .topbar-sub   { font-size: 11px; color: var(--muted); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--card);
+    text-decoration: none; color: var(--text); transition: background .15s;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn-green  { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-green:hover { background: var(--green-dark); }
+  .btn-outline { border-color: var(--green); color: var(--green); }
+  .btn-outline:hover { background: var(--green-light); }
+
+  /* ── CONTENT ── */
+  #app { display: none; }
+  .content { max-width: 860px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* ── FILTERS ── */
+  .filters {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .filter-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .filter-select {
+    padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; background: var(--bg); cursor: pointer; color: var(--text);
+  }
+  .filter-select:focus { outline: none; border-color: var(--green); }
+
+  /* ── SUMMARY CARDS ── */
+  .kpi-row { display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; flex: 1; min-width: 140px;
+    border-top: 3px solid var(--green);
+  }
+  .kpi-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 800; color: var(--green); }
+  .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── TABLE ── */
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--green-mid);
+  }
+  .tbl-wrap { overflow-x: auto; }
+  table.aportes-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.aportes-tbl th {
+    background: var(--green-light); color: var(--green); font-weight: 700;
+    padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--green-mid);
+    font-size: 12px;
+  }
+  table.aportes-tbl th.num { text-align: right; }
+  table.aportes-tbl td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.aportes-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.aportes-tbl tr:hover td { background: #fafafa; }
+  table.aportes-tbl tr.total-row td { background: var(--green-light); font-weight: 700; color: var(--green-dark); }
+  .badge-grado {
+    display: inline-block; background: var(--green-light); color: var(--green);
+    border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+  }
+  .aporte-val { font-weight: 700; color: var(--green-dark); }
+
+  /* ── LOADING / EMPTY ── */
+  .estado { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--green-mid); border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── PRINT ── */
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; }
+    .topbar, .filters, .no-print { display: none !important; }
+    .content { padding: 0; max-width: 100%; }
+    .kpi-row { display: flex !important; }
+    .kpi-card { border: 1px solid #ccc !important; }
+    table.aportes-tbl th { background: #e8f5e9 !important; }
+    table.aportes-tbl tr.total-row td { background: #e8f5e9 !important; }
+    .print-header { display: flex !important; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--green); padding-bottom: 14px; margin-bottom: 20px; }
+  }
+  .print-header { display: none; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    .topbar { padding: 8px 14px; }
+    .topbar-title { font-size: 13px; }
+    .topbar-sub { display: none; }
+    .content { padding: 16px 12px 60px; }
+    .kpi-value { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León">
+    <h2>Informe de Aportes</h2>
+    <p>Ingresá con tu cuenta de Google para ver el informe</p>
+    <div id="g_id_onload"
+      data-client_id="308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com"
+      data-callback="onGoogleLogin"
+      data-auto_select="true">
+    </div>
+    <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-locale="es"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="DdL">
+      <div>
+        <div class="topbar-title">Informe de Aportes por Grado</div>
+        <div class="topbar-sub">Tienda Diente de León</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-green no-print" onclick="window.print()">⬇ Exportar PDF</button>
+      <a href="dashboard-referentes.html" class="btn btn-outline no-print">← Dashboard</a>
+      <button class="btn no-print" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Print header (solo visible al imprimir) -->
+    <div class="print-header">
+      <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León" style="height:48px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:#1b5e20">Informe de Aportes por Grado</div>
+        <div id="print-periodo" style="font-size:12px;color:#555;margin-top:2px"></div>
+      </div>
+      <div style="font-size:11px;color:#999;text-align:right" id="print-fecha"></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters no-print">
+      <span class="filter-label">Período:</span>
+      <select class="filter-select" id="sel-mes" onchange="aplicarFiltro()"></select>
+    </div>
+
+    <!-- Estado de carga -->
+    <div id="estado" class="estado">
+      <div class="spinner"></div>
+      Cargando datos…
+    </div>
+
+    <!-- Resultados -->
+    <div id="resultados" style="display:none">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Total aportes a grados</div>
+          <div class="kpi-value" id="kpi-total-aporte">—</div>
+          <div class="kpi-sub">del mes seleccionado</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Grados con aporte</div>
+          <div class="kpi-value" id="kpi-grados">—</div>
+          <div class="kpi-sub">grados activos</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unidades vendidas</div>
+          <div class="kpi-value" id="kpi-unidades">—</div>
+          <div class="kpi-sub">en el período</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Aporte escuela</div>
+          <div class="kpi-value" id="kpi-escuela">—</div>
+          <div class="kpi-sub">destino general</div>
+        </div>
+      </div>
+
+      <div class="section-title">Aportes por grado</div>
+      <div class="tbl-wrap">
+        <table class="aportes-tbl">
+          <thead>
+            <tr>
+              <th>Grado</th>
+              <th>Recaudador / Titular</th>
+              <th class="num">Aporte recaudado</th>
+              <th class="num">Unidades vendidas</th>
+              <th class="num">% del total</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-cuerpo"></tbody>
+          <tfoot id="tabla-pie"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var APPS_URL       = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var SESSION_KEY    = 'dl_admin_session';
+var allRows        = [];
+
+// Recaudadores por grado (según wiki)
+var RECAUDADORES = {
+  'Jardín':  'Lourdes del Castillo',
+  '1ro':     'Mariana Bobadilla',
+  '2do':     'Paola Belen',
+  '3ro':     'Alejandro Houspanosian',
+  '4to':     'Pablo Contreras',
+  '5to':     'Marienela Segalla',
+  '6to':     'Virginia Battelli',
+  '7mo':     'Magui Debat',
+  '8vo':     'Juan Diaz',
+  '9no':     'Cecilia Mogni',
+  '10mo':    'Delfina Salvetti',
+  '11mo':    'Pía Victoria Lucarno',
+  '12vo':    'Sin referente'
+};
+
+function guardarSesion(email) { localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, expires: Date.now() + 24*60*60*1000 })); }
+function leerSesion()         { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return s && Date.now() < s.expires ? s.email : null; } catch(e) { return null; } }
+function cerrarSesion()       { localStorage.removeItem(SESSION_KEY); location.reload(); }
+
+function onGoogleLogin(resp) {
+  var payload = JSON.parse(atob(resp.credential.split('.')[1]));
+  guardarSesion(payload.email);
+  iniciar(payload.email);
+}
+
+window.addEventListener('load', function() {
+  var email = leerSesion();
+  if (email) iniciar(email);
+});
+
+function iniciar(email) {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display   = 'block';
+  poblarSelectorMes();
+  cargarDatos(email);
+}
+
+function poblarSelectorMes() {
+  var sel = document.getElementById('sel-mes');
+  var hoy = new Date();
+  for (var i = 0; i < 12; i++) {
+    var d   = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    var val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var lbl = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    lbl = lbl.charAt(0).toUpperCase() + lbl.slice(1);
+    var opt = document.createElement('option');
+    opt.value = val; opt.textContent = lbl;
+    if (i === 1) opt.selected = true; // mes anterior por defecto
+    sel.appendChild(opt);
+  }
+}
+
+function cargarDatos(email) {
+  document.getElementById('estado').style.display     = 'flex';
+  document.getElementById('estado').style.flexDirection = 'column';
+  document.getElementById('resultados').style.display = 'none';
+
+  fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(email), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allRows = data.rows || [];
+      aplicarFiltro();
+    })
+    .catch(function(e) {
+      document.getElementById('estado').innerHTML = '<p style="color:#c62828">Error al cargar datos. Intentá de nuevo.</p>';
+    });
+}
+
+function normalizarGrado(g) {
+  if (!g) return null;
+  var s = g.toString().trim().toLowerCase();
+  var sinObs = ['sin observaciones','(sin observaciones)','na','n/a','no aplica','ninguno','ninguna','-','escuela','para la escuela','escuela general',''];
+  if (sinObs.indexOf(s) > -1) return null;
+  return g.toString().trim();
+}
+
+function pesos(n) {
+  return '$ ' + Math.round(n).toLocaleString('es-AR');
+}
+
+function aplicarFiltro() {
+  var mes = document.getElementById('sel-mes').value; // "2026-09"
+  var partes = mes.split('-');
+  var anio = parseInt(partes[0]);
+  var mesIdx = parseInt(partes[1]) - 1;
+
+  var rows = allRows.filter(function(r) {
+    var f = new Date(r.fecha);
+    return f.getFullYear() === anio && f.getMonth() === mesIdx;
+  });
+
+  var porGrado    = {};
+  var totalAporte = 0;
+  var totalEscuela = 0;
+  var totalUnidades = 0;
+
+  rows.forEach(function(r) {
+    var grado  = normalizarGrado(r.grado);
+    var aporte = parseFloat(r.aporte_grado) || 0;
+    var qty    = parseInt(r.cantidad) || 0;
+
+    totalUnidades += qty;
+    totalAporte   += aporte;
+
+    if (grado) {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporte;
+      porGrado[grado].unidades += qty;
+    } else {
+      // sin grado → aporte va a escuela (aproximado)
+      totalEscuela += aporte;
+    }
+  });
+
+  var gradoKeys = Object.keys(porGrado).sort(function(a, b) {
+    var orden = ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo','12vo'];
+    var ia = orden.indexOf(a); var ib = orden.indexOf(b);
+    if (ia === -1) ia = 99; if (ib === -1) ib = 99;
+    return ia - ib;
+  });
+
+  // KPIs
+  document.getElementById('kpi-total-aporte').textContent = pesos(totalAporte);
+  document.getElementById('kpi-grados').textContent       = gradoKeys.length;
+  document.getElementById('kpi-unidades').textContent     = totalUnidades;
+  document.getElementById('kpi-escuela').textContent      = pesos(totalEscuela);
+
+  // Tabla
+  var tbody = document.getElementById('tabla-cuerpo');
+  var tfoot = document.getElementById('tabla-pie');
+  tbody.innerHTML = '';
+
+  if (gradoKeys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">Sin aportes registrados para este período</td></tr>';
+  } else {
+    gradoKeys.forEach(function(g) {
+      var d   = porGrado[g];
+      var pct = totalAporte > 0 ? ((d.aporte / totalAporte) * 100).toFixed(1) + '%' : '—';
+      var rec = RECAUDADORES[g] || '—';
+      var tr  = document.createElement('tr');
+      tr.innerHTML =
+        '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
+        '<td style="color:#555">' + esc(rec) + '</td>' +
+        '<td class="num"><span class="aporte-val">' + pesos(d.aporte) + '</span></td>' +
+        '<td class="num">' + d.unidades + '</td>' +
+        '<td class="num" style="color:#aaa">' + pct + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  tfoot.innerHTML =
+    '<tr class="total-row">' +
+    '<td colspan="2">Total</td>' +
+    '<td class="num">' + pesos(totalAporte) + '</td>' +
+    '<td class="num">' + totalUnidades + '</td>' +
+    '<td class="num">100%</td>' +
+    '</tr>';
+
+  // Print metadata
+  var selEl   = document.getElementById('sel-mes');
+  var mesTexto = selEl.options[selEl.selectedIndex].text;
+  document.getElementById('print-periodo').textContent = 'Período: ' + mesTexto;
+  document.getElementById('print-fecha').textContent   = 'Generado el ' + new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
+
+  document.getElementById('estado').style.display     = 'none';
+  document.getElementById('resultados').style.display = 'block';
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
