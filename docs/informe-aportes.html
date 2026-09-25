@@ -336,8 +336,7 @@ function aplicarFiltro() {
   var mesIdx = parseInt(partes[1]) - 1;
 
   var rows = allRows.filter(function(r) {
-    var f = new Date(r.fecha);
-    return f.getFullYear() === anio && f.getMonth() === mesIdx;
+    return r.mes === mes;
   });
 
   var porGrado    = {};
@@ -346,19 +345,16 @@ function aplicarFiltro() {
   var totalUnidades = 0;
 
   rows.forEach(function(r) {
-    var grado  = normalizarGrado(r.grado);
     var aporte = parseFloat(r.aporte_grado) || 0;
     var qty    = parseInt(r.cantidad) || 0;
-
     totalUnidades += qty;
-    totalAporte   += aporte;
 
-    if (grado) {
-      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
-      porGrado[grado].aporte   += aporte;
-      porGrado[grado].unidades += qty;
+    if (aporte > 0 && r.grado && r.grado !== '(Sin observaciones)' && r.grado !== 'Escuela') {
+      if (!porGrado[r.grado]) porGrado[r.grado] = { aporte: 0, unidades: 0 };
+      porGrado[r.grado].aporte   += aporte;
+      porGrado[r.grado].unidades += qty;
+      totalAporte += aporte;
     } else {
-      // sin grado → aporte va a escuela (aproximado)
       totalEscuela += aporte;
     }
   });
