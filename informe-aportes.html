@@ -108,6 +108,14 @@
     border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 700;
   }
   .aporte-val { font-weight: 700; color: var(--green-dark); }
+  .btn-copiar {
+    background: none; border: none; cursor: pointer; color: #bbb;
+    padding: 2px 4px; border-radius: 3px; vertical-align: middle;
+    transition: color .15s; line-height: 1; margin-left: 4px;
+  }
+  .btn-copiar:hover { color: var(--green); }
+  .btn-copiar.copiado { color: var(--green); }
+  .btn-copiar svg { display: block; }
 
   /* ── LOADING / EMPTY ── */
   .estado { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
@@ -247,6 +255,42 @@ var APPS_URL       = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0
 var SESSION_KEY    = 'dl_admin_session';
 var allRows        = [];
 
+// Datos bancarios por grado para copiar al portapapeles
+var DATOS_PAGO = {
+  'Jardín': { alias: 'LOURDES.DELCASTILLO',  cbu: null },
+  '1ro':    { alias: 'marianabobadilla',      cbu: null },
+  '2do':    { alias: 'PaoBelen.ppay',         cbu: '0000076500000037031749' },
+  '3ro':    { alias: 'ale.calera',            cbu: '0720199488000000949886' },
+  '4to':    { alias: 'METRO.IDEA.CINE',       cbu: '0070199630004057045143' },
+  '5to':    { alias: 'quinto.grado.dande',    cbu: null },
+  '6to':    { alias: 'VirginiaBattelli.mp',   cbu: null },
+  '7mo':    { alias: 'maguidebat',            cbu: null },
+  '8vo':    { alias: 'Senado.mole.catre',     cbu: null },
+  '9no':    { alias: 'viajenovenodande',      cbu: null },
+  '10mo':   { alias: 'delfi.salvetti.1978',   cbu: '0720469688000001927122' },
+  '11mo':   { alias: 'pialucarno.mp',         cbu: '0000003100028245233221' },
+  '12vo':   { alias: null,                    cbu: null }
+};
+
+function getDatoPago(grado) {
+  var d = DATOS_PAGO[grado];
+  if (!d) return null;
+  if (d.alias) return { texto: d.alias, tipo: 'alias' };
+  if (d.cbu)   return { texto: d.cbu,   tipo: 'CBU' };
+  return null;
+}
+
+function copiarDato(texto, btn) {
+  navigator.clipboard.writeText(texto).then(function() {
+    btn.classList.add('copiado');
+    btn.setAttribute('title', '¡Copiado!');
+    setTimeout(function() {
+      btn.classList.remove('copiado');
+      btn.setAttribute('title', btn.dataset.title);
+    }, 2000);
+  });
+}
+
 // Recaudadores por grado (según wiki)
 var RECAUDADORES = {
   'Jardín':  'Lourdes del Castillo',
@@ -367,12 +411,13 @@ function aplicarFiltro() {
   rows.forEach(function(r) {
     var aporte = parseFloat(r.aporte_grado) || 0;
     var qty    = parseInt(r.cantidad) || 0;
+    var grado  = normalizarGrado(r.grado); // normaliza 'J' → 'Jardín', null para sin grado
     totalUnidades += qty;
 
-    if (aporte > 0 && r.grado && r.grado !== '(Sin observaciones)' && r.grado !== 'Escuela') {
-      if (!porGrado[r.grado]) porGrado[r.grado] = { aporte: 0, unidades: 0 };
-      porGrado[r.grado].aporte   += aporte;
-      porGrado[r.grado].unidades += qty;
+    if (aporte > 0 && grado) {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporte;
+      porGrado[grado].unidades += qty;
       totalAporte += aporte;
     } else {
       totalEscuela += aporte;
@@ -403,11 +448,21 @@ function aplicarFiltro() {
     gradoKeys.forEach(function(g) {
       var d   = porGrado[g];
       var pct = totalAporte > 0 ? ((d.aporte / totalAporte) * 100).toFixed(1) + '%' : '—';
-      var rec = getRecaudador(g);
+      var rec  = getRecaudador(g);
+      var dato = getDatoPago(g);
+      var copyBtn = '';
+      if (dato) {
+        var title = 'Copiar ' + dato.tipo + ': ' + dato.texto;
+        copyBtn = '<button class="btn-copiar" data-title="' + esc(title) + '" title="' + esc(title) + '" onclick="copiarDato(\'' + dato.texto.replace(/'/g,"\\'") + '\',this)">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
+          '<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
+          '</button>';
+      }
       var tr  = document.createElement('tr');
       tr.innerHTML =
         '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
-        '<td style="color:#555">' + esc(rec) + '</td>' +
+        '<td style="color:#555">' + esc(rec) + copyBtn + '</td>' +
         '<td class="num"><span class="aporte-val">' + pesos(d.aporte) + '</span></td>' +
         '<td class="num">' + d.unidades + '</td>' +
         '<td class="num" style="color:#aaa">' + pct + '</td>';
