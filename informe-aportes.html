@@ -317,6 +317,25 @@ function cargarDatos(email) {
     });
 }
 
+function getRecaudador(grado) {
+  if (!grado) return '—';
+  if (RECAUDADORES[grado]) return RECAUDADORES[grado];
+  var g = grado.toLowerCase().trim();
+  var keys = Object.keys(RECAUDADORES);
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].toLowerCase().trim() === g) return RECAUDADORES[keys[i]];
+  }
+  // Búsqueda parcial por número de grado
+  var num = g.match(/\d+/);
+  if (num) {
+    for (var j = 0; j < keys.length; j++) {
+      var km = keys[j].match(/\d+/);
+      if (km && km[0] === num[0]) return RECAUDADORES[keys[j]];
+    }
+  }
+  return '—';
+}
+
 function normalizarGrado(g) {
   if (!g) return null;
   var s = g.toString().trim().toLowerCase();
@@ -383,7 +402,7 @@ function aplicarFiltro() {
     gradoKeys.forEach(function(g) {
       var d   = porGrado[g];
       var pct = totalAporte > 0 ? ((d.aporte / totalAporte) * 100).toFixed(1) + '%' : '—';
-      var rec = RECAUDADORES[g] || '—';
+      var rec = getRecaudador(g);
       var tr  = document.createElement('tr');
       tr.innerHTML =
         '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
