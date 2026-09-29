@@ -325,17 +325,20 @@ window.addEventListener('load', function() {
 });
 
 function poblarSelectorMes() {
-  var sel = document.getElementById('sel-mes');
-  var hoy = new Date();
-  for (var i = 0; i < 12; i++) {
-    var d   = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+  var sel    = document.getElementById('sel-mes');
+  var hoy    = new Date();
+  var inicio = new Date(2026, 8, 1); // Septiembre 2026 (mes 8 = septiembre)
+  var d      = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  var primero = true;
+  while (d >= inicio) {
     var val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     var lbl = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
     lbl = lbl.charAt(0).toUpperCase() + lbl.slice(1);
     var opt = document.createElement('option');
     opt.value = val; opt.textContent = lbl;
-    if (i === 0) opt.selected = true; // mes actual por defecto
+    if (primero) { opt.selected = true; primero = false; }
     sel.appendChild(opt);
+    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   }
 }
 
