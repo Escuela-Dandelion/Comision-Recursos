@@ -115,8 +115,19 @@
     font-size: 14px; font-family: inherit;
     -webkit-tap-highlight-color: transparent;
   }
-  .btn-copiar:hover  { color: var(--green); }
-  .btn-copiar.copiado { color: var(--green); font-size: 12px; }
+  .btn-copiar:hover   { color: var(--green); }
+  .btn-copiar.copiado { color: var(--green); }
+  #toast-copiado {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--green); color: #fff;
+    padding: 9px 20px; border-radius: 24px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    pointer-events: none; opacity: 0;
+    transition: opacity .2s; z-index: 9999;
+    white-space: nowrap;
+  }
+  #toast-copiado.visible { opacity: 1; }
 
   /* ── LOADING / EMPTY ── */
   .estado { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
@@ -281,14 +292,28 @@ function getDatoPago(grado) {
   return null;
 }
 
+function mostrarToast(txt) {
+  var t = document.getElementById('toast-copiado');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast-copiado';
+    document.body.appendChild(t);
+  }
+  t.textContent = '✓ Copiado: ' + txt;
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('visible'); }, 2500);
+}
+
 function copiarDato(texto, btn) {
   function marcarCopiado() {
     btn.textContent = '✓';
     btn.classList.add('copiado');
+    mostrarToast(texto);
     setTimeout(function() {
       btn.textContent = '⎘';
       btn.classList.remove('copiado');
-    }, 2000);
+    }, 2500);
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texto).then(marcarCopiado).catch(function() { fallbackCopiar(texto, marcarCopiado); });
@@ -405,11 +430,15 @@ function getRecaudador(grado) {
 
 function normalizarGrado(g) {
   if (!g) return null;
-  var s = g.toString().trim().toLowerCase();
+  var s = g.toString().trim();
+  var l = s.toLowerCase();
   var sinObs = ['sin observaciones','(sin observaciones)','na','n/a','no aplica','ninguno','ninguna','-','escuela','para la escuela','escuela general',''];
-  if (sinObs.indexOf(s) > -1) return null;
-  if (s === 'j') return 'Jardín'; // normalizarGradoGAS devuelve 'J' para Jardín
-  return g.toString().trim();
+  if (sinObs.indexOf(l) > -1) return null;
+  if (l === 'j') return 'Jardín';
+  // normalizarGradoGAS devuelve números como string ('1','2',...,'12')
+  var NUMS = {'1':'1ro','2':'2do','3':'3ro','4':'4to','5':'5to','6':'6to','7':'7mo','8':'8vo','9':'9no','10':'10mo','11':'11mo','12':'12vo'};
+  if (NUMS[s]) return NUMS[s];
+  return s;
 }
 
 function pesos(n) {
