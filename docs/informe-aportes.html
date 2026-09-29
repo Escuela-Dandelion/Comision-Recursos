@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Informe de Aportes — Diente de León</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌼</text></svg>">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --green:       #2e7d32;
@@ -20,19 +19,6 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); min-height: 100vh; }
-
-  /* ── LOGIN ── */
-  #login {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; background: var(--bg);
-  }
-  .login-card {
-    background: var(--card); border-radius: 16px; padding: 40px 36px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; max-width: 360px; width: 100%;
-  }
-  .login-card img { height: 70px; margin-bottom: 16px; }
-  .login-card h2  { font-size: 18px; color: var(--green); margin-bottom: 6px; }
-  .login-card p   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
 
   /* ── TOPBAR ── */
   .topbar {
@@ -58,7 +44,7 @@
   .btn-outline:hover { background: var(--green-light); }
 
   /* ── CONTENT ── */
-  #app { display: none; }
+  #app { display: block; }
   .content { max-width: 860px; margin: 0 auto; padding: 28px 24px 80px; }
 
   /* ── FILTERS ── */
@@ -160,22 +146,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login">
-  <div class="login-card">
-    <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Diente de León">
-    <h2>Informe de Aportes</h2>
-    <p>Ingresá con tu cuenta de Google para ver el informe</p>
-    <div id="g_id_onload"
-      data-client_id="308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com"
-      data-callback="onGoogleLogin"
-      data-auto_select="true">
-    </div>
-    <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-locale="es"></div>
-  </div>
-</div>
-
-<!-- APP -->
 <div id="app">
   <div class="topbar">
     <div class="topbar-left">
@@ -188,7 +158,6 @@
     <div class="topbar-right">
       <button class="btn btn-green no-print" onclick="window.print()">⬇ Exportar PDF</button>
       <a href="dashboard-referentes.html" class="btn btn-outline no-print">← Dashboard</a>
-      <button class="btn no-print" onclick="cerrarSesion()">Salir</button>
     </div>
   </div>
 
@@ -264,7 +233,6 @@
 
 <script>
 var APPS_URL       = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
-var SESSION_KEY    = 'dl_admin_session';
 var allRows        = [];
 
 // Datos bancarios por grado para copiar al portapapeles
@@ -349,19 +317,9 @@ var RECAUDADORES = {
   '12vo':    'Sin referente'
 };
 
-function guardarSesion(email) { localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, expires: Date.now() + 24*60*60*1000 })); }
-function leerSesion()         { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return s && Date.now() < s.expires ? s.email : null; } catch(e) { return null; } }
-function cerrarSesion()       { localStorage.removeItem(SESSION_KEY); location.reload(); }
-
-function onGoogleLogin(resp) {
-  var payload = JSON.parse(atob(resp.credential.split('.')[1]));
-  guardarSesion(payload.email);
-  iniciar(payload.email);
-}
-
 window.addEventListener('load', function() {
-  var email = leerSesion();
-  if (email) iniciar(email);
+  poblarSelectorMes();
+  cargarDatos();
 
   document.getElementById('tabla-cuerpo').addEventListener('click', function(e) {
     var btn = e.target.closest ? e.target.closest('.btn-copiar') : null;
@@ -370,13 +328,6 @@ window.addEventListener('load', function() {
     copiarDato(btn.dataset.copy, btn);
   });
 });
-
-function iniciar(email) {
-  document.getElementById('login').style.display = 'none';
-  document.getElementById('app').style.display   = 'block';
-  poblarSelectorMes();
-  cargarDatos(email);
-}
 
 function poblarSelectorMes() {
   var sel = document.getElementById('sel-mes');
@@ -393,12 +344,12 @@ function poblarSelectorMes() {
   }
 }
 
-function cargarDatos(email) {
+function cargarDatos() {
   document.getElementById('estado').style.display     = 'flex';
   document.getElementById('estado').style.flexDirection = 'column';
   document.getElementById('resultados').style.display = 'none';
 
-  fetch(APPS_URL + '?action=api_dashboard&email=' + encodeURIComponent(email), { redirect: 'follow' })
+  fetch(APPS_URL + '?action=api_aportes', { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       allRows = data.rows || [];
