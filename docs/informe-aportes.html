@@ -110,12 +110,13 @@
   .aporte-val { font-weight: 700; color: var(--green-dark); }
   .btn-copiar {
     background: none; border: none; cursor: pointer; color: #bbb;
-    padding: 2px 4px; border-radius: 3px; vertical-align: middle;
+    padding: 2px 5px; border-radius: 3px; vertical-align: middle;
     transition: color .15s; line-height: 1; margin-left: 4px;
+    font-size: 14px; font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn-copiar:hover { color: var(--green); }
-  .btn-copiar.copiado { color: var(--green); }
-  .btn-copiar svg { display: block; }
+  .btn-copiar:hover  { color: var(--green); }
+  .btn-copiar.copiado { color: var(--green); font-size: 12px; }
 
   /* ── LOADING / EMPTY ── */
   .estado { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
@@ -281,14 +282,29 @@ function getDatoPago(grado) {
 }
 
 function copiarDato(texto, btn) {
-  navigator.clipboard.writeText(texto).then(function() {
+  function marcarCopiado() {
+    btn.textContent = '✓';
     btn.classList.add('copiado');
-    btn.setAttribute('title', '¡Copiado!');
     setTimeout(function() {
+      btn.textContent = '⎘';
       btn.classList.remove('copiado');
-      btn.setAttribute('title', btn.dataset.title);
     }, 2000);
-  });
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(marcarCopiado).catch(function() { fallbackCopiar(texto, marcarCopiado); });
+  } else {
+    fallbackCopiar(texto, marcarCopiado);
+  }
+}
+
+function fallbackCopiar(texto, cb) {
+  var ta = document.createElement('textarea');
+  ta.value = texto;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); if (cb) cb(); } catch(e) {}
+  document.body.removeChild(ta);
 }
 
 // Recaudadores por grado (según wiki)
@@ -321,6 +337,13 @@ function onGoogleLogin(resp) {
 window.addEventListener('load', function() {
   var email = leerSesion();
   if (email) iniciar(email);
+
+  document.getElementById('tabla-cuerpo').addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('.btn-copiar') : null;
+    if (!btn && e.target.classList.contains('btn-copiar')) btn = e.target;
+    if (!btn) return;
+    copiarDato(btn.dataset.copy, btn);
+  });
 });
 
 function iniciar(email) {
@@ -453,11 +476,7 @@ function aplicarFiltro() {
       var copyBtn = '';
       if (dato) {
         var title = 'Copiar ' + dato.tipo + ': ' + dato.texto;
-        copyBtn = '<button class="btn-copiar" data-title="' + esc(title) + '" title="' + esc(title) + '" onclick="copiarDato(\'' + dato.texto.replace(/'/g,"\\'") + '\',this)">' +
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-          '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
-          '<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
-          '</button>';
+        copyBtn = '<button class="btn-copiar" data-copy="' + esc(dato.texto) + '" title="' + esc(title) + '">&#9112;</button>';
       }
       var tr  = document.createElement('tr');
       tr.innerHTML =
