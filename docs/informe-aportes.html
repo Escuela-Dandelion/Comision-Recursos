@@ -388,7 +388,7 @@ function poblarSelectorMes() {
     lbl = lbl.charAt(0).toUpperCase() + lbl.slice(1);
     var opt = document.createElement('option');
     opt.value = val; opt.textContent = lbl;
-    if (i === 1) opt.selected = true; // mes anterior por defecto
+    if (i === 0) opt.selected = true; // mes actual por defecto
     sel.appendChild(opt);
   }
 }
