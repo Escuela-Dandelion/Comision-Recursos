@@ -203,11 +203,6 @@
           <div class="kpi-value" id="kpi-unidades">—</div>
           <div class="kpi-sub">en el período</div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Aporte escuela</div>
-          <div class="kpi-value" id="kpi-escuela">—</div>
-          <div class="kpi-sub">destino general</div>
-        </div>
       </div>
 
       <div class="section-title">Aportes por grado</div>
@@ -438,7 +433,6 @@ function aplicarFiltro() {
   document.getElementById('kpi-total-aporte').textContent = pesos(totalAporte);
   document.getElementById('kpi-grados').textContent       = gradoKeys.length;
   document.getElementById('kpi-unidades').textContent     = totalUnidades;
-  document.getElementById('kpi-escuela').textContent      = pesos(totalEscuela);
 
   // Tabla
   var tbody = document.getElementById('tabla-cuerpo');
