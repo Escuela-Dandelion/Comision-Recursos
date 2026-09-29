@@ -356,7 +356,7 @@ function cargarDatos() {
       aplicarFiltro();
     })
     .catch(function(e) {
-      document.getElementById('estado').innerHTML = '<p style="color:#c62828">Error al cargar datos. Intentá de nuevo.</p>';
+      document.getElementById('estado').innerHTML = '<p style="color:#c62828">Error al cargar datos.<br><span style="font-size:12px;color:#888">Si el problema persiste, el GAS puede necesitar ser redesplegado con el endpoint <code>api_aportes</code>.</span></p>';
     });
 }
 
