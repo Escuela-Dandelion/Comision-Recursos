@@ -215,6 +215,7 @@
               <th class="num">Aporte recaudado</th>
               <th class="num">Unidades vendidas</th>
               <th class="num">% del total</th>
+              <th class="num">Comprobante</th>
             </tr>
           </thead>
           <tbody id="tabla-cuerpo"></tbody>
@@ -229,6 +230,22 @@
 <script>
 var APPS_URL       = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var allRows        = [];
+
+// Comprobantes disponibles por mes — actualizar cada mes al subir los PDFs
+var COMPROBANTES = {
+  '2026-09': ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo']
+};
+var GRADO_FILE = {
+  'Jardín':'jardin','1ro':'1ro','2do':'2do','3ro':'3ro','4to':'4to',
+  '5to':'5to','6to':'6to','7mo':'7mo','8vo':'8vo','9no':'9no',
+  '10mo':'10mo','11mo':'11mo','12vo':'12vo'
+};
+function getComprobante(grado, mes) {
+  var disponibles = COMPROBANTES[mes] || [];
+  if (disponibles.indexOf(grado) === -1) return null;
+  var f = GRADO_FILE[grado];
+  return f ? 'comprobantes/' + mes + '/' + f + '.pdf' : null;
+}
 
 // Datos bancarios por grado para copiar al portapapeles
 var DATOS_PAGO = {
@@ -442,8 +459,9 @@ function aplicarFiltro() {
   var tfoot = document.getElementById('tabla-pie');
   tbody.innerHTML = '';
 
+  var mesSel = document.getElementById('sel-mes').value;
   if (gradoKeys.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:32px">Sin aportes registrados para este período</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:32px">Sin aportes registrados para este período</td></tr>';
   } else {
     gradoKeys.forEach(function(g) {
       var d   = porGrado[g];
@@ -455,13 +473,18 @@ function aplicarFiltro() {
         var title = 'Copiar ' + dato.tipo + ': ' + dato.texto;
         copyBtn = '<button class="btn-copiar" data-copy="' + esc(dato.texto) + '" title="' + esc(title) + '">&#9112;</button>';
       }
+      var compUrl = getComprobante(g, mesSel);
+      var compCell = compUrl
+        ? '<a href="' + compUrl + '" target="_blank" title="Ver comprobante de transferencia" style="color:var(--green);font-size:18px;text-decoration:none">&#128196;</a>'
+        : '<span style="color:#ddd">—</span>';
       var tr  = document.createElement('tr');
       tr.innerHTML =
         '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
         '<td style="color:#555">' + esc(rec) + copyBtn + '</td>' +
         '<td class="num"><span class="aporte-val">' + pesos(d.aporte) + '</span></td>' +
         '<td class="num">' + d.unidades + '</td>' +
-        '<td class="num" style="color:#aaa">' + pct + '</td>';
+        '<td class="num" style="color:#aaa">' + pct + '</td>' +
+        '<td class="num">' + compCell + '</td>';
       tbody.appendChild(tr);
     });
   }
@@ -472,6 +495,7 @@ function aplicarFiltro() {
     '<td class="num">' + pesos(totalAporte) + '</td>' +
     '<td class="num">' + totalUnidades + '</td>' +
     '<td class="num">100%</td>' +
+    '<td></td>' +
     '</tr>';
 
   // Print metadata
