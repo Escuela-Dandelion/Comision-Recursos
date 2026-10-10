@@ -153,6 +153,7 @@ tbody tr:hover td { background: #fafafa; }
       <strong style="font-size:15px;">Lista de acreditación — Diente de León</strong>
       <div id="print-evento" style="font-size:12px; color:#555; margin-top:2px;"></div>
       <div id="print-fecha"  style="font-size:11px; color:#888; margin-top:2px;"></div>
+      <div id="print-totales" style="margin-top:10px; padding:8px 12px; background:#f0f7e6; border-left:3px solid #2d5a27; font-size:12px; display:inline-block;"></div>
     </div>
 
     <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:4px;">
@@ -212,6 +213,7 @@ var GAS_URL      = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JY
 var CLIENT_ID    = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
 var currentUser  = null;
 var _rows        = [];
+var _totalActual = 0;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────
 
@@ -314,9 +316,16 @@ function limpiarFiltros() {
 }
 
 function exportarPDF() {
-  var prod = document.getElementById('filt-producto').value;
+  var prod     = document.getElementById('filt-producto').value;
+  var total    = _totalActual;
+  var comision = total * 0.01815;
+  var neto     = total - comision;
   document.getElementById('print-evento').textContent = prod ? 'Evento: ' + prod : 'Todos los eventos';
   document.getElementById('print-fecha').textContent  = 'Generado el ' + new Date().toLocaleString('es-AR');
+  document.getElementById('print-totales').innerHTML  =
+    '<strong>Total recaudado:</strong> ' + pesos(total) +
+    ' &nbsp;·&nbsp; <strong>Comisión TiendaNube (1.815%):</strong> ' + pesos(comision) +
+    ' &nbsp;·&nbsp; <strong>Neto:</strong> ' + pesos(neto);
   window.print();
 }
 
@@ -364,6 +373,7 @@ function renderTabla(rows) {
       '</tr>';
   }).join('');
 
+  _totalActual = totalPesos;
   document.getElementById('kpi-cantidad').textContent    = totalCantidad;
   document.getElementById('kpi-compradores').textContent = Object.keys(emailsUnicos).length;
   document.getElementById('kpi-total').textContent       = pesos(totalPesos);
