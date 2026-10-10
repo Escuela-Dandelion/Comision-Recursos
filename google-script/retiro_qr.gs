@@ -1888,8 +1888,8 @@ var AUTH_EMAILS = {
   'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },      // 9no
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },      // 2do
   'francoalini@gmail.com':           { role: 'ADMIN',     name: 'Franco' },    // Alfajores Nazareno
-  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' } // 4to
-  // Agregar más emails de Staff acá con role: 'STAFF'
+  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' }, // 4to
+  'leila.remedi@dandelion.edu.ar':          { role: 'digital',   name: 'Leila' }
 };
 
 // Lista blanca de teléfonos de referentes (sin el +, formato internacional)
