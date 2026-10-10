@@ -142,7 +142,11 @@ tbody tr:hover td { background: #fafafa; }
     <div class="kpis">
       <div class="kpi"><div class="kpi-label">Entradas vendidas</div><div class="kpi-val" id="kpi-cantidad">—</div></div>
       <div class="kpi"><div class="kpi-label">Compradores únicos</div><div class="kpi-val" id="kpi-compradores">—</div></div>
-      <div class="kpi"><div class="kpi-label">Total recaudado</div><div class="kpi-val" id="kpi-total">—</div></div>
+      <div class="kpi">
+        <div class="kpi-label">Total recaudado</div>
+        <div class="kpi-val" id="kpi-total">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Comisión TiendaNube (1.815%): <span id="kpi-comision">—</span></div>
+      </div>
     </div>
 
     <div class="tbl-wrap">
@@ -293,6 +297,7 @@ function renderTabla(rows) {
     document.getElementById('kpi-cantidad').textContent    = '0';
     document.getElementById('kpi-compradores').textContent = '0';
     document.getElementById('kpi-total').textContent       = pesos(0);
+    document.getElementById('kpi-comision').textContent    = pesos(0);
     return;
   }
 
@@ -317,6 +322,7 @@ function renderTabla(rows) {
   document.getElementById('kpi-cantidad').textContent    = totalCantidad;
   document.getElementById('kpi-compradores').textContent = Object.keys(emailsUnicos).length;
   document.getElementById('kpi-total').textContent       = pesos(totalPesos);
+  document.getElementById('kpi-comision').textContent    = pesos(totalPesos * 0.01815);
 
   estado.style.display = 'none';
   tabla.style.display  = 'table';
