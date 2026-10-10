@@ -29,70 +29,29 @@ var CONFIG = {
   // Tel de Inés para WhatsApp de "Solicitar Pago"
   INES_TEL: '5493512112050',
 
-  STAFF_PINS: {
-    'Yuliana.Longhi ':   'PYL26',   // Jardín
-    'Maria.Martini ':    'PMM26',   // Jardín
-    'Amanda.Benedi ':    'PAB26',   // FGP
-    'Ines.Robertson':    'PIR26',   // 4to
-    'Delfina.Salvetti':  'PDS26',   // 6to / 10mo
-    'Dolo.Dominguez':    'PDD26',   // 2do
-    'Gaby.Dominguez':    'PGD26',   // 5to
-    'Juan.Diaz':         'PJD26',   // 8vo
-    'Karina':            'PK26',    // 7mo
-    'Monica.Chesta':     'PMC26',   // —
-    'Paola':             'PP26',    // 2do
-    'Pia':               'PPI26',   // 11vo
-    'Sabi':              'PSA26',   // 9no
-    'Yana':              'PYA26',   // 5to
-    'Elina':             'PEL26',   // 3ro
-    'Claudio':           'PCL26',   // Tiendita
-    'Ines.Vasquez':      'PIV26'    // Punto de Retiro
-  },
+  // Nombres que aparecen en el dropdown de confirmación de entrega QR
+  // IDs de productos digitales (no requieren envío físico ni QR)
+  // Agregar acá cada nuevo producto digital creado en TiendaNube
+  DIGITAL_PRODUCT_IDS: ['371016918'],
 
-  // PINs con permiso para confirmar entregas (Retiro Mercadería)
-  RETIRO_PINS: [
-    'PYL26',  // Yuliana Longhi   — Jardín
-    'PMM26',  // Maria Martini    — Jardín
-    'PAB26',  // Amanda Benedi    — FGP
-    'PIR26',  // Ines Robertson   — 4to
-    'PDS26',  // Delfina Salvetti — 6to / 10mo
-    'PDD26',  // Dolo Dominguez   — 2do
-    'PGD26',  // Gaby Dominguez   — 5to
-    'PJD26',  // Juan Diaz        — 8vo
-    'PK26',   // Karina           — 7mo
-    'PP26',   // Paola            — 2do
-    'PSA26',  // Sabi             — 9no
-    'PYA26',  // Yana             — 5to
-    'PEL26',  // Elina            — 3ro
-    'PCL26',  // Claudio          — Tiendita
-    'PIV26'   // Ines Vasquez     — Punto de Retiro
-  ],
-
-  // Solo dashboard — no pueden confirmar entregas
-  DASHBOARD_PINS: {
-    'Maxi.Contreras':      'PMAC26',
-    'Lucas.DiStefano':     'PLDS26',
-    'Esteban.Prospero':    'PEP26',
-    'Jose.Brizzi':         'PJB26',
-    'Anabella.Gargiulo':   'PAG26',   // Comisión de Recursos — sin acceso QR
-    'Hector.Larrea':       'PHL26'    // Prof. Héctor Larrea — solo Dashboard General
-  },
-
-  // Solo Dashboard Referentes — no pueden ver Dashboard General ni Pedidos
-  REFERENTE_PINS: [
-    'PJD26',  // Juan Diaz        — 8vo
-    'PK26',   // Karina           — 7mo
-    'PDD26',  // Dolo Dominguez   — 2do
-    'PGD26',  // Gaby Dominguez   — 5to
-    'PDS26',  // Delfina Salvetti — 6to / 10mo
-    'PP26',   // Paola            — 2do
-    'PMC26',  // Monica Chesta    — —
-    'PPI26',  // Pia              — 11vo
-    'PSA26',  // Sabi             — 9no
-    'PYA26',  // Yana             — 5to
-    'PEL26',  // Elina            — 3ro
-    'PCL26',  // Claudio          — Tiendita
-    'PIV26'   // Ines Vasquez     — Punto de Retiro
+  STAFF_NAMES: [
+    'Yuliana.Longhi',
+    'Maria.Martini',
+    'Amanda.Benedi',
+    'Ines.Robertson',
+    'Delfina.Salvetti',
+    'Dolo.Dominguez',
+    'Gaby.Dominguez',
+    'Juan.Diaz',
+    'Karina',
+    'Monica.Chesta',
+    'Paola',
+    'Pia',
+    'Sabi',
+    'Yana',
+    'Elina',
+    'Claudio',
+    'Ines.Vasquez'
   ]
 
 };
@@ -117,13 +76,90 @@ function doPost(e) {
     if (evento === 'order/paid' || evento === 'order/updated') {
       var order = fetchOrder(orderId);
       if (order && order.payment_status === 'paid' && !yaFueEnviado(orderId)) {
-        procesarPedido(order);
+        var partes = separarProductos(order);
+        if (partes.digitales.length > 0) {
+          registrarEnDigitales(order, partes.digitales);
+        }
+        if (partes.fisicos.length > 0) {
+          var ordenFisica = JSON.parse(JSON.stringify(order));
+          ordenFisica.products = partes.fisicos;
+          procesarPedido(ordenFisica);
+        } else {
+          Logger.log('Orden #' + order.number + ' es solo digital — sin QR.');
+        }
       }
     }
     return ContentService.createTextOutput('OK');
   } catch(err) {
     Logger.log('doPost error: ' + err);
     return ContentService.createTextOutput('error');
+  }
+}
+
+// Detecta si un producto del line item de la orden es digital.
+// TiendaNube no expone requires_shipping en los line items de órdenes,
+// por lo que usamos la lista explícita de IDs + fallback por peso/dimensiones = 0.
+function esProductoDigital(p) {
+  if (CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.product_id)) !== -1) return true;
+  return parseFloat(p.weight || 0) === 0
+      && parseFloat(p.depth  || 0) === 0
+      && parseFloat(p.height || 0) === 0
+      && parseFloat(p.width  || 0) === 0;
+}
+
+// Separa productos físicos y digitales de una orden.
+// Retorna { fisicos: [...], digitales: [...] }
+function separarProductos(order) {
+  var fisicos   = [];
+  var digitales = [];
+  (order.products || []).forEach(function(p) {
+    if (esProductoDigital(p)) digitales.push(p);
+    else fisicos.push(p);
+  });
+  return { fisicos: fisicos, digitales: digitales };
+}
+
+function getDigitalesSheet() {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Digitales');
+  if (!sheet) {
+    sheet = ss.insertSheet('Digitales');
+    sheet.appendRow(['Fecha','Pedido #','ID Interno','Nombre','Email','Producto','SKU','Cantidad','Precio Unit.','Total Línea','Total Pedido','Método Pago']);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 12).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function registrarEnDigitales(order, productosDigitales) {
+  try {
+    var sheet  = getDigitalesSheet();
+    var fecha  = order.created_at ? new Date(order.created_at) : new Date();
+    var paymentMethod = (order.payment_details && order.payment_details.method) || '';
+    productosDigitales.forEach(function(p) {
+      var nombre = (typeof p.name === 'object')
+        ? (p.name.es || p.name.pt || Object.values(p.name)[0] || '')
+        : (p.name || '');
+      var qty        = p.quantity || 1;
+      var precioUnit = parseFloat(p.price || 0);
+      sheet.appendRow([
+        fecha,
+        order.number,
+        String(order.id),
+        order.contact_name  || '',
+        order.contact_email || '',
+        nombre,
+        p.sku || '',
+        qty,
+        precioUnit,
+        precioUnit * qty,
+        parseFloat(order.total || 0),
+        paymentMethod
+      ]);
+    });
+    Logger.log('Digitales: ' + productosDigitales.length + ' fila(s) para pedido #' + order.number);
+  } catch(err) {
+    Logger.log('Error registrarEnDigitales: ' + err);
   }
 }
 
@@ -145,7 +181,6 @@ function doGetInterno(e) {
   var token     = e.parameter.token     || '';
   var pass      = e.parameter.pass      || '';
   var staffName = e.parameter.staff     || '';
-  var pin       = e.parameter.pin       || '';
   var entregado = e.parameter.entregado || '';
 
   if (action === 'version') {
@@ -163,7 +198,7 @@ function doGetInterno(e) {
   if (action === 'api_entregar') {
     var notasParam = e.parameter.notas || '';
     var emailParam = e.parameter.email || '';
-    var resultado = apiEntregar(orderId, staffName, pin, pass, token, notasParam, emailParam);
+    var resultado = apiEntregar(orderId, staffName, pass, token, notasParam, emailParam);
     return ContentService
       .createTextOutput(JSON.stringify(resultado))
       .setMimeType(ContentService.MimeType.JSON);
@@ -205,8 +240,22 @@ function doGetInterno(e) {
   }
 
   if (action === 'api_dashboard') {
-    var res = apiDashboard(pin, e.parameter.email || '');
+    var res = apiDashboard(e.parameter.email || '');
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'api_aportes') {
+    var res = apiAportes();
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'api_digitales') {
+    var res = apiDigitales(e.parameter.email || '');
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'preview_informe') {
+    return previewInformeMensual(e.parameter.mes || '');
   }
 
   // ── AUTH para admin.html ──────────────────────────────────
@@ -1029,7 +1078,7 @@ function paginaVerificar(orderId, token) {
   var apiUrl       = webAppUrl + '?action=api_verificar&id=' + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
   var portalUrl    = webAppUrl + '?action=portal&pass=' + CONFIG.STAFF_TOKEN;
   var extraParam   = '&token=' + encodeURIComponent(token);
-  var staffOptions = Object.keys(CONFIG.STAFF_PINS).map(function(name) {
+  var staffOptions = CONFIG.STAFF_NAMES.map(function(name) {
     return '<option value="' + name.trim() + '">' + name.trim() + '</option>';
   }).join('');
 
@@ -1282,11 +1331,11 @@ function paginaPortalStaff(mostrarExito) {
 function paginaConfirmar(orderId, token, errorMsg, adminPass) {
   var webAppUrl    = ScriptApp.getService().getUrl();
   var portalUrl    = webAppUrl + '?action=portal&pass=' + CONFIG.STAFF_TOKEN + '&entregado=1';
-  var staffOptions = Object.keys(CONFIG.STAFF_PINS).map(function(name) {
+  var staffOptions = CONFIG.STAFF_NAMES.map(function(name) {
     return '<option value="' + name.trim() + '">' + name.trim() + '</option>';
   }).join('');
 
-  // El endpoint AJAX que verifica PIN y registra la entrega, devuelve JSON
+  // El endpoint AJAX que registra la entrega, devuelve JSON
   var extraParam = adminPass
     ? '&pass=' + encodeURIComponent(adminPass)
     : '&token=' + encodeURIComponent(token);
@@ -1406,15 +1455,12 @@ function getOrderNumber(orderId) {
 // ENTREGA
 // ──────────────────────────────────────────────────────────
 
-// Lógica de verificación de PIN + entrega — usada por api_entregar (AJAX)
-function apiEntregar(orderId, staffName, pin, adminPass, token, notas, email) {
-  // Validar acceso: o viene del portal (adminPass) o tiene un token QR válido
+function apiEntregar(orderId, staffName, adminPass, token, notas, email) {
   if (adminPass) {
     if (adminPass !== CONFIG.STAFF_TOKEN) return { ok: false, error: 'Acceso no autorizado.' };
   } else {
     if (!orderId || !verificarToken(orderId, token)) return { ok: false, error: 'QR inválido o expirado.' };
   }
-  // El token QR o el adminPass ya garantizan el acceso — no se requiere PIN
   var staffKey = staffName ? staffName.trim() : '';
   if (!staffKey) return { ok: false, error: 'Seleccioná tu nombre.' };
   try {
@@ -1426,8 +1472,8 @@ function apiEntregar(orderId, staffName, pin, adminPass, token, notas, email) {
   return { ok: true };
 }
 
-function procesarEntrega(orderId, staffName, pin) {
-  var res = apiEntregar(orderId, staffName, pin, null, generarToken(orderId));
+function procesarEntrega(orderId, staffName) {
+  var res = apiEntregar(orderId, staffName, null, generarToken(orderId));
   if (!res.ok) return paginaConfirmar(orderId, generarToken(orderId), res.error);
   return paginaPortalStaff(true);
 }
@@ -1484,6 +1530,17 @@ function enviarEmailEntrega(email, nombre, numeroPedido, productos) {
 // ──────────────────────────────────────────────────────────
 // UTILIDADES
 // ──────────────────────────────────────────────────────────
+
+// Registra manualmente una orden digital que ya entró antes del fix
+function reprocesarOrdenDigital() {
+  var ORDER_ID = '2091239608'; // Taller Tercer Septenio
+  var order = fetchOrder(ORDER_ID);
+  if (!order) { Logger.log('Pedido no encontrado'); return; }
+  var partes = separarProductos(order);
+  if (partes.digitales.length === 0) { Logger.log('No se detectaron productos digitales'); return; }
+  registrarEnDigitales(order, partes.digitales);
+  Logger.log('OK — ' + partes.digitales.length + ' producto(s) registrado(s) en hoja Digitales');
+}
 
 function testConPedido() {
   var ORDER_ID_REAL = 'PEGA_UN_ID_DE_PEDIDO_REAL'; // ← reemplazá
@@ -1560,8 +1617,16 @@ function reprocesarPendientes() {
   Logger.log('Pedidos encontrados: ' + orders.length);
   orders.forEach(function(order) {
     if (order.status !== 'cancelled' && !yaFueEnviado(String(order.id))) {
-      Logger.log('Procesando pedido #' + order.number + ' — ' + order.contact_email);
-      procesarPedido(order);
+      var partes = separarProductos(order);
+      if (partes.digitales.length > 0) registrarEnDigitales(order, partes.digitales);
+      if (partes.fisicos.length > 0) {
+        Logger.log('Procesando pedido #' + order.number + ' — ' + order.contact_email);
+        var ordenFisica = JSON.parse(JSON.stringify(order));
+        ordenFisica.products = partes.fisicos;
+        procesarPedido(ordenFisica);
+      } else {
+        Logger.log('Saltando pedido #' + order.number + ' (solo digital)');
+      }
     } else {
       Logger.log('Saltando pedido #' + order.number + ' (cancelado o ya enviado)');
     }
@@ -1620,121 +1685,6 @@ function registrarWebhook() {
 }
 
 // ──────────────────────────────────────────────────────────
-// WHATSAPP — ENVÍO DE PINs A REFERENTES
-// ──────────────────────────────────────────────────────────
-
-function enviarPinsReferentes() {
-  var GREEN_INSTANCE = '7107556439';
-  var GREEN_TOKEN    = '7f7e2a357d2a4f0faa7edc4729f4c89f491b1420ef19462783';
-  var DASHBOARD_URL  = 'https://escuela-dandelion.github.io/Comision-Recursos/dashboard-referentes.html';
-
-  var referentes = [
-    { nombre: 'Ines',    grado: '4to',    pin: 'PIR26',  tel: '5493512112050' },
-    { nombre: 'Yuliana', grado: 'Jardín', pin: 'PYL26',  tel: '5493513645612' },
-    { nombre: 'Maria',   grado: 'Jardín', pin: 'PMM26',  tel: '5493516865078' },
-    { nombre: 'Delfina', grado: '6to / 10mo', pin: 'PDS26',  tel: '5493543512538' },
-    { nombre: 'Dolo',    grado: '2do',    pin: 'PDD26',  tel: '5493516523262' },
-    { nombre: 'Gaby',    grado: '5to',    pin: 'PGD26',  tel: '5493517076221' },
-    { nombre: 'Juan',    grado: '8vo',    pin: 'PJD26',  tel: '5493515514893' },
-    { nombre: 'Karina',  grado: '7mo',    pin: 'PK26',   tel: '5493512130302' },
-    { nombre: 'Paola',   grado: '2do',    pin: 'PP26',   tel: '5493516166134' },
-    { nombre: 'Sabi',    grado: '9no',    pin: 'PSA26',  tel: '5493517888479' },
-    { nombre: 'Yana',    grado: '5to',    pin: 'PYA26',  tel: '5493512114209' },
-    { nombre: 'Elina',   grado: '3ro',    pin: 'PEL26',  tel: '5493512032487' },
-    { nombre: 'Claudio', grado: null,     pin: 'PCL26',  tel: '5493516319266' },
-    { nombre: 'Inés',   grado: null,     pin: 'PIV26',  tel: '5493512343534' }
-  ];
-
-  referentes.forEach(function(r) {
-    var saludo = r.grado
-      ? 'Hola ' + r.nombre + '! Sos *Referente de ' + r.grado + ' grado* en la tienda Diente de León. Te comparto tu PIN:\n\n'
-      : 'Hola ' + r.nombre + '! Te comparto tu PIN para la tienda:\n\n';
-
-    var mensaje =
-      '🌼 *Diente de León — Tu PIN personal*\n\n' +
-      saludo +
-      '🔐 *Tu PIN: ' + r.pin + '*\n\n' +
-      'Lo vas a usar para dos cosas:\n\n' +
-      '📦 *Confirmar entregas:* cuando una familia venga a retirar su pedido, escaneás el QR que te muestra el comprador y confirmás la entrega con tu PIN. De esta forma tendremos control sobre quién entregó qué mercadería.\n\n' +
-      '📊 *Dashboard de ventas:* podés ver en tiempo real las ventas de tu grado en:\n' +
-      DASHBOARD_URL + '\n' +
-      '¡Animate a impulsar y promover más compras!\n\n' +
-      '¡Guardá este mensaje! 🙌';
-
-    if (!r.tel) {
-      Logger.log('Sin teléfono — saltando ' + r.nombre);
-      return;
-    }
-
-    UrlFetchApp.fetch(
-      'https://api.green-api.com/waInstance' + GREEN_INSTANCE + '/sendMessage/' + GREEN_TOKEN, {
-      method: 'POST',
-      contentType: 'application/json',
-      payload: JSON.stringify({ chatId: r.tel + '@c.us', message: mensaje })
-    });
-
-    Logger.log('Enviado a ' + r.nombre + ' (' + r.tel + ')');
-    Utilities.sleep(1500); // pausa entre mensajes para no saturar la API
-  });
-
-  Logger.log('Listo. ' + referentes.length + ' mensajes enviados.');
-}
-
-function enviarPinsStaff() {
-  var staff = [
-    { nombre: 'Claudio',   pin: 'PCL26',  tel: '5493516319266' },
-    { nombre: 'Anabella',  pin: 'PAG26',  tel: '5493513915935' }
-  ];
-  staff.forEach(function(r) { _enviarPinDashboard(r.nombre, r.pin, r.tel); });
-  Logger.log('Listo. ' + staff.length + ' mensajes enviados.');
-}
-
-// ──────────────────────────────────────────────────────────
-// Envío individual — para cuando se suma una persona nueva
-// Ejemplo de uso: enviarPinNuevoMiembro('Anabella', 'PAG26', '5493513915935')
-// ──────────────────────────────────────────────────────────
-function enviarPinNuevoMiembro() {
-  // ← Modificar estos tres valores antes de ejecutar
-  var nombre = 'Anabella';
-  var pin    = 'PAG26';
-  var tel    = '5493513915935';
-  _enviarPinDashboard(nombre, pin, tel);
-  Logger.log('PIN enviado a ' + nombre);
-}
-
-function _enviarPinDashboard(nombre, pin, tel) {
-  var GREEN_INSTANCE  = '7107556439';
-  var GREEN_TOKEN     = '7f7e2a357d2a4f0faa7edc4729f4c89f491b1420ef19462783';
-  var URL_GENERAL     = 'https://escuela-dandelion.github.io/Comision-Recursos/dashboard-general.html';
-  var URL_REFERENTES  = 'https://escuela-dandelion.github.io/Comision-Recursos/dashboard-referentes.html';
-  var URL_WIKI        = 'https://escuela-dandelion.github.io/Comision-Recursos/wiki-comision-recursos.html';
-
-  var mensaje =
-    '🌼 *Bienvenida a la Comisión de Recursos — Diente de León!*\n\n' +
-    'Hola ' + nombre + '! Te compartimos tu acceso al sistema de gestión de la tienda.\n\n' +
-    '🔐 *Tu PIN personal: ' + pin + '*\n' +
-    '_Guardalo, lo vas a necesitar para ingresar a todo._\n\n' +
-    '📊 *Dashboard General*\n' +
-    'Métricas de ventas, evolución mensual, productos y rentabilidad:\n' +
-    URL_GENERAL + '\n\n' +
-    '🎓 *Dashboard Referentes*\n' +
-    'Ventas por grado, quién compró qué y lista de retiro:\n' +
-    URL_REFERENTES + '\n\n' +
-    '📖 *Wiki de la Comisión*\n' +
-    'Procesos, roles, circuito logístico y más:\n' +
-    URL_WIKI + '\n\n' +
-    '¡Guardá este mensaje! 🙌';
-
-  UrlFetchApp.fetch(
-    'https://api.green-api.com/waInstance' + GREEN_INSTANCE + '/sendMessage/' + GREEN_TOKEN, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify({ chatId: tel + '@c.us', message: mensaje })
-  });
-  Utilities.sleep(1500);
-}
-
-// ──────────────────────────────────────────────────────────
 // AUTH API — validación liviana por email (sin cargar datos)
 // ──────────────────────────────────────────────────────────
 
@@ -1746,36 +1696,48 @@ function apiAuthEmail(email) {
 }
 
 // ──────────────────────────────────────────────────────────
+// APORTES PÚBLICOS — solo datos agregados, sin info personal
+// ──────────────────────────────────────────────────────────
+
+function apiAportes() {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+    var sheet = ss.getSheetByName('Ventas');
+    var data  = sheet.getDataRange().getValues();
+    if (data.length <= 1) return { ok: true, rows: [] };
+
+    var rows = [];
+    for (var i = 1; i < data.length; i++) {
+      var row   = data[i];
+      var fecha = row[0] instanceof Date ? row[0] : null;
+      var mes   = fecha ? (fecha.getFullYear() + '-' + ('0' + (fecha.getMonth()+1)).slice(-2)) : '';
+      var grado = normalizarGradoGAS(String(row[11] || '').trim());
+      if (!mes || !grado || grado === '(Sin observaciones)') continue;
+      var aporte = parseFloat(row[20]) || 0;
+      if (aporte <= 0) continue;
+      rows.push({
+        mes:          mes,
+        grado:        grado,
+        aporte_grado: Math.round(aporte * 100) / 100,
+        cantidad:     parseInt(row[7]) || 0
+      });
+    }
+    return { ok: true, rows: rows };
+  } catch(e) {
+    Logger.log('Error en apiAportes: ' + e);
+    return { ok: false, error: 'Error al cargar datos.' };
+  }
+}
+
+// ──────────────────────────────────────────────────────────
 // DASHBOARD API
 // ──────────────────────────────────────────────────────────
 
-function apiDashboard(pin, email) {
-  var pinValido = false;
-  var userRole  = 'staff';
-
-  // Bypass por email (sesión Google del admin)
-  if (email) {
-    var authUser = AUTH_EMAILS[email.toLowerCase().trim()];
-    if (authUser) { pinValido = true; userRole = authUser.role || 'staff'; }
-  }
-
-  // Validar PIN contra STAFF_PINS y DASHBOARD_PINS
-  if (!pinValido) {
-    var allPins = [CONFIG.STAFF_PINS, CONFIG.DASHBOARD_PINS];
-    for (var g = 0; g < allPins.length; g++) {
-      var keys = Object.keys(allPins[g]);
-      for (var i = 0; i < keys.length; i++) {
-        if (allPins[g][keys[i]] === pin) {
-          pinValido = true;
-          if (CONFIG.REFERENTE_PINS.indexOf(pin) !== -1) userRole = 'referente';
-          break;
-        }
-      }
-      if (pinValido) break;
-    }
-  }
-
-  if (!pinValido) return { ok: false, error: 'PIN incorrecto.' };
+function apiDashboard(email) {
+  if (!email) return { ok: false, error: 'Email no autorizado.' };
+  var authUser = AUTH_EMAILS[email.toLowerCase().trim()];
+  if (!authUser) return { ok: false, error: 'Email no autorizado.' };
+  var userRole = authUser.role || 'staff';
 
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
   var sheet = ss.getSheetByName('Ventas');
@@ -1889,7 +1851,6 @@ var AUTH_EMAILS = {
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
   'pialucarno@gmail.com':            { role: 'ADMIN',     name: 'Pia' },
-  'beluravaza@gmail.com':            { role: 'ADMIN',     name: 'Belén' },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },   // 2do grado
   'monicachesta@gmail.com':          { role: 'ADMIN',     name: 'Monica' },
@@ -1902,7 +1863,8 @@ var AUTH_EMAILS = {
   'yaninafuentes33@gmail.com':       { role: 'referente', name: 'Yana' },      // 5to
   'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },      // 9no
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },      // 2do
-  'francoalini@gmail.com':           { role: 'ADMIN',     name: 'Franco' }     // Alfajores Nazareno
+  'francoalini@gmail.com':           { role: 'ADMIN',     name: 'Franco' },    // Alfajores Nazareno
+  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' } // 4to
   // Agregar más emails de Staff acá con role: 'STAFF'
 };
 
@@ -2194,6 +2156,137 @@ function testEnviarEmailAporte() {
   Logger.log('[TEST] Mail enviado a robertson.ine@gmail.com — pedido #' + order.number);
 }
 
+// ── PREVIEW INFORME MENSUAL (browser, sin enviar mails) ─────────────────────
+// Acceder con: ?action=preview_informe   (mes actual - 1)
+//              ?action=preview_informe&mes=2026-09  (mes específico)
+function previewInformeMensual(mesParam) {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) return HtmlService.createHtmlOutput('<p>Sheet Ventas no encontrada.</p>');
+
+  var data = sheet.getDataRange().getValues();
+
+  var mesPasado;
+  if (mesParam && mesParam.match(/^\d{4}-\d{2}$/)) {
+    var parts = mesParam.split('-');
+    mesPasado = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+  } else {
+    var hoy = new Date();
+    mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  }
+  var mesNum    = mesPasado.getMonth();
+  var anioNum   = mesPasado.getFullYear();
+  var mesNombre = mesPasado.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  var mesLabel  = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+
+  var porGrado = {}, totalAporte = 0, totalUnidades = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row   = data[i];
+    var fecha = new Date(row[0]);
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha.getMonth() !== mesNum || fecha.getFullYear() !== anioNum) continue;
+    var qty         = parseInt(row[7])    || 0;
+    var aporteGrado = parseFloat(row[20]) || 0;
+    var grado       = normalizarGradoGAS(String(row[21] || ''));
+    totalUnidades  += qty;
+    totalAporte    += aporteGrado;
+    if (grado && grado !== '(Sin observaciones)') {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporteGrado;
+      porGrado[grado].unidades += qty;
+    }
+  }
+
+  var grados = Object.keys(porGrado).sort(function(a, b) {
+    if (a === 'J') return -1;
+    if (b === 'J') return 1;
+    return parseInt(a) - parseInt(b);
+  });
+
+  if (grados.length === 0) {
+    return HtmlService.createHtmlOutput(
+      '<p style="font-family:sans-serif;padding:32px;color:#888">Sin aportes por grado en ' + mesLabel + '.</p>'
+    );
+  }
+
+  var filasGrado = grados.map(function(g) {
+    var d = porGrado[g];
+    return '<tr>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + formatearGrado(g) + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var html =
+    '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;max-width:560px;margin:auto;padding:24px;color:#1a1a2e">' +
+    '<p style="font-size:11px;color:#c00;background:#fff3cd;padding:8px 12px;border-radius:6px;margin-bottom:20px">⚠️ PREVIEW — este mail aún no fue enviado</p>' +
+    '<div style="text-align:center;padding:0 0 24px 0">' +
+    '<img src="' + LOGO_B64 + '" style="max-width:200px;width:55%" alt="Diente de León">' +
+    '</div>' +
+    '<h2 style="color:#3a7d44;margin:0 0 8px 0;font-size:20px">Resumen de aportes · ' + mesLabel + '</h2>' +
+    '<p style="color:#555;margin:0 0 20px 0;font-size:14px;line-height:1.6">Gracias a las compras de toda la comunidad Dandelion, este mes se generaron aportes para cada grado. Acá compartimos el resumen:</p>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #c8e6c9">' +
+    '<thead><tr style="background:#3a7d44">' +
+    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:13px;font-weight:600">Grado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Aporte recaudado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Unidades vendidas</th>' +
+    '</tr></thead>' +
+    '<tbody>' + filasGrado + '</tbody>' +
+    '<tfoot><tr style="background:#e8f5e9">' +
+    '<td style="padding:11px 14px;font-weight:700;font-size:14px">Total</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#1a5c2a">$' + Math.round(totalAporte).toLocaleString('es-AR') + '</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#555">' + totalUnidades + '</td>' +
+    '</tr></tfoot>' +
+    '</table>' +
+    '<p style="font-size:13px;color:#555;line-height:1.6">Los aportes se transfieren a cada grado durante los primeros días del mes. Si tenés alguna consulta o querés verificar el destino de tu aporte, <a href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-aportes-grado.html" style="color:#3a7d44">visitá nuestra wiki</a>.</p>' +
+    '<p style="font-size:11px;color:#aaa;margin-top:24px;padding-top:14px;border-top:1px solid #eee;text-align:center">Tienda Diente de León · Escuela Dandelion Pedagogía Waldorf · Córdoba</p>' +
+    '</div>';
+
+  return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ── VENTAS DIGITALES ────────────────────────────────────────────────────────
+
+function apiDigitales(email) {
+  if (!email) return { ok: false, error: 'Email requerido.' };
+  var user = AUTH_EMAILS[email.toLowerCase().trim()];
+  if (!user) return { ok: false, error: 'Email no autorizado.' };
+  if (user.role !== 'ADMIN' && user.role !== 'digital') return { ok: false, error: 'Sin permiso para ver ventas digitales.' };
+
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+    var sheet = ss.getSheetByName('Digitales');
+    if (!sheet) return { ok: true, rows: [] };
+    var data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return { ok: true, rows: [] };
+    var rows = [];
+    for (var i = 1; i < data.length; i++) {
+      var row   = data[i];
+      var fecha = row[0] instanceof Date ? row[0] : null;
+      rows.push({
+        fecha:         fecha ? Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy HH:mm') : '',
+        pedido:        String(row[1] || ''),
+        id:            String(row[2] || ''),
+        nombre:        String(row[3] || ''),
+        email:         String(row[4] || ''),
+        producto:      String(row[5] || ''),
+        sku:           String(row[6] || ''),
+        cantidad:      parseInt(row[7]) || 0,
+        precio_unit:   parseFloat(row[8]) || 0,
+        total_linea:   parseFloat(row[9]) || 0,
+        total_pedido:  parseFloat(row[10]) || 0,
+        metodo_pago:   String(row[11] || '')
+      });
+    }
+    return { ok: true, rows: rows };
+  } catch(e) {
+    Logger.log('Error apiDigitales: ' + e);
+    return { ok: false, error: 'Error al cargar datos.' };
+  }
+}
+
 // ── INFORME MENSUAL ─────────────────────────────────────────────────────────
 
 // Ejecutar una vez para activar el trigger automático el 1ro de cada mes
@@ -2251,17 +2344,21 @@ function enviarInformeMensual() {
     }
   }
 
-  var grados = Object.keys(porGrado).sort(function(a, b) { return a.localeCompare(b, 'es'); });
+  var grados = Object.keys(porGrado).sort(function(a, b) {
+    if (a === 'J') return -1;
+    if (b === 'J') return 1;
+    return parseInt(a) - parseInt(b);
+  });
 
-  if (grados.length === 0 && totalUnidades === 0) {
-    Logger.log('Sin ventas en ' + mesLabel + '. No se envía mail.');
+  if (grados.length === 0) {
+    Logger.log('Sin aportes por grado en ' + mesLabel + '. No se envía mail.');
     return;
   }
 
   var filasGrado = grados.map(function(g) {
     var d = porGrado[g];
     return '<tr>' +
-      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + g + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + formatearGrado(g) + '</td>' +
       '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
       '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
       '</tr>';
@@ -2313,7 +2410,93 @@ function enviarInformeMensual() {
   Logger.log('Informe ' + mesLabel + ' enviado a ' + enviados + '/' + emails.length + ' destinatarios. Aporte total: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
 }
 
-// Test: corre la función manualmente para el mes anterior
+// Test: envía el informe solo a robertson.ine@gmail.com para previsualizar
 function testEnviarInformeMensual() {
-  enviarInformeMensual();
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) { Logger.log('Sheet Ventas no encontrada.'); return; }
+
+  var data = sheet.getDataRange().getValues();
+
+  // Forzar septiembre 2026 para el test
+  var mesPasado = new Date(2026, 8, 1);
+  var mesNum    = mesPasado.getMonth();
+  var anioNum   = mesPasado.getFullYear();
+  var mesNombre = mesPasado.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  var mesLabel  = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+
+  var porGrado      = {};
+  var totalAporte   = 0;
+  var totalUnidades = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row   = data[i];
+    var fecha = new Date(row[0]);
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha.getMonth() !== mesNum || fecha.getFullYear() !== anioNum) continue;
+
+    var qty         = parseInt(row[7])    || 0;
+    var aporteGrado = parseFloat(row[20]) || 0;
+    var grado       = normalizarGradoGAS(String(row[21] || ''));
+
+    totalUnidades += qty;
+    totalAporte   += aporteGrado;
+
+    if (grado && grado !== '(Sin observaciones)') {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporteGrado;
+      porGrado[grado].unidades += qty;
+    }
+  }
+
+  var grados = Object.keys(porGrado).sort(function(a, b) {
+    if (a === 'J') return -1;
+    if (b === 'J') return 1;
+    return parseInt(a) - parseInt(b);
+  });
+
+  if (grados.length === 0) {
+    Logger.log('[TEST] Sin aportes por grado en ' + mesLabel + '. Nada para enviar.');
+    return;
+  }
+
+  var filasGrado = grados.map(function(g) {
+    var d = porGrado[g];
+    return '<tr>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + formatearGrado(g) + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var html =
+    '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;max-width:560px;margin:auto;padding:24px;color:#1a1a2e">' +
+    '<div style="text-align:center;padding:0 0 24px 0">' +
+    '<img src="' + LOGO_B64 + '" style="max-width:200px;width:55%" alt="Diente de León">' +
+    '</div>' +
+    '<h2 style="color:#3a7d44;margin:0 0 8px 0;font-size:20px">Resumen de aportes · ' + mesLabel + '</h2>' +
+    '<p style="color:#555;margin:0 0 20px 0;font-size:14px;line-height:1.6">Gracias a las compras de toda la comunidad Dandelion, este mes se generaron aportes para cada grado. Acá compartimos el resumen:</p>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #c8e6c9">' +
+    '<thead><tr style="background:#3a7d44">' +
+    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:13px;font-weight:600">Grado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Aporte recaudado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Unidades vendidas</th>' +
+    '</tr></thead>' +
+    '<tbody>' + filasGrado + '</tbody>' +
+    '<tfoot><tr style="background:#e8f5e9">' +
+    '<td style="padding:11px 14px;font-weight:700;font-size:14px">Total</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#1a5c2a">$' + Math.round(totalAporte).toLocaleString('es-AR') + '</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#555">' + totalUnidades + '</td>' +
+    '</tr></tfoot>' +
+    '</table>' +
+    '<p style="font-size:13px;color:#555;line-height:1.6">Los aportes se transfieren a cada grado durante los primeros días del mes. Si tenés alguna consulta o querés verificar el destino de tu aporte, <a href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-aportes-grado.html" style="color:#3a7d44">visitá nuestra wiki</a>.</p>' +
+    '<p style="font-size:11px;color:#aaa;margin-top:24px;padding-top:14px;border-top:1px solid #eee;text-align:center">Tienda Diente de León · Escuela Dandelion Pedagogía Waldorf · Córdoba</p>' +
+    '</div>';
+
+  GmailApp.sendEmail('robertson.ine@gmail.com', '[TEST] Tienda Diente de León — Aportes de ' + mesLabel, '', {
+    htmlBody: html,
+    from:     'tiendavirtual.dientedeleon@gmail.com',
+    name:     'Tienda Diente de León'
+  });
+  Logger.log('[TEST] Mail de prueba enviado a robertson.ine@gmail.com — ' + mesLabel + ' | Aportes: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
 }

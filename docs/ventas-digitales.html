@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas Digitales — Diente de León</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f8fa; color: #1a1a2e; }
+
+:root {
+  --green: #2d5a27;
+  --green-dark: #1e3d1a;
+  --green-light: #eaf3e6;
+  --border: #E5E7EB;
+  --muted: #6B7280;
+}
+
+/* LOGIN */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1e3d1a 0%, #2d5a27 100%); padding: 24px;
+}
+.login-box {
+  background: #fff; border-radius: 16px; padding: 40px 32px;
+  width: 100%; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,.15); text-align: center;
+}
+.login-box img { width: 140px; margin-bottom: 16px; }
+.login-box h2 { font-size: 20px; color: var(--green-dark); margin-bottom: 6px; }
+.login-box p  { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+#google-btn-container { display: flex; justify-content: center; }
+#login-error { color: #c62828; font-size: 13px; margin-top: 16px; display: none; }
+
+/* APP */
+#app { display: none; }
+
+header {
+  background: var(--green-dark); color: #fff;
+  padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+header .title { font-size: 16px; font-weight: 700; }
+header .user  { font-size: 13px; color: rgba(255,255,255,.7); cursor: pointer; }
+header .user:hover { color: #fff; }
+
+.content { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+.page-title { font-size: 22px; font-weight: 800; color: var(--green-dark); margin-bottom: 4px; }
+.page-sub   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+/* FILTROS */
+.filtros {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 20px;
+}
+.filtros label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+.filtros select, .filtros input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; background: #fff; min-width: 160px;
+}
+.filtros select:focus, .filtros input:focus { outline: none; border-color: var(--green); }
+.btn-limpiar {
+  padding: 8px 14px; background: none; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 18px;
+}
+.btn-limpiar:hover { background: #f3f4f6; }
+
+/* KPIs */
+.kpis { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.kpi {
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 20px; flex: 1; min-width: 140px;
+}
+.kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.kpi-val   { font-size: 24px; font-weight: 800; color: var(--green-dark); }
+
+/* TABLA */
+.tbl-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  padding: 11px 14px; text-align: left; background: #f9fafb;
+  border-bottom: 1px solid var(--border); font-size: 11px;
+  font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
+  white-space: nowrap;
+}
+tbody td { padding: 11px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafafa; }
+.num { text-align: right; }
+.badge-prod {
+  display: inline-block; background: var(--green-light); color: var(--green);
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis;
+}
+.email-link { color: var(--green); text-decoration: none; font-size: 12px; }
+.email-link:hover { text-decoration: underline; }
+
+#estado-carga { padding: 48px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <img src="Logo_Diente_de_Leon.png" alt="Diente de León">
+    <h2>Ventas Digitales</h2>
+    <p>Acceso restringido — ingresá con tu cuenta Google autorizada</p>
+    <div id="google-btn-container"></div>
+    <div id="login-error">Email no autorizado para esta sección.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <span class="title">🎟 Ventas Digitales — Diente de León</span>
+    <span class="user" onclick="cerrarSesion()" id="header-user"></span>
+  </header>
+
+  <div class="content">
+    <div class="page-title">Ventas de productos digitales</div>
+    <div class="page-sub" id="subtitulo">Cargando...</div>
+
+    <div class="filtros">
+      <div>
+        <label>Producto / Evento</label>
+        <select id="filt-producto" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label>Buscar comprador</label>
+        <input id="filt-buscar" type="text" placeholder="Nombre o email..." oninput="aplicarFiltros()">
+      </div>
+      <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">Entradas vendidas</div><div class="kpi-val" id="kpi-cantidad">—</div></div>
+      <div class="kpi"><div class="kpi-label">Compradores únicos</div><div class="kpi-val" id="kpi-compradores">—</div></div>
+      <div class="kpi"><div class="kpi-label">Total recaudado</div><div class="kpi-val" id="kpi-total">—</div></div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div id="estado-carga">Cargando datos...</div>
+      <table id="tabla" style="display:none">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Pedido</th>
+            <th>Comprador</th>
+            <th>Email</th>
+            <th>Producto / Variante</th>
+            <th class="num">Cant.</th>
+            <th class="num">Total</th>
+            <th>Método</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+var GAS_URL      = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var CLIENT_ID    = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
+var currentUser  = null;
+var _rows        = [];
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+
+window.addEventListener('load', function() {
+  var saved = localStorage.getItem('ddl_digital_user');
+  if (saved) {
+    try {
+      var u = JSON.parse(saved);
+      if (u && u.email && u.role) { currentUser = u; mostrarApp(); return; }
+    } catch(e) {}
+  }
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback:  handleCredential,
+    auto_select: false
+  });
+  google.accounts.id.renderButton(document.getElementById('google-btn-container'), {
+    theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: 280
+  });
+});
+
+function handleCredential(resp) {
+  var payload = JSON.parse(atob(resp.credential.split('.')[1]));
+  var email   = payload.email;
+  fetch(GAS_URL + '?action=api_auth&email=' + encodeURIComponent(email), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || (d.role !== 'ADMIN' && d.role !== 'digital')) {
+        document.getElementById('login-error').style.display = 'block';
+        return;
+      }
+      currentUser = { email: email, name: d.name || email.split('@')[0], role: d.role };
+      localStorage.setItem('ddl_digital_user', JSON.stringify(currentUser));
+      mostrarApp();
+    })
+    .catch(function() {
+      document.getElementById('login-error').textContent = 'Error de conexión. Intentá de nuevo.';
+      document.getElementById('login-error').style.display = 'block';
+    });
+}
+
+function cerrarSesion() {
+  localStorage.removeItem('ddl_digital_user');
+  currentUser = null;
+  location.reload();
+}
+
+function mostrarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display          = 'block';
+  document.getElementById('header-user').textContent    = currentUser.name + ' · Cerrar sesión';
+  cargarDatos();
+}
+
+// ── DATOS ──────────────────────────────────────────────────────────────────
+
+function cargarDatos() {
+  fetch(GAS_URL + '?action=api_digitales&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { document.getElementById('estado-carga').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
+      _rows = d.rows || [];
+      poblarFiltroProducto();
+      aplicarFiltros();
+      document.getElementById('subtitulo').textContent =
+        'Actualizado · ' + _rows.length + ' registro' + (_rows.length !== 1 ? 's' : '') + ' en total';
+    })
+    .catch(function() {
+      document.getElementById('estado-carga').textContent = 'Error al cargar datos. Intentá de nuevo.';
+    });
+}
+
+function poblarFiltroProducto() {
+  var productos = {};
+  _rows.forEach(function(r) { if (r.producto) productos[r.producto] = true; });
+  var sel = document.getElementById('filt-producto');
+  while (sel.options.length > 1) sel.remove(1);
+  Object.keys(productos).sort().forEach(function(p) {
+    var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o);
+  });
+}
+
+function aplicarFiltros() {
+  var prod   = document.getElementById('filt-producto').value;
+  var buscar = document.getElementById('filt-buscar').value.toLowerCase().trim();
+
+  var filtradas = _rows.filter(function(r) {
+    if (prod   && r.producto !== prod) return false;
+    if (buscar && (r.nombre + ' ' + r.email).toLowerCase().indexOf(buscar) === -1) return false;
+    return true;
+  });
+
+  renderTabla(filtradas);
+}
+
+function limpiarFiltros() {
+  document.getElementById('filt-producto').value = '';
+  document.getElementById('filt-buscar').value   = '';
+  aplicarFiltros();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+
+function pesos(n) {
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderTabla(rows) {
+  var estado = document.getElementById('estado-carga');
+  var tabla  = document.getElementById('tabla');
+  var tbody  = document.getElementById('tbody');
+
+  if (rows.length === 0) {
+    tabla.style.display  = 'none';
+    estado.style.display = 'block';
+    estado.textContent   = 'Sin registros para los filtros seleccionados.';
+    document.getElementById('kpi-cantidad').textContent    = '0';
+    document.getElementById('kpi-compradores').textContent = '0';
+    document.getElementById('kpi-total').textContent       = pesos(0);
+    return;
+  }
+
+  var totalCantidad = 0, totalPesos = 0;
+  var emailsUnicos  = {};
+
+  tbody.innerHTML = rows.map(function(r) {
+    totalCantidad += r.cantidad;
+    totalPesos    += r.total_linea;
+    emailsUnicos[r.email] = true;
+    return '<tr>' +
+      '<td style="color:#6b7280;white-space:nowrap">' + esc(r.fecha) + '</td>' +
+      '<td><strong>#' + esc(r.pedido) + '</strong></td>' +
+      '<td>' + esc(r.nombre) + '</td>' +
+      '<td><a class="email-link" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></td>' +
+      '<td><span class="badge-prod" title="' + esc(r.producto) + '">' + esc(r.producto) + '</span></td>' +
+      '<td class="num">' + r.cantidad + '</td>' +
+      '<td class="num"><strong>' + pesos(r.total_linea) + '</strong></td>' +
+      '<td style="color:#6b7280;font-size:12px">' + esc(r.metodo_pago) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  document.getElementById('kpi-cantidad').textContent    = totalCantidad;
+  document.getElementById('kpi-compradores').textContent = Object.keys(emailsUnicos).length;
+  document.getElementById('kpi-total').textContent       = pesos(totalPesos);
+
+  estado.style.display = 'none';
+  tabla.style.display  = 'table';
+}
+</script>
+</body>
+</html>

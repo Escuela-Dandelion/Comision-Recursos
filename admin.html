@@ -332,6 +332,9 @@
       <a class="nav-item" href="dashboard-referentes.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
+      <a class="nav-item" href="ventas-digitales.html" target="_blank" data-roles="admin,digital" style="text-decoration:none">
+        <span class="nav-icon">🎟</span> Ventas Digitales ↗
+      </a>
       <div class="nav-section-label">Recursos</div>
       <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-comision-recursos.html#resumen" target="_blank" style="text-decoration:none">
         <span class="nav-icon">📖</span> Wiki ↗
@@ -1041,6 +1044,7 @@ function cargarVentas(forzar) {
           var k = v.staff.trim();
           v.grado = SGMAP[k+' '] || SGMAP[k] || Object.keys(SGMAP).reduce(function(g,key){ return (!g && key.trim().toLowerCase()===k.toLowerCase()) ? SGMAP[key] : g; }, '');
         }
+        v.grado = normalizarGrado(v.grado);
         return v;
       });
       _ventas = _ventas.filter(function(v){ return v.estado !== estado && estado !== 'Todos'; });
@@ -1056,6 +1060,29 @@ function cargarVentas(forzar) {
 }
 
 var MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function normalizarGrado(g) {
+  if (!g) return '';
+  var s = g.toString().trim();
+  var l = s.toLowerCase();
+  var sinObs = ['sin observaciones','(sin observaciones)','na','n/a','no aplica','ninguno','ninguna','-','escuela','para la escuela','escuela general',''];
+  if (sinObs.indexOf(l) > -1) return '';
+  if (l === 'j') return 'Jardín';
+  var NUMS = {'1':'1ro','2':'2do','3':'3ro','4':'4to','5':'5to','6':'6to','7':'7mo','8':'8vo','9':'9no','10':'10mo','11':'11mo','12':'12vo'};
+  if (NUMS[s]) return NUMS[s];
+  return s;
+}
+
+function ordenarGrados(arr) {
+  var ORDEN = ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo','12vo'];
+  return arr.sort(function(a, b) {
+    var ia = ORDEN.indexOf(a), ib = ORDEN.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b, 'es');
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
 
 function poblarFiltrosVentas() {
   var staffSet = {}, prodSet = {}, mesSet = {}, marcaSet = {};
@@ -1086,7 +1113,7 @@ function poblarFiltrosVentas() {
   if (selG) {
     var curG = selG.value;
     while (selG.options.length > 1) selG.remove(1);
-    Object.keys(gradoSet).sort().forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; selG.appendChild(o); });
+    ordenarGrados(Object.keys(gradoSet)).forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; selG.appendChild(o); });
     selG.value = curG;
   }
 
