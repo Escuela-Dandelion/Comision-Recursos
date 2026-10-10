@@ -157,7 +157,6 @@ tbody tr:hover td { background: #fafafa; }
             <th>Producto / Variante</th>
             <th class="num">Cant.</th>
             <th class="num">Total</th>
-            <th>Método</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -312,7 +311,6 @@ function renderTabla(rows) {
       '<td><span class="badge-prod" title="' + esc(r.producto) + '">' + esc(r.producto) + '</span></td>' +
       '<td class="num">' + r.cantidad + '</td>' +
       '<td class="num"><strong>' + pesos(r.total_linea) + '</strong></td>' +
-      '<td style="color:#6b7280;font-size:12px">' + esc(r.metodo_pago) + '</td>' +
       '</tr>';
   }).join('');
 
