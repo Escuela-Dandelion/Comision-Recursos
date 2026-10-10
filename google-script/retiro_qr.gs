@@ -184,7 +184,7 @@ function doGetInterno(e) {
   var entregado = e.parameter.entregado || '';
 
   if (action === 'version') {
-    return ContentService.createTextOutput('Version_1.5');
+    return ContentService.createTextOutput('Version_1.6_digitales');
   }
 
   if (action === 'portal') {
