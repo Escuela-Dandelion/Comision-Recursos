@@ -99,6 +99,31 @@ tbody tr:hover td { background: #fafafa; }
 .email-link:hover { text-decoration: underline; }
 
 #estado-carga { padding: 48px; text-align: center; color: var(--muted); }
+
+.btn-pdf {
+  padding: 8px 16px; background: var(--green); color: #fff;
+  border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+}
+.btn-pdf:hover { background: var(--green-dark); }
+
+/* ── IMPRESIÓN / PDF ─────────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  header, .filtros, .kpis, .btn-pdf, #estado-carga, .page-sub { display: none !important; }
+  body { background: #fff; }
+  .content { max-width: 100%; padding: 0; }
+  .tbl-wrap { border: none; border-radius: 0; overflow: visible; }
+  .page-title { font-size: 16px; margin-bottom: 2px; }
+  #print-header { display: block !important; }
+  table { font-size: 12px; }
+  thead th { background: #2d5a27 !important; color: #fff !important; padding: 8px 10px; font-size: 10px; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+  .badge-prod { background: none; padding: 0; font-size: 12px; font-weight: normal; color: #000; }
+  .email-link { color: #000; text-decoration: none; }
+  .num-print { text-align: center; }
+  @page { margin: 1.5cm; size: A4 portrait; }
+}
 </style>
 </head>
 <body>
@@ -122,7 +147,20 @@ tbody tr:hover td { background: #fafafa; }
   </header>
 
   <div class="content">
-    <div class="page-title">Ventas de productos digitales</div>
+    <!-- Solo visible al imprimir -->
+    <div id="print-header" style="display:none; margin-bottom:16px;">
+      <img src="Logo_Diente_de_Leon.png" style="height:48px; margin-bottom:8px;"><br>
+      <strong style="font-size:15px;">Lista de acreditación — Diente de León</strong>
+      <div id="print-evento" style="font-size:12px; color:#555; margin-top:2px;"></div>
+      <div id="print-fecha"  style="font-size:11px; color:#888; margin-top:2px;"></div>
+    </div>
+
+    <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:4px;">
+      <div class="page-title">Ventas de productos digitales</div>
+      <button class="btn-pdf" onclick="exportarPDF()" id="btn-pdf" style="display:none">
+        ⬇ Exportar lista PDF
+      </button>
+    </div>
     <div class="page-sub" id="subtitulo">Cargando...</div>
 
     <div class="filtros">
@@ -275,6 +313,13 @@ function limpiarFiltros() {
   aplicarFiltros();
 }
 
+function exportarPDF() {
+  var prod = document.getElementById('filt-producto').value;
+  document.getElementById('print-evento').textContent = prod ? 'Evento: ' + prod : 'Todos los eventos';
+  document.getElementById('print-fecha').textContent  = 'Generado el ' + new Date().toLocaleString('es-AR');
+  window.print();
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────
 
 function pesos(n) {
@@ -326,6 +371,7 @@ function renderTabla(rows) {
 
   estado.style.display = 'none';
   tabla.style.display  = 'table';
+  document.getElementById('btn-pdf').style.display = 'flex';
 }
 </script>
 </body>
