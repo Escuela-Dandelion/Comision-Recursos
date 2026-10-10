@@ -131,33 +131,57 @@ function getDigitalesSheet() {
   return sheet;
 }
 
+function yaFueRegistradoDigital(orderId) {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Digitales');
+  if (!sheet) return false;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][2]) === String(orderId)) return true;
+  }
+  return false;
+}
+
 function registrarEnDigitales(order, productosDigitales) {
+  if (yaFueRegistradoDigital(order.id)) {
+    Logger.log('Digitales: pedido #' + order.number + ' ya registrado, se omite.');
+    return;
+  }
   try {
     var sheet  = getDigitalesSheet();
     var fecha  = order.created_at ? new Date(order.created_at) : new Date();
     var paymentMethod = (order.payment_details && order.payment_details.method) || '';
+    // Agrupar por variante para consolidar si compran N unidades del mismo producto
+    var agrupados = {};
     productosDigitales.forEach(function(p) {
-      var nombre = (typeof p.name === 'object')
-        ? (p.name.es || p.name.pt || Object.values(p.name)[0] || '')
-        : (p.name || '');
-      var qty        = p.quantity || 1;
-      var precioUnit = parseFloat(p.price || 0);
+      var key = String(p.product_id || '') + '_' + String(p.variant_id || '') + '_' + String(p.sku || '');
+      if (agrupados[key]) {
+        agrupados[key].qty += (p.quantity || 1);
+      } else {
+        var nombre = (typeof p.name === 'object')
+          ? (p.name.es || p.name.pt || Object.values(p.name)[0] || '')
+          : (p.name || '');
+        agrupados[key] = { nombre: nombre, sku: p.sku || '', qty: p.quantity || 1, precioUnit: parseFloat(p.price || 0) };
+      }
+    });
+    Object.keys(agrupados).forEach(function(key) {
+      var g = agrupados[key];
       sheet.appendRow([
         fecha,
         order.number,
         String(order.id),
         order.contact_name  || '',
         order.contact_email || '',
-        nombre,
-        p.sku || '',
-        qty,
-        precioUnit,
-        precioUnit * qty,
+        g.nombre,
+        g.sku,
+        g.qty,
+        g.precioUnit,
+        g.precioUnit * g.qty,
         parseFloat(order.total || 0),
         paymentMethod
       ]);
     });
-    Logger.log('Digitales: ' + productosDigitales.length + ' fila(s) para pedido #' + order.number);
+    Logger.log('Digitales: ' + Object.keys(agrupados).length + ' fila(s) para pedido #' + order.number);
   } catch(err) {
     Logger.log('Error registrarEnDigitales: ' + err);
   }
