@@ -1889,7 +1889,7 @@ var AUTH_EMAILS = {
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },      // 2do
   'francoalini@gmail.com':           { role: 'ADMIN',     name: 'Franco' },    // Alfajores Nazareno
   'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' }, // 4to
-  'leila.remedi@dandelion.edu.ar':          { role: 'digital',   name: 'Leila' }
+  'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' }
 };
 
 // Lista blanca de teléfonos de referentes (sin el +, formato internacional)
