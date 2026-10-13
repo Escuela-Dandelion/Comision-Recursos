@@ -312,6 +312,9 @@
       </button>
 
       <div class="nav-section-label">Gestión</div>
+      <button class="nav-item" data-view="gestion" data-roles="admin,fgp" onclick="showView('gestion', this)">
+        <span class="nav-icon">📦</span> Gestión de Productos
+      </button>
       <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
         <span class="nav-icon">📦</span> Pedidos
       </button>
@@ -334,9 +337,6 @@
       </a>
       <a class="nav-item" href="ventas-digitales.html" target="_blank" data-roles="admin,digital" style="text-decoration:none">
         <span class="nav-icon">🎟</span> Ventas Productos Digitales ↗
-      </a>
-      <a class="nav-item" href="gestion.html" target="_blank" data-roles="admin,fgp" style="text-decoration:none">
-        <span class="nav-icon">📦</span> Gestión de Productos ↗
       </a>
       <div class="nav-section-label">Recursos</div>
       <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-comision-recursos.html#resumen" target="_blank" style="text-decoration:none">
@@ -519,6 +519,10 @@
       <iframe class="view-iframe" src="retiro-proveedor.html" id="iframe-retiro"></iframe>
     </div>
 
+    <!-- GESTIÓN DE PRODUCTOS -->
+    <div class="view" id="view-gestion" style="padding:0;overflow:hidden;">
+      <iframe id="iframe-gestion" src="" style="width:100%;height:calc(100vh - var(--header-h));border:none;display:block;"></iframe>
+    </div>
 
   </main>
 </div>
@@ -779,6 +783,14 @@ function showView(viewId, navBtn, opts) {
       } else if (opts.id) {
         retiroIframe.src = 'retiro-proveedor.html?id=' + encodeURIComponent(opts.id);
       }
+    }
+  }
+
+  // Cargar gestión de productos con email del usuario actual
+  if (viewId === 'gestion') {
+    var gestionIframe = document.getElementById('iframe-gestion');
+    if (gestionIframe && (!gestionIframe.src || gestionIframe.src === 'about:blank' || gestionIframe.src === window.location.href.split('?')[0]) && currentUser && currentUser.email) {
+      gestionIframe.src = 'gestion.html?email=' + encodeURIComponent(currentUser.email);
     }
   }
 

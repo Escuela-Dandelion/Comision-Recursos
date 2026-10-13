@@ -15,6 +15,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   --border: #E5E7EB; --muted: #6B7280; --red: #dc2626;
 }
 
+/* ── EMBEDDED (inside admin iframe) ── */
+html.embedded header { display: none !important; }
+html.embedded .layout { height: 100vh; }
+
 /* ── LOGIN ── */
 #login-screen {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -322,6 +326,26 @@ var _fotoMime   = null;
 // ── AUTH ──────────────────────────────────────────────────────
 
 window.addEventListener('load', function() {
+  var params = new URLSearchParams(window.location.search);
+  var emailParam = params.get('email');
+
+  // When opened inside admin iframe: auto-auth with passed email
+  if (emailParam) {
+    document.documentElement.classList.add('embedded');
+    fetch(GAS_URL + '?action=api_auth&email=' + encodeURIComponent(emailParam), { redirect: 'follow' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) { mostrarError('Email no autorizado para esta sección.'); return; }
+        var puedeGestionar = d.role === 'ADMIN' || (d.marcas && d.marcas.length > 0);
+        if (!puedeGestionar) { mostrarError('Tu usuario no tiene productos asignados para gestionar.'); return; }
+        currentUser = { email: emailParam, name: d.name || emailParam.split('@')[0], role: d.role, marcas: d.marcas };
+        localStorage.setItem('ddl_gestion_user', JSON.stringify(currentUser));
+        mostrarApp();
+      })
+      .catch(function() { mostrarError('Error de conexión. Intentá de nuevo.'); });
+    return;
+  }
+
   var saved = localStorage.getItem('ddl_gestion_user');
   if (saved) {
     try {
