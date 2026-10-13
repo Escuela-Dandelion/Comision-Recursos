@@ -41,15 +41,15 @@ server.resource('ddl-auth', 'ddl://auth_emails', async () => ({
         { email: 'robertson.ine@gmail.com',              role: 'ADMIN',    name: 'Inés' },
         { email: 'longhi.yuliana@gmail.com',             role: 'ADMIN',    name: 'Yuliana' },
         { email: 'yuliana.longhi@dandelion.edu.ar',      role: 'ADMIN',    name: 'Yuliana' },
-        { email: 'pialucarno@gmail.com',                 role: 'ADMIN',    name: 'Pia' },
-        { email: 'monicachesta@gmail.com',               role: 'ADMIN',    name: 'Monica' },
-        { email: 'lmdestefano@dandelion.edu.ar',         role: 'ADMIN',    name: 'Lucas' },
-        { email: 'lmdestefano@gmail.com',                role: 'ADMIN',    name: 'Lucas' },
-        { email: 'francoalini@gmail.com',                role: 'ADMIN',    name: 'Franco' },
-        { email: 'martinimaria39@gmail.com',             role: 'FGP',      name: 'Maria' },
-        { email: 'amandabenedi@gmail.com',               role: 'FGP',      name: 'Amanda' },
-        { email: 'lourdelcastillo@gmail.com',            role: 'FGP',      name: 'Luli' },
-        { email: 'belen.ravaza@dandelion.edu.ar',        role: 'FGP',      name: 'Belén' },
+        { email: 'pialucarno@gmail.com',                 role: 'ADMIN',    name: 'Pia',    marcas: ['EL MAITEN','ODDIS'] },
+        { email: 'monicachesta@gmail.com',               role: 'ADMIN',    name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
+        { email: 'lmdestefano@dandelion.edu.ar',         role: 'ADMIN',    name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+        { email: 'lmdestefano@gmail.com',                role: 'ADMIN',    name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+        { email: 'francoalini@gmail.com',                role: 'ADMIN',    name: 'Franco', marcas: ['NAZARENO'] },
+        { email: 'martinimaria39@gmail.com',             role: 'FGP',      name: 'Maria',   marcas: ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'] },
+        { email: 'amandabenedi@gmail.com',               role: 'FGP',      name: 'Amanda',  marcas: [] },
+        { email: 'lourdelcastillo@gmail.com',            role: 'FGP',      name: 'Luli',    marcas: ['LA YAYA','ODDIS'] },
+        { email: 'belen.ravaza@dandelion.edu.ar',        role: 'FGP',      name: 'Belén',   marcas: [] },
         { email: 'avilaclaudio1905@gmail.com',           role: 'referente', name: 'Claudio' },
         { email: 'inesitavasquezoliva@gmail.com',        role: 'referente', name: 'Inés V.' },
         { email: 'elinapipino8@gmail.com',               role: 'referente', name: 'Elina' },
@@ -108,6 +108,84 @@ server.resource('ddl-paginas', 'ddl://paginas', async () => ({
         { archivo: 'informe-aportes.html',  url: 'escuela-dandelion.github.io/Comision-Recursos/informe-aportes.html',  roles: ['ADMIN'],                             descripcion: 'Informe mensual de aportes por grado con comprobantes de transferencia' }
       ],
       nota: 'GitHub Pages sirve desde la raíz del repo. Siempre editar en raíz y copiar a docs/. Auth via Google Sign-In + validación contra AUTH_EMAILS en GAS.'
+    }, null, 2)
+  }]
+}));
+
+server.resource('ddl-proveedores', 'ddl://proveedores', async () => ({
+  contents: [{
+    uri: 'ddl://proveedores',
+    mimeType: 'application/json',
+    text: JSON.stringify({
+      descripcion: 'Proveedores de la Tienda Diente de León y sus FGPs responsables. La clave "marca_tn" es el valor exacto del campo brand en TiendaNube y en CONFIG.ALIAS_PAGO.',
+      proveedores: [
+        {
+          nombre: 'Yemari',
+          marca_tn: 'YEMARI',
+          producto: 'Yerba mate',
+          fgps: ['lmdestefano@dandelion.edu.ar', 'martinimaria39@gmail.com'],
+          pago: { alias: 'Yerba.yemari', titular: 'Claudio Daniel Avila Moyano', banco: 'Mercado Pago', cbu: '00000031000040988897724' }
+        },
+        {
+          nombre: 'Caballo Negro',
+          marca_tn: 'CABALLO NEGRO',
+          producto: 'Yerba mate',
+          fgps: ['lmdestefano@dandelion.edu.ar', 'martinimaria39@gmail.com'],
+          pago: { alias: 'TOPE.POROTO.RUBIO', titular: 'Gabriel Alejandro Michalec', cbu: '2850006540094869600518' }
+        },
+        {
+          nombre: 'Miel La Yaya',
+          marca_tn: 'LA YAYA',
+          producto: 'Miel',
+          fgps: ['monicachesta@gmail.com', 'martinimaria39@gmail.com'],
+          soporte: ['lourdelcastillo@gmail.com'],
+          pago: { alias: 'MUNDO.TACO.LANA', titular: 'Mariela Isabel Conci', banco: 'Banco Galicia', cbu: '0070362630004011663770' }
+        },
+        {
+          nombre: 'Guardianes de la Colmena',
+          marca_tn: 'GUARDIANES COLMENA',
+          producto: 'Miel',
+          fgps: ['monicachesta@gmail.com', 'martinimaria39@gmail.com'],
+          pago: { titular: 'Alejandro Sánchez Penak', banco: 'Mercado Pago', cbu: '0000003100017116879020' }
+        },
+        {
+          nombre: 'El Maiten',
+          marca_tn: 'EL MAITEN',
+          producto: 'Granola · Frutos secos',
+          fgps: ['pialucarno@gmail.com', 'martinimaria39@gmail.com'],
+          pago: { alias: 'El.maiten2025' }
+        },
+        {
+          nombre: 'Oddis',
+          marca_tn: 'ODDIS',
+          producto: 'Pasta de maní',
+          fgps: ['pialucarno@gmail.com', 'martinimaria39@gmail.com'],
+          soporte: ['lourdelcastillo@gmail.com'],
+          pago: { titular: 'Rece SA', banco: 'Mercado Pago', cbu: '0000003100008850705997' }
+        },
+        {
+          nombre: 'Alfajores Nazareno',
+          marca_tn: 'NAZARENO',
+          producto: 'Alfajores',
+          fgps: ['francoalini@gmail.com'],
+          nota: 'Franco recibe resumen automático por mail y gestiona el pedido directo con Nazareno. Pedido semanal los jueves.',
+          pago: { alias: 'Lapaz293', titular: 'Franco Alini (intermediario)' }
+        },
+        {
+          nombre: 'Groen',
+          marca_tn: 'GROEN',
+          producto: 'Limpieza (Detergente Sólido XL)',
+          fgps: ['monicachesta@gmail.com', 'martinimaria39@gmail.com'],
+          pago: { titular: 'Daniel Elías González', banco: 'Banco Santander Río', cbu: '0720242388000036973204' }
+        },
+        {
+          nombre: 'Paraisa',
+          marca_tn: 'PARAISA',
+          producto: 'Biocosmética',
+          fgps: ['martinimaria39@gmail.com'],
+          pago: { alias: 'Paraisabiocosmetica' }
+        }
+      ]
     }, null, 2)
   }]
 }));

@@ -1868,27 +1868,27 @@ var AUTH_EMAILS = {
   'robertson.ine@gmail.com':    { role: 'ADMIN', name: 'Inés' },
   'longhi.yuliana@gmail.com':        { role: 'ADMIN', name: 'Yuliana' },
   'yuliana.longhi@dandelion.edu.ar': { role: 'ADMIN', name: 'Yuliana' },
-  'martinimaria39@gmail.com':   { role: 'FGP',   name: 'Maria' },
-  'amandabenedi@gmail.com':     { role: 'FGP',   name: 'Amanda' },
-  'lourdelcastillo@gmail.com':       { role: 'FGP',   name: 'Luli' },
-  'belen.ravaza@dandelion.edu.ar':   { role: 'FGP',   name: 'Belén' },
+  'martinimaria39@gmail.com':        { role: 'FGP', name: 'Maria',  marcas: ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'] },
+  'amandabenedi@gmail.com':          { role: 'FGP', name: 'Amanda', marcas: [] },
+  'lourdelcastillo@gmail.com':       { role: 'FGP', name: 'Luli',   marcas: ['LA YAYA','ODDIS'] },
+  'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  marcas: [] },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'ADMIN',     name: 'Pia' },
+  'pialucarno@gmail.com':            { role: 'ADMIN', name: 'Pia',    marcas: ['EL MAITEN','ODDIS'] },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
-  'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },   // 2do grado
-  'monicachesta@gmail.com':          { role: 'ADMIN',     name: 'Monica' },
-  'lmdestefano@dandelion.edu.ar':    { role: 'ADMIN',     name: 'Lucas' },
-  'lmdestefano@gmail.com':           { role: 'ADMIN',     name: 'Lucas' },
-  'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },  // 6to / 10mo
-  'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },      // 8vo
-  'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },    // 7mo
-  'dominguezgabydl@gmail.com':       { role: 'referente', name: 'Gaby' },      // 5to
-  'yaninafuentes33@gmail.com':       { role: 'referente', name: 'Yana' },      // 5to
-  'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },      // 9no
-  'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },      // 2do
-  'francoalini@gmail.com':           { role: 'ADMIN',     name: 'Franco' },    // Alfajores Nazareno
-  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' }, // 4to
+  'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
+  'monicachesta@gmail.com':          { role: 'ADMIN', name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
+  'lmdestefano@dandelion.edu.ar':    { role: 'ADMIN', name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+  'lmdestefano@gmail.com':           { role: 'ADMIN', name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+  'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
+  'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },
+  'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },
+  'dominguezgabydl@gmail.com':       { role: 'referente', name: 'Gaby' },
+  'yaninafuentes33@gmail.com':       { role: 'referente', name: 'Yana' },
+  'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },
+  'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
+  'francoalini@gmail.com':           { role: 'ADMIN', name: 'Franco', marcas: ['NAZARENO'] },
+  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
   'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' }
 };
 
