@@ -69,10 +69,25 @@ var LOGO_B64 = "https://escuela-dandelion.github.io/Comision-Recursos/Logo_Dient
 
 function doPost(e) {
   try {
-    var body    = JSON.parse(e.postData.contents);
+    var body   = JSON.parse(e.postData.contents);
+    var action = body.action || '';
+
+    if (action === 'update_producto') {
+      var res = apiUpdateProducto(body.email || '', body.producto_id || '', body.nombre, body.descripcion);
+      return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'update_variante') {
+      var res = apiUpdateVariante(body.email || '', body.producto_id || '', body.variante_id || '', body.precio, body.precio_promo, body.costo, body.stock);
+      return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'update_imagen') {
+      var res = apiUpdateImagen(body.email || '', body.producto_id || '', body.base64 || '', body.mime_type || 'image/jpeg');
+      return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Webhook de TiendaNube
     var evento  = body.event || '';
     var orderId = String(body.id);
-
     if (evento === 'order/paid' || evento === 'order/updated') {
       var order = fetchOrder(orderId);
       if (order && order.payment_status === 'paid' && !yaFueEnviado(orderId)) {
@@ -275,6 +290,11 @@ function doGetInterno(e) {
 
   if (action === 'api_digitales') {
     var res = apiDigitales(e.parameter.email || '');
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'api_productos') {
+    var res = apiProductos(e.parameter.email || '');
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -1716,7 +1736,7 @@ function apiAuthEmail(email) {
   if (!email) return { ok: false, error: 'Email requerido.' };
   var user = AUTH_EMAILS[email.toLowerCase().trim()];
   if (!user) return { ok: false, error: 'Email no autorizado.' };
-  return { ok: true, role: user.role, name: user.name };
+  return { ok: true, role: user.role, name: user.name, marcas: user.marcas || null };
 }
 
 // ──────────────────────────────────────────────────────────
@@ -1911,12 +1931,12 @@ var AUTH_REFERENTES = {
   '5493516319266': { role: 'REFERENTE', name: 'Claudio' }
 };
 
-// Verificar Google Sign-In — devuelve {ok, role, name}
+// Verificar Google Sign-In — devuelve {ok, role, name, marcas}
 function apiVerificarEmail(email) {
   email = email.toLowerCase().trim();
   var user = AUTH_EMAILS[email];
   if (!user) return { ok: false, error: 'Email no autorizado' };
-  return { ok: true, role: user.role, name: user.name };
+  return { ok: true, role: user.role, name: user.name, marcas: user.marcas || null };
 }
 
 // Generar y enviar OTP por WhatsApp
@@ -2523,4 +2543,139 @@ function testEnviarInformeMensual() {
     name:     'Tienda Diente de León'
   });
   Logger.log('[TEST] Mail de prueba enviado a robertson.ine@gmail.com — ' + mesLabel + ' | Aportes: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GESTIÓN DE PRODUCTOS — TiendaNube API
+// ══════════════════════════════════════════════════════════════
+
+function _tnHeaders() {
+  return {
+    'Authentication': 'bearer ' + CONFIG.API_TOKEN,
+    'Content-Type':   'application/json',
+    'User-Agent':     CONFIG.TIENDA_NOMBRE + ' (gestion-productos)'
+  };
+}
+
+function _puedeGestionarMarca(user, brand) {
+  if (!user.marcas || user.marcas.length === 0) return user.role === 'ADMIN';
+  var up = String(brand || '').toUpperCase();
+  return user.marcas.some(function(m) { return m.toUpperCase() === up; });
+}
+
+function _authGestion(email) {
+  if (!email) return null;
+  var user = AUTH_EMAILS[email.toLowerCase().trim()];
+  if (!user) return null;
+  var puedeGestionar = user.role === 'ADMIN' || (user.marcas && user.marcas.length > 0);
+  return puedeGestionar ? user : null;
+}
+
+function apiProductos(email) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso para gestionar productos.' };
+  try {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200';
+    var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) return { ok: false, error: 'Error al cargar productos de TiendaNube.' };
+    var productos = JSON.parse(resp.getContentText());
+
+    if (user.role !== 'ADMIN' && user.marcas && user.marcas.length > 0) {
+      var marcasUp = user.marcas.map(function(m) { return m.toUpperCase(); });
+      productos = productos.filter(function(p) {
+        return marcasUp.indexOf(String(p.brand || '').toUpperCase()) !== -1;
+      });
+    }
+
+    var rows = productos.map(function(p) {
+      var nombre = typeof p.name        === 'object' ? (p.name.es        || p.name.pt        || Object.values(p.name)[0]        || '') : (p.name        || '');
+      var desc   = typeof p.description === 'object' ? (p.description.es || p.description.pt || '') : (p.description || '');
+      return {
+        id:        String(p.id),
+        nombre:    nombre,
+        descripcion: desc,
+        imagen:    p.images && p.images.length > 0 ? p.images[0].src : '',
+        imagenes:  (p.images || []).map(function(img) { return { id: String(img.id), src: img.src }; }),
+        brand:     String(p.brand || ''),
+        publicado: p.published !== false,
+        variantes: (p.variants || []).map(function(v) {
+          var vn = typeof v.name === 'object' ? (Object.values(v.name).filter(Boolean)[0] || '') : (v.name || '');
+          return {
+            id:          String(v.id),
+            sku:         v.sku || '',
+            nombre:      vn,
+            precio:      parseFloat(v.price || 0),
+            precio_promo: parseFloat(v.promotional_price || 0),
+            costo:       parseFloat(v.cost || 0),
+            stock:       (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock)
+          };
+        })
+      };
+    });
+    return { ok: true, productos: rows };
+  } catch(err) {
+    Logger.log('Error apiProductos: ' + err);
+    return { ok: false, error: 'Error al cargar productos.' };
+  }
+}
+
+function apiUpdateProducto(email, productoId, nombre, descripcion) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  var body = {};
+  if (nombre      !== undefined && nombre      !== null) body.name        = { es: nombre };
+  if (descripcion !== undefined && descripcion !== null) body.description = { es: descripcion };
+  if (!Object.keys(body).length) return { ok: false, error: 'Sin datos para actualizar.' };
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
+  var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateProducto error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar producto.' }; }
+  return { ok: true };
+}
+
+function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, costo, stock) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  var body = {};
+  if (precio      !== undefined && precio      !== null && precio      !== '') body.price             = parseFloat(precio);
+  if (precioPromo !== undefined && precioPromo !== null && precioPromo !== '') body.promotional_price = parseFloat(precioPromo) > 0 ? parseFloat(precioPromo) : null;
+  if (costo       !== undefined && costo       !== null && costo       !== '') body.cost              = parseFloat(costo);
+  if (stock       !== undefined && stock       !== null) body.stock = (stock === '' || stock === 'null' || stock === null) ? null : parseInt(stock);
+  if (!Object.keys(body).length) return { ok: false, error: 'Sin datos para actualizar.' };
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
+  var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateVariante error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar variante.' }; }
+  return { ok: true };
+}
+
+function apiUpdateImagen(email, productoId, base64Data, mimeType) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (!base64Data) return { ok: false, error: 'Imagen requerida.' };
+  try {
+    var prodUrl = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
+    var headers = { 'Authentication': 'bearer ' + CONFIG.API_TOKEN, 'User-Agent': CONFIG.TIENDA_NOMBRE + ' (gestion-productos)' };
+
+    // Eliminar imágenes existentes
+    var prodResp = UrlFetchApp.fetch(prodUrl, { headers: headers, muteHttpExceptions: true });
+    if (prodResp.getResponseCode() === 200) {
+      var prod = JSON.parse(prodResp.getContentText());
+      (prod.images || []).forEach(function(img) {
+        UrlFetchApp.fetch(prodUrl + '/images/' + img.id, { method: 'delete', headers: headers, muteHttpExceptions: true });
+      });
+    }
+
+    // Subir nueva imagen como multipart
+    var bytes = Utilities.base64Decode(base64Data);
+    var blob  = Utilities.newBlob(bytes, mimeType || 'image/jpeg', 'producto.jpg');
+    var uploadResp = UrlFetchApp.fetch(prodUrl + '/images', {
+      method: 'post', headers: headers,
+      payload: { 'filename': blob }, muteHttpExceptions: true
+    });
+    var code = uploadResp.getResponseCode();
+    if (code !== 200 && code !== 201) { Logger.log('apiUpdateImagen error: ' + code + ' ' + uploadResp.getContentText()); return { ok: false, error: 'Error al subir imagen.' }; }
+    return { ok: true };
+  } catch(err) {
+    Logger.log('Error apiUpdateImagen: ' + err);
+    return { ok: false, error: 'Error al procesar imagen.' };
+  }
 }
