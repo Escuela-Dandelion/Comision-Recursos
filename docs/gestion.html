@@ -498,20 +498,40 @@ function cerrarPanel() {
   cancelarFoto();
 }
 
+function calcularMargen(precio, costo) {
+  var p = parseFloat(precio) || 0;
+  var c = parseFloat(costo)  || 0;
+  if (p <= 0) return '—';
+  var m = ((p - c) / p) * 100;
+  return Math.round(m) + ' %';
+}
+
+function actualizarMargen(varianteId) {
+  var precio = document.getElementById('precio-' + varianteId).value;
+  var costo  = document.getElementById('costo-'  + varianteId).value;
+  document.getElementById('margen-' + varianteId).textContent = calcularMargen(precio, costo);
+}
+
 function renderEditPrecios(variantes) {
   var html = variantes.map(function(v, i) {
+    var margen = calcularMargen(v.precio, v.costo);
     return '<div class="variante-editor">' +
       '<div class="variante-nombre">' + esc(v.nombre || v.sku || 'Variante ' + (i+1)) + '</div>' +
-      '<div class="field-row tres">' +
-        '<div><label class="field-label">Precio</label>' +
+      '<div class="field-row">' +
+        '<div><label class="field-label">Precio de venta</label>' +
           '<div class="input-precio"><span>$</span>' +
-          '<input class="field" id="precio-' + v.id + '" type="number" step="1" value="' + v.precio + '"></div></div>' +
-        '<div><label class="field-label">Promocional</label>' +
+          '<input class="field" id="precio-' + v.id + '" type="number" step="1" value="' + v.precio + '" oninput="actualizarMargen(\'' + v.id + '\')"></div></div>' +
+        '<div><label class="field-label">Precio promocional</label>' +
           '<div class="input-precio"><span>$</span>' +
           '<input class="field" id="promo-' + v.id + '" type="number" step="1" value="' + (v.precio_promo > 0 ? v.precio_promo : '') + '" placeholder="0"></div></div>' +
+      '</div>' +
+      '<div class="field-row">' +
         '<div><label class="field-label">Costo</label>' +
           '<div class="input-precio"><span>$</span>' +
-          '<input class="field" id="costo-' + v.id + '" type="number" step="1" value="' + v.costo + '"></div></div>' +
+          '<input class="field" id="costo-' + v.id + '" type="number" step="1" value="' + v.costo + '" oninput="actualizarMargen(\'' + v.id + '\')"></div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px">Tus clientes no ven este valor.</div></div>' +
+        '<div><label class="field-label">Margen de ganancia</label>' +
+          '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151" id="margen-' + v.id + '">' + margen + '</div></div>' +
       '</div>' +
     '</div>';
   }).join('');
