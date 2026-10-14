@@ -80,12 +80,20 @@ function doGet(e) {
     const action = e.parameter.action || '';
 
     if (action === 'getPedidos') {
-      const excluir        = e.parameter.excluir || 'Cerrado'; // por defecto excluye Cerrados
+      const excluir         = e.parameter.excluir || 'Cerrado';
       const incluirCerrados = e.parameter.incluirCerrados === '1';
+      const email           = (e.parameter.email || '').toLowerCase().trim();
       let pedidos = leerPedidos();
       if (!incluirCerrados && excluir) {
         const excluidos = excluir.split(',').map(function(s){ return s.trim(); });
         pedidos = pedidos.filter(function(p){ return excluidos.indexOf(p.estado) === -1; });
+      }
+      // Filtrar por marcas si el usuario no es admin
+      if (email && MARCAS_POR_EMAIL.hasOwnProperty(email) && MARCAS_POR_EMAIL[email] !== null) {
+        const marcas = MARCAS_POR_EMAIL[email].map(function(m){ return m.toUpperCase(); });
+        pedidos = pedidos.filter(function(p){
+          return marcas.indexOf(String(p.proveedor || '').toUpperCase()) !== -1;
+        });
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, pedidos: pedidos }))
@@ -100,6 +108,10 @@ function doGet(e) {
     }
 
     if (action === 'getProveedores') {
+      const email = (e.parameter.email || '').toLowerCase().trim();
+      const marcasUsuario = email && MARCAS_POR_EMAIL.hasOwnProperty(email) && MARCAS_POR_EMAIL[email] !== null
+        ? MARCAS_POR_EMAIL[email].map(function(m){ return m.toUpperCase(); })
+        : null; // null = admin, ve todo
       // 1. Teles guardados en la tab Proveedores
       const ss    = SpreadsheetApp.openById(CONFIG_RETIRO.PEDIDOS_SHEET_ID);
       const sheet = ss.getSheetByName('Proveedores');
@@ -113,7 +125,7 @@ function doGet(e) {
       // 2. Marcas de TiendaNube como lista base
       let brandsSet = {};
       try { brandsSet = obtenerMarcasTN(); } catch(e) { Logger.log('Error marcas TN: ' + e.message); }
-      // 3. Merge: marcas TN + proveedores del Sheet (puede haber proveedores sin marca TN)
+      // 3. Merge: marcas TN + proveedores del Sheet
       const listaMap = {};
       Object.keys(brandsSet).forEach(function(key) {
         listaMap[key] = { nombre: brandsSet[key], tel: telMap[key] || '' };
@@ -121,7 +133,13 @@ function doGet(e) {
       Object.keys(telMap).forEach(function(key) {
         if (!listaMap[key]) listaMap[key] = { nombre: key, tel: telMap[key] };
       });
-      const lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      // 4. Filtrar por marcas del usuario si no es admin
+      if (marcasUsuario !== null) {
+        lista = lista.filter(function(p){
+          return marcasUsuario.indexOf(String(p.nombre || '').toUpperCase()) !== -1;
+        });
+      }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, proveedores: lista }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -850,13 +868,30 @@ const INV_UMBRAL_FB     = 10;
 const INV_MESES_EXC     = [0, 1, 2, 6]; // Ene, Feb, Mar, Jul
 
 const INV_FGP = {
-  'LA YAYA':                  { nombre: 'Yuliana Longhi',   email: 'longhi.yuliana@gmail.com'  },
+  'LA YAYA':                  { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com'    },
+  'GUARDIANES COLMENA':       { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com'    },
+  'GUARDIANES DE LA COLMENA': { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com'    },
+  'GROEN':                    { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com'    },
+  'CABALLO NEGRO':            { nombre: 'Lucas De Stefano',  email: 'lmdestefano@gmail.com'     },
+  'YEMARI':                   { nombre: 'Lucas De Stefano',  email: 'lmdestefano@gmail.com'     },
+  'EL MAITEN':                { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
+  'ODDIS':                    { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
+  'MIX Y FRUTOS SECOS':       { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
+  'PARAISA':                  { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
   'ODDIS':                    { nombre: 'Luli del Castillo', email: 'lourdelcastillo@gmail.com' },
-  'CABALLO NEGRO':            { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
-  'YEMARI':                   { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
-  'GROEN':                    { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
-  'EL MAITEN':                { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  },
-  'GUARDIANES DE LA COLMENA': { nombre: 'Maria Martini',     email: 'martinimaria39@gmail.com'  }
+};
+
+// null = ADMIN (ve todo), array = filtro de marcas
+const MARCAS_POR_EMAIL = {
+  'robertson.ine@gmail.com':         null,
+  'longhi.yuliana@gmail.com':        null,
+  'yuliana.longhi@dandelion.edu.ar': null,
+  'lmdestefano@dandelion.edu.ar':    ['YEMARI','CABALLO NEGRO'],
+  'lmdestefano@gmail.com':           ['YEMARI','CABALLO NEGRO'],
+  'pialucarno@gmail.com':            ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'],
+  'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN'],
+  'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
+  'lourdelcastillo@gmail.com':       ['LA YAYA','ODDIS'],
 };
 
 const INV_PISO_MARCA = {

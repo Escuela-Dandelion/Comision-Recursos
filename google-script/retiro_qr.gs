@@ -23,7 +23,8 @@ var CONFIG = {
     'EL MAITEN':          { alias: 'El.maiten2025',          titular: '',                    banco: '',              cbu: '' },
     'ODDIS':              { alias: '',                      titular: 'Rece SA',             banco: 'Mercado Pago',  cbu: '0000003100008850705997' },
     'NAZARENO':           { alias: 'Lapaz293',              titular: 'Franco Alini (intermediario)', banco: '', cbu: '' },
-    'GROEN':              { alias: '',                      titular: 'Daniel Elías González', banco: 'Banco Santander Río', cbu: '0720242388000036973204' }
+    'GROEN':              { alias: '',                      titular: 'Daniel Elías González', banco: 'Banco Santander Río', cbu: '0720242388000036973204' },
+    'MIX Y FRUTOS SECOS': { alias: '',                      titular: '',                    banco: '',              cbu: '' }
   },
 
   // Tel de Inés para WhatsApp de "Solicitar Pago"
@@ -1936,12 +1937,12 @@ var AUTH_EMAILS = {
   'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  marcas: [] },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'ADMIN', name: 'Pia',    marcas: ['EL MAITEN','ODDIS'] },
+  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    marcas: ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'] },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
-  'monicachesta@gmail.com':          { role: 'ADMIN', name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
-  'lmdestefano@dandelion.edu.ar':    { role: 'ADMIN', name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
-  'lmdestefano@gmail.com':           { role: 'ADMIN', name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+  'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
+  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },

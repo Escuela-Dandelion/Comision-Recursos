@@ -336,6 +336,8 @@
 
   <div class="flash" id="flash"></div>
 
+  <div style="padding:10px 16px 0;font-size:12px;color:#9ca3af;">Aquí verás solo los pedidos de los proveedores que vos gestionás.</div>
+
   <div id="loadingSpinner">Cargando pedidos…</div>
   <div id="listaContent" style="display:none">
 
@@ -802,7 +804,8 @@ let todosLosPedidos = [];
 var _proveedoresMap = {}; // nombre → tel (cargado desde GAS)
 
 function cargarProveedoresMap() {
-  fetch(SCRIPT_URL + '?action=getProveedores')
+  var _aeP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
+  fetch(SCRIPT_URL + '?action=getProveedores' + (_aeP ? '&email=' + encodeURIComponent(_aeP) : ''))
     .then(function(r){ return r.json(); })
     .then(function(data) {
       if (!data.ok || !data.proveedores) return;
@@ -976,7 +979,8 @@ var _incluyeCerrados = false;
 async function cargarLista(incluyeCerrados) {
   if (incluyeCerrados !== undefined) _incluyeCerrados = incluyeCerrados;
   try {
-    var gasUrl = SCRIPT_URL + '?action=getPedidos' + (_incluyeCerrados ? '&incluirCerrados=1' : '');
+    var _adminEmail = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
+    var gasUrl = SCRIPT_URL + '?action=getPedidos' + (_incluyeCerrados ? '&incluirCerrados=1' : '') + (_adminEmail ? '&email=' + encodeURIComponent(_adminEmail) : '');
     const [respPedidos, respTel] = await Promise.all([
       fetch(gasUrl, { redirect: 'follow' }).then(r => r.json()).catch(() => ({ ok: false, _usarCSV: true })),
       fetch(SCRIPT_URL + '?action=getTelProveedores').then(r => r.json()).catch(() => ({ ok: false }))
@@ -2396,7 +2400,8 @@ function filtrarCerrado(btn) {
   // Traer cerrados sin tocar el spinner de la lista principal
   btn.disabled = true;
   btn.textContent = '⏳';
-  fetch(SCRIPT_URL + '?action=getPedidos&incluirCerrados=1', { redirect: 'follow' })
+  var _ae2 = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
+  fetch(SCRIPT_URL + '?action=getPedidos&incluirCerrados=1' + (_ae2 ? '&email=' + encodeURIComponent(_ae2) : ''), { redirect: 'follow' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data.ok && data.pedidos) {
