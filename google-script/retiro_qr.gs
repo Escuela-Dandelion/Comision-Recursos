@@ -2676,7 +2676,8 @@ function apiProductos(email) {
           leadTime:       cfg.leadTime || 10,
           velMes:         velMes,
           semaforo:       semaforo,
-          activo:         v.visible !== false
+          activo:         v.visible !== false,
+          _dbg_clave_vel: nombre + (vn ? ' (' + vn + ')' : '')
         };
       });
 
