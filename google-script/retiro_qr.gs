@@ -328,6 +328,7 @@ function doGetInterno(e) {
         }
       }
       if (!found2) sh2.appendRow([clave, nomVar, umbralV !== null ? umbralV : '', pisoV !== null ? pisoV : '']);
+      _invalidarCacheProductos(e.parameter.email || '');
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     } catch(err2) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err2) })).setMimeType(ContentService.MimeType.JSON);
@@ -2614,9 +2615,26 @@ function _authGestion(email) {
   return puedeGestionar ? user : null;
 }
 
+function _productosCacheKey(email) {
+  return 'PROD_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+function _invalidarCacheProductos(email) {
+  try { CacheService.getScriptCache().remove(_productosCacheKey(email)); } catch(e) {}
+}
+
 function apiProductos(email) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso para gestionar productos.' };
+
+  // Intentar devolver desde cache (TTL 5 min)
+  var cache = CacheService.getScriptCache();
+  var cacheKey = _productosCacheKey(email);
+  var cached = cache.get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
   try {
     var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200';
     var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
@@ -2705,7 +2723,12 @@ function apiProductos(email) {
 
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
-    return { ok: true, productos: rows };
+    var result = { ok: true, productos: rows };
+
+    // Guardar en cache
+    try { cache.put(cacheKey, JSON.stringify(result), 300); } catch(e) {}
+
+    return result;
   } catch(err) {
     Logger.log('Error apiProductos: ' + err);
     return { ok: false, error: 'Error al cargar productos.' };
@@ -2722,6 +2745,7 @@ function apiUpdateProducto(email, productoId, nombre, descripcion) {
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
   var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
   if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateProducto error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar producto.' }; }
+  _invalidarCacheProductos(email);
   return { ok: true };
 }
 
@@ -2737,6 +2761,7 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
   var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
   if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateVariante error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar variante.' }; }
+  _invalidarCacheProductos(email);
   return { ok: true };
 }
 
