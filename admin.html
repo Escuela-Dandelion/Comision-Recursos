@@ -313,7 +313,7 @@
 
       <div class="nav-section-label">Gestión</div>
       <button class="nav-item" data-view="gestion" data-roles="admin,fgp,digital" onclick="showView('gestion', this)">
-        <span class="nav-icon">📦</span> Gestión de Productos
+        <span class="nav-icon">🏷️</span> Gestión de Productos
       </button>
       <button class="nav-item" data-view="digitales" data-roles="admin,digital" onclick="showView('digitales', this)">
         <span class="nav-icon">🎟</span> Productos Digitales
@@ -326,7 +326,7 @@
         <span class="nav-icon">📷</span> Registrar Entrega
       </button>
       <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,referente" onclick="showView('ventas', this)">
-        <span class="nav-icon">🛍️</span> Ventas
+        <span class="nav-icon">🛒</span> Ventas
       </button>
 
       <div class="nav-section-label">Reportes</div>
@@ -454,7 +454,7 @@
 
     <!-- VENTAS -->
     <div class="view" id="view-ventas">
-      <div class="view-title">🛍️ Ventas</div>
+      <div class="view-title">🛒 Ventas</div>
 
       <!-- Filtros estado -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
@@ -528,7 +528,7 @@
 
     <!-- GESTIÓN DE PRODUCTOS -->
     <div class="view" id="view-gestion">
-      <div class="view-title">🛒 Gestión de Productos</div>
+      <div class="view-title">🏷️ Gestión de Productos</div>
       <iframe id="iframe-gestion" class="view-iframe" src=""></iframe>
     </div>
 
@@ -726,11 +726,11 @@ function aplicarPermisos(role) {
 function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
-    { view:'gestion',              icon:'🧺', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','digital'],               url:null },
+    { view:'gestion',              icon:'🏷️', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','digital'],               url:null },
     { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital'],                     url:null },
     { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
-    { view:'ventas',               icon:'🛍️', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
+    { view:'ventas',               icon:'🛒', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
     { view:'dashboard-general',    icon:'📊', name:'Dashboard General',                         desc:'Ventas y métricas globales',            roles:['admin','staff','fgp'],                 url:'dashboard-general.html?appv='+APP_V },
     { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',                                desc:'Dashboard de tu grado',                 roles:['admin','staff','fgp','referente'],     url:'dashboard-referentes.html?appv='+APP_V },
   ];
