@@ -116,7 +116,9 @@ header .user:hover { color: #fff; }
   border-bottom: 1px solid var(--border);
 }
 .variantes-tabla td { padding: 5px 8px 5px 0; color: #374151; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.variantes-tabla tr.inactiva td { color: #c4c9d0; }
 .variantes-tabla .num { text-align: right; }
+.badge-inactiva { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
@@ -453,11 +455,12 @@ function renderLista(productos) {
     if (p.variantes && p.variantes.length > 0) {
       var filas = p.variantes.map(function(v) {
         var sc = stockClass(v);
-        return '<tr>' +
-          '<td>' + esc(v.sku || v.nombre) + '</td>' +
+        var inactiva = v.activo === false;
+        return '<tr' + (inactiva ? ' class="inactiva"' : '') + '>' +
+          '<td>' + esc(v.sku || v.nombre) + (inactiva ? ' <span class="badge-inactiva">Inactiva</span>' : '') + '</td>' +
           '<td><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
           '<td class="num">' + pesos(v.precio) + '</td>' +
-          '<td class="num" style="color:var(--muted)">' + (v.precio_promo > 0 ? pesos(v.precio_promo) : '—') + '</td>' +
+          '<td class="num">' + (v.precio_promo > 0 ? pesos(v.precio_promo) : '—') + '</td>' +
           '<td>' + esc(v.nombre) + '</td>' +
           '</tr>';
       }).join('');

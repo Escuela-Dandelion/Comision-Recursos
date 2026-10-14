@@ -2607,7 +2607,8 @@ function apiProductos(email) {
             precio:      parseFloat(v.price || 0),
             precio_promo: parseFloat(v.promotional_price || 0),
             costo:       parseFloat(v.cost || 0),
-            stock:       (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock)
+            stock:       (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
+            activo:      v.active !== false
           };
         })
       };
