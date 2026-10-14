@@ -101,15 +101,21 @@ header .user:hover { color: #fff; }
 }
 
 .variantes-tabla {
-  width: 100%; border-collapse: collapse; font-size: 12px;
+  border-collapse: collapse; font-size: 12px;
   margin: 0 24px 12px; width: calc(100% - 48px);
+  table-layout: fixed;
 }
+.variantes-tabla col.col-sku      { width: 38%; }
+.variantes-tabla col.col-stock    { width: 16%; }
+.variantes-tabla col.col-precio   { width: 16%; }
+.variantes-tabla col.col-promo    { width: 14%; }
+.variantes-tabla col.col-variante { width: 16%; }
 .variantes-tabla th {
   text-align: left; color: var(--muted); font-weight: 600; font-size: 10px;
   text-transform: uppercase; letter-spacing: .5px; padding: 4px 8px 4px 0;
   border-bottom: 1px solid var(--border);
 }
-.variantes-tabla td { padding: 5px 8px 5px 0; color: #374151; vertical-align: middle; }
+.variantes-tabla td { padding: 5px 8px 5px 0; color: #374151; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .variantes-tabla .num { text-align: right; }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
@@ -454,6 +460,7 @@ function renderLista(productos) {
           '</tr>';
       }).join('');
       variantesHtml = '<table class="variantes-tabla">' +
+        '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-precio"><col class="col-promo"><col class="col-variante"></colgroup>' +
         '<thead><tr><th>SKU</th><th>Stock</th><th class="num">Precio</th><th class="num">Promo</th><th>Variante</th></tr></thead>' +
         '<tbody>' + filas + '</tbody></table>';
     }
