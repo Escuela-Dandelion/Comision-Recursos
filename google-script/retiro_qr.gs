@@ -551,6 +551,13 @@ function enviarEmail(email, nombre, order, qrBlob, productos) {
       '<p style="margin:10px 0 0 0;font-size:12px;color:#6b9e6b">¡Gracias por apoyar a la comunidad Dandelion!</p>' +
       '<p style="margin:8px 0 0 0;font-size:11px;color:#999">Este aporte fue asignado al ' + formatearGrado(aporte.grado) + ' porque lo indicaste al momento de hacer tu compra. Si elegiste un destino diferente o querés hacer alguna corrección, <a href="https://wa.me/' + CONFIG.INES_TEL + '?text=' + encodeURIComponent('Hola! Quiero consultar sobre el aporte a grado de mi pedido #' + order.number) + '" style="color:#3a7d44">escribinos por WhatsApp</a>.</p>' +
       '</div>';
+  } else if (mostrarAporte) {
+    bloqueGrado =
+      '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
+      '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
+      '<p style="margin:0 0 10px 0;font-size:14px;color:#555;line-height:1.6">Como no indicaste un grado en especial, tu aporte fue íntegramente para la Escuela Dandelion.</p>' +
+      '<p style="margin:0;font-size:11px;color:#999">Si necesitás cambiar el destino de tu aporte o tenés alguna corrección, <a href="https://wa.me/' + CONFIG.INES_TEL + '?text=' + encodeURIComponent('Hola! Quiero consultar sobre el aporte de mi pedido #' + order.number) + '" style="color:#3a7d44">escribinos por WhatsApp</a>.</p>' +
+      '</div>';
   }
 
   var html =
