@@ -693,7 +693,11 @@ function guardarInfo() {
       _productoActual.descripcion = desc;
       document.getElementById('panel-titulo').textContent = nombre;
       var row = document.getElementById('row-' + _productoActual.id);
-      if (row) row.querySelector('.prod-nombre').childNodes[0].textContent = nombre;
+      if (row) {
+        var semClass = _productoActual.semaforo || 'verde';
+        var badgeHtml = !_productoActual.publicado ? '<span class="badge-nopub">No listado</span>' : '';
+        row.querySelector('.prod-nombre').innerHTML = '<span class="prod-sem ' + semClass + '"></span>' + esc(nombre) + badgeHtml;
+      }
     } else { setSt('info', d.error || 'Error', false); }
   })
   .catch(function(err) { btn.disabled = false; setSt('info', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
