@@ -260,6 +260,7 @@ function doGetInterno(e) {
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(ordId)) {
         sheet.getRange(i + 1, 10).setValue(notas);
+        _invalidarCacheRetiros();
         return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -627,6 +628,7 @@ function registrarEnSheet(order, token) {
     getOrderDiscount(order),                             // col 12: Descuento total del pedido
     getDiscountType(order)                               // col 13: Tipo de descuento (Cupón / DxC / Cupón+DxC)
   ]);
+  _invalidarCacheRetiros();
 }
 
 // Normaliza col 11 (Grado) en todas las filas del sheet Retiros
@@ -1553,6 +1555,7 @@ function apiEntregar(orderId, staffName, adminPass, token, notas, email) {
   if (!staffKey) return { ok: false, error: 'Seleccioná tu nombre.' };
   try {
     marcarEntregado(orderId, staffKey, notas || '');
+    _invalidarCacheRetiros();
   } catch(err) {
     Logger.log('Error al marcar entregado: ' + err);
     return { ok: false, error: 'No se pudo registrar la entrega: ' + err.message };
@@ -2073,6 +2076,12 @@ function staffToGrado(staffKey) {
 
 // ── RETIROS CON ESTADO ENTREGADO/PENDIENTE ───────────────────
 function getRetirosData(estadoFiltro, diasFiltro) {
+  var cacheKey = _retirosCacheKey(estadoFiltro, diasFiltro);
+  try {
+    var cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch(e) {}
+
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
 
   // Construir mapa pedido# → set de marcas desde el sheet Ventas
@@ -2137,7 +2146,9 @@ function getRetirosData(estadoFiltro, diasFiltro) {
       marcas:        Object.keys(marcasMap[String(row[1] || '')] || {})
     });
   }
-  return rows.reverse();
+  var result = rows.reverse();
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 180); } catch(e) {}
+  return result;
 }
 
 // ── TEST: distintos casos de uso ──────────────────────────────
@@ -2611,8 +2622,24 @@ function _authGestion(email) {
   if (!email) return null;
   var user = AUTH_EMAILS[email.toLowerCase().trim()];
   if (!user) return null;
-  var puedeGestionar = user.role === 'ADMIN' || (user.marcas && user.marcas.length > 0);
+  var puedeGestionar = user.role === 'ADMIN' || user.role === 'digital' || (user.marcas && user.marcas.length > 0);
   return puedeGestionar ? user : null;
+}
+
+function _retirosCacheKey(estadoFiltro, diasFiltro) {
+  return 'RETIROS_V1_' + (estadoFiltro || 'todos') + '_' + (diasFiltro || 0);
+}
+
+function _invalidarCacheRetiros() {
+  try {
+    CacheService.getScriptCache().removeAll([
+      'RETIROS_V1_Pendiente_0',
+      'RETIROS_V1_Entregado_60',
+      'RETIROS_V1_Todos_30',
+      'RETIROS_V1_todos_0',
+      'RETIROS_V1__0'
+    ]);
+  } catch(e) {}
 }
 
 function _productosCacheKey(email) {
@@ -2641,7 +2668,11 @@ function apiProductos(email) {
     if (resp.getResponseCode() !== 200) return { ok: false, error: 'Error al cargar productos de TiendaNube.' };
     var productos = JSON.parse(resp.getContentText());
 
-    if (user.role !== 'ADMIN' && user.marcas && user.marcas.length > 0) {
+    if (user.role === 'digital') {
+      productos = productos.filter(function(p) {
+        return CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.id)) !== -1;
+      });
+    } else if (user.role !== 'ADMIN' && user.marcas && user.marcas.length > 0) {
       var marcasUp = user.marcas.map(function(m) { return m.toUpperCase(); });
       productos = productos.filter(function(p) {
         return marcasUp.indexOf(String(p.brand || '').toUpperCase()) !== -1;

@@ -535,7 +535,7 @@ function renderLista(productos) {
         var sem = v.semaforo || 'verde';
         var margenStr = v.margen !== null && v.margen !== undefined ? v.margen + '%' : '—';
         return '<tr' + (inactiva ? ' class="inactiva"' : '') + '>' +
-          '<td>' + esc(v.sku || v.nombre) + (inactiva ? ' <span class="badge-inactiva">Inactiva</span>' : '') + '</td>' +
+          '<td>' + esc(v.sku || v.nombre) + '</td>' +
           '<td class="num"><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
           '<td style="text-align:center"><span class="sem-dot ' + sem + '"></span></td>' +
           '<td class="num">' + (v.velMes || '—') + '</td>' +
@@ -544,7 +544,7 @@ function renderLista(productos) {
           '<td class="num">' + pesos(v.precio) + '</td>' +
           '<td class="num">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</td>' +
           '<td class="num">' + margenStr + '</td>' +
-          '<td>' + esc(v.nombre) + '</td>' +
+          '<td>' + esc(v.nombre) + (inactiva ? ' <span class="badge-inactiva">Inactivo</span>' : '') + '</td>' +
           '</tr>';
       }).join('');
       variantesHtml = '<table class="variantes-tabla">' +
