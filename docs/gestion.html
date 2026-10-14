@@ -6,6 +6,8 @@
 <title>Gestión de Productos — Diente de León</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f8fa; color: #1a1a2e; }
@@ -239,6 +241,7 @@ textarea.field { min-height: 90px; resize: vertical; }
     <div class="lista-wrap" id="lista-wrap">
       <div class="lista-header">
         <h1>Productos</h1>
+        <p style="font-size:12px; color:var(--muted); margin-top:2px; width:100%;">Aquí verás solo los productos que vos podés administrar.</p>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
           <input id="buscar" type="text" placeholder="Buscar por nombre o SKU..." oninput="filtrar()">
@@ -265,7 +268,7 @@ textarea.field { min-height: 90px; resize: vertical; }
         </div>
         <div class="field-group">
           <label class="field-label">Descripción</label>
-          <textarea class="field" id="edit-descripcion"></textarea>
+          <div id="edit-descripcion-editor" style="background:#fff; border:1px solid var(--border); border-radius:6px; min-height:120px;"></div>
         </div>
         <button class="btn-guardar" id="btn-guardar-info" onclick="guardarInfo()">Guardar</button>
         <span class="save-status" id="st-info"></span>
@@ -492,7 +495,7 @@ function abrirEditor(productoId) {
 
   document.getElementById('panel-titulo').textContent = p.nombre;
   document.getElementById('edit-nombre').value       = p.nombre;
-  document.getElementById('edit-descripcion').value  = p.descripcion || '';
+  quill.root.innerHTML = p.descripcion || '';
 
   // Foto
   if (p.imagen) {
@@ -596,7 +599,7 @@ function setSt(key, msg, ok) {
 function guardarInfo() {
   if (!_productoActual) return;
   var nombre = document.getElementById('edit-nombre').value.trim();
-  var desc   = document.getElementById('edit-descripcion').value.trim();
+  var desc   = quill.root.innerHTML.trim();
   if (!nombre) { setSt('info', 'El nombre no puede estar vacío.', false); return; }
   var btn = document.getElementById('btn-guardar-info');
   btn.disabled = true; setSt('info', 'Guardando...');
@@ -742,6 +745,19 @@ function guardarFoto() {
   })
   .catch(function() { btn.disabled = false; setSt('foto', 'Error de red', false); });
 }
+</script>
+
+<script>
+var quill = new Quill('#edit-descripcion-editor', {
+  theme: 'snow',
+  modules: {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['clean']
+    ]
+  }
+});
 </script>
 </body>
 </html>
