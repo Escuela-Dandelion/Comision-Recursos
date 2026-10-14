@@ -124,6 +124,9 @@ header .user:hover { color: #fff; }
 .variantes-tabla .num { text-align: right; }
 .badge-inactiva { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; background: #f3f4f6; color: #9ca3af; border: 1px solid #d1d5db; margin-left: 4px; }
 .sem-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; vertical-align: middle; }
+.tip-btn-g { background: none; border: 1px solid #d1d5db; border-radius: 50%; width: 13px; height: 13px; font-size: 8px; cursor: pointer; color: #9ca3af; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; vertical-align: middle; margin-left: 3px; }
+.tip-box-g { display: none; position: fixed; background: #1f2937; color: #f3f4f6; font-size: 11px; padding: 6px 9px; border-radius: 7px; width: 240px; line-height: 1.6; z-index: 9999; white-space: pre-line; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.tip-box-g.open { display: block; }
 .sem-dot.rojo   { background: #ef4444; }
 .sem-dot.naranja { background: #f97316; }
 .sem-dot.verde  { background: #22c55e; }
@@ -463,6 +466,34 @@ function recargarProductos() {
 
 // ── LISTA ──────────────────────────────────────────────────────
 
+function umbralTipG(v) {
+  if (!v.velMes)
+    return 'Sin ventas registradas — umbral por defecto de ' + v.umbral + ' u.';
+  var lead = v.leadTime || 10;
+  return '📦 Se venden ~' + v.velMes + ' u. por mes\n' +
+    '🚚 El proveedor puede tardar hasta ~' + lead + ' días en entregar\n' +
+    '⚠️ Hay que pedir cuando quedan ' + v.umbral + ' u. — si esperás más, el stock se agota antes de que llegue el pedido';
+}
+
+function toggleTipG(id, e) {
+  e.stopPropagation();
+  var box = document.getElementById('gtip-' + id);
+  var isOpen = box.classList.contains('open');
+  document.querySelectorAll('.tip-box-g.open').forEach(function(el) { el.classList.remove('open'); });
+  if (!isOpen) {
+    var btn = e.currentTarget;
+    var rect = btn.getBoundingClientRect();
+    var left = rect.left + rect.width / 2 - 120;
+    left = Math.max(8, Math.min(left, window.innerWidth - 248));
+    box.style.top  = (rect.bottom + 5) + 'px';
+    box.style.left = left + 'px';
+    box.classList.add('open');
+  }
+}
+document.addEventListener('click', function() {
+  document.querySelectorAll('.tip-box-g.open').forEach(function(el) { el.classList.remove('open'); });
+});
+
 function stockClass(v) {
   if (v.stock === null) return 'stock-inf';
   if (v.stock === 0)   return 'stock-cero';
@@ -503,7 +534,7 @@ function renderLista(productos) {
           '<td class="num"><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
           '<td style="text-align:center"><span class="sem-dot ' + sem + '"></span></td>' +
           '<td class="num">' + (v.velMes || '—') + '</td>' +
-          '<td class="num">' + (v.umbral !== undefined && v.umbral !== null ? v.umbral : '—') + '</td>' +
+          '<td class="num" style="white-space:nowrap">' + (v.umbral !== undefined && v.umbral !== null ? v.umbral : '—') + (v.umbral ? '<button class="tip-btn-g" onclick="toggleTipG(\'' + v.id + '\',event)">i</button><div class="tip-box-g" id="gtip-' + v.id + '">' + umbralTipG(v) + '</div>' : '') + '</td>' +
           '<td class="num">' + pesos(v.precio) + '</td>' +
           '<td class="num">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</td>' +
           '<td class="num">' + margenStr + '</td>' +
