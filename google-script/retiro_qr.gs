@@ -298,6 +298,41 @@ function doGetInterno(e) {
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'update_producto') {
+    var res = apiUpdateProducto(e.parameter.email || '', e.parameter.producto_id || '', e.parameter.nombre, e.parameter.descripcion);
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'update_variante') {
+    var res = apiUpdateVariante(e.parameter.email || '', e.parameter.producto_id || '', e.parameter.variante_id || '', e.parameter.precio, e.parameter.precio_promo, e.parameter.costo, e.parameter.stock);
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'saveStockOverride') {
+    try {
+      var clave   = e.parameter.clave || '';
+      var nomVar  = e.parameter.nombre_variante || '';
+      var umbralV = (e.parameter.umbral !== undefined && e.parameter.umbral !== '') ? parseInt(e.parameter.umbral) : null;
+      var pisoV   = (e.parameter.piso   !== undefined && e.parameter.piso   !== '') ? parseInt(e.parameter.piso)   : null;
+      var ss2  = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
+      var sh2  = ss2.getSheetByName('ConfigStock');
+      if (!sh2) { sh2 = ss2.insertSheet('ConfigStock'); sh2.appendRow(['Clave','Nombre','Umbral Override','Piso Override']); }
+      var dat2 = sh2.getDataRange().getValues();
+      var found2 = false;
+      for (var k = 1; k < dat2.length; k++) {
+        if (String(dat2[k][0]).trim() === clave) {
+          sh2.getRange(k + 1, 3).setValue(umbralV !== null ? umbralV : '');
+          sh2.getRange(k + 1, 4).setValue(pisoV   !== null ? pisoV   : '');
+          found2 = true; break;
+        }
+      }
+      if (!found2) sh2.appendRow([clave, nomVar, umbralV !== null ? umbralV : '', pisoV !== null ? pisoV : '']);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    } catch(err2) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err2) })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   if (action === 'preview_informe') {
     return previewInformeMensual(e.parameter.mes || '');
   }
@@ -2620,17 +2655,18 @@ function apiProductos(email) {
           else if (st <= umbral) semaforo = 'naranja';
         }
         return {
-          id:      String(v.id),
-          sku:     v.sku || '',
-          nombre:  vn,
-          precio:  precio,
-          costo:   costo,
-          margen:  margen,
-          stock:   (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
-          umbral:  umbral,
-          velMes:  velMes,
-          semaforo: semaforo,
-          activo:  v.active === true
+          id:             String(v.id),
+          sku:            v.sku || '',
+          nombre:         vn,
+          precio:         precio,
+          costo:          costo,
+          margen:         margen,
+          stock:          (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
+          umbral:         umbral,
+          umbralOverride: (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : null,
+          velMes:         velMes,
+          semaforo:       semaforo,
+          activo:         v.active === true
         };
       });
 

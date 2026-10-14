@@ -123,7 +123,7 @@ header .user:hover { color: #fff; }
 .variantes-tabla tr.inactiva td { color: #c4c9d0; background: repeating-linear-gradient(135deg, transparent, transparent 4px, rgba(0,0,0,.03) 4px, rgba(0,0,0,.03) 8px); }
 .variantes-tabla .num { text-align: right; }
 .badge-inactiva { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; background: #f3f4f6; color: #9ca3af; border: 1px solid #d1d5db; margin-left: 4px; }
-.sem-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sem-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; vertical-align: middle; }
 .sem-dot.rojo   { background: #ef4444; }
 .sem-dot.naranja { background: #f97316; }
 .sem-dot.verde  { background: #22c55e; }
@@ -650,6 +650,13 @@ function renderEditStock(variantes) {
         '<label class="field-label">Cantidad</label>' +
         '<input class="field" id="stock-' + v.id + '" type="number" step="1" min="0" value="' + (esInf ? '' : v.stock) + '" style="max-width:140px">' +
       '</div>' +
+      '<div style="margin-top:10px">' +
+        '<label class="field-label">Umbral de alerta</label>' +
+        '<input class="field" id="umbral-' + v.id + '" type="number" step="1" min="0" ' +
+          'value="' + (v.umbralOverride !== null && v.umbralOverride !== undefined ? v.umbralOverride : '') + '" ' +
+          'placeholder="auto (' + (v.umbral || '—') + ')" style="max-width:140px">' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = usar valor calculado automáticamente.</div>' +
+      '</div>' +
     '</div>';
   }).join('');
   document.getElementById('edit-stock').innerHTML = html;
@@ -675,11 +682,8 @@ function guardarInfo() {
   if (!nombre) { setSt('info', 'El nombre no puede estar vacío.', false); return; }
   var btn = document.getElementById('btn-guardar-info');
   btn.disabled = true; setSt('info', 'Guardando...');
-  fetch(GAS_URL, {
-    method: 'POST', redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: _productoActual.id, nombre: nombre, descripcion: desc })
-  })
+  var _pInfo = new URLSearchParams({ action: 'update_producto', email: currentUser.email, producto_id: String(_productoActual.id), nombre: nombre, descripcion: desc });
+  fetch(GAS_URL + '?' + _pInfo.toString(), { redirect: 'follow' })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     btn.disabled = false;
@@ -703,11 +707,8 @@ function guardarPrecios() {
     var precio = document.getElementById('precio-' + v.id).value;
     var promo  = document.getElementById('promo-'  + v.id).value;
     var costo  = document.getElementById('costo-'  + v.id).value;
-    return fetch(GAS_URL, {
-      method: 'POST', redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, precio: precio, precio_promo: promo, costo: costo })
-    }).then(function(r) { return r.json(); });
+    var _pPr = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), precio: precio, precio_promo: promo, costo: costo });
+    return fetch(GAS_URL + '?' + _pPr.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
   });
   Promise.all(promesas).then(function(resultados) {
     btn.disabled = false;
@@ -724,11 +725,14 @@ function guardarStock() {
   var promesas = _productoActual.variantes.map(function(v) {
     var esInf  = document.getElementById('inf-' + v.id).checked;
     var stock  = esInf ? null : document.getElementById('stock-' + v.id).value;
-    return fetch(GAS_URL, {
-      method: 'POST', redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, stock: stock })
-    }).then(function(r) { return r.json(); });
+    var umbralEl = document.getElementById('umbral-' + v.id);
+    var umbralVal = umbralEl ? umbralEl.value.trim() : '';
+    var _pSt = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), stock: stock === null ? 'null' : String(stock) });
+    var stockFetch = fetch(GAS_URL + '?' + _pSt.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    var clave = _productoActual.id + '_' + v.id;
+    var _pUmb = new URLSearchParams({ action: 'saveStockOverride', clave: clave, nombre_variante: v.nombre || v.sku || '', umbral: umbralVal });
+    var umbralFetch = fetch(GAS_URL + '?' + _pUmb.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    return Promise.all([stockFetch, umbralFetch]).then(function(rs) { return rs[0]; });
   });
   Promise.all(promesas).then(function(resultados) {
     btn.disabled = false;
