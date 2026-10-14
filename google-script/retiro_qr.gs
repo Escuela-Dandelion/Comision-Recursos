@@ -2763,14 +2763,15 @@ function apiProductos(email) {
         var proveedorRaw = String(pedData[pi][2] || '').trim();
         var estadoPed   = String(pedData[pi][5] || '').trim();
         if (!norden || !proveedorRaw || ACTIVOS_EST.indexOf(estadoPed.toLowerCase()) === -1) continue;
-        var marcaPed = proveedorRaw.toUpperCase();
+        var marcaPed = invDetectarMarca(proveedorRaw) || proveedorRaw.toUpperCase();
         if (!pedidosActivos[marcaPed]) pedidosActivos[marcaPed] = [];
         pedidosActivos[marcaPed].push({ norden: norden, estado: estadoPed });
       }
     } catch(e) { Logger.log('apiProductos pedidos activos error: ' + e); }
 
     rows.forEach(function(r) {
-      r.pedidos = pedidosActivos[String(r.brand || '').toUpperCase()] || [];
+      var marcaKey = invDetectarMarca(r.nombre) || String(r.brand || '').toUpperCase();
+      r.pedidos = pedidosActivos[marcaKey] || [];
     });
 
     // Ordenar: rojo → naranja → verde
