@@ -269,10 +269,13 @@ textarea.field { min-height: 90px; resize: vertical; }
           <h1>Productos</h1>
           <p style="font-size:12px; color:var(--muted); margin-top:2px;">Aquí verás solo los productos que vos podés administrar.</p>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="pill-filtro" id="pill-rojo"    onclick="toggleFiltroSem('rojo')"><span class="sem-dot rojo"></span>Rojo</span>
-          <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
-          <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
+        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px;">
+          <span style="font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);">Estado de inventario</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="pill-filtro" id="pill-rojo"    onclick="toggleFiltroSem('rojo')"><span class="sem-dot rojo"></span>Rojo</span>
+            <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
+            <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
+          </div>
         </div>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
