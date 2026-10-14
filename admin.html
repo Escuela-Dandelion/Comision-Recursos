@@ -800,7 +800,7 @@ function showView(viewId, navBtn, opts) {
   if (viewId === 'gestion') {
     var gestionIframe = document.getElementById('iframe-gestion');
     if (gestionIframe && gestionIframe.src.indexOf('gestion.html') === -1 && currentUser && currentUser.email) {
-      gestionIframe.src = 'gestion.html?email=' + encodeURIComponent(currentUser.email);
+      gestionIframe.src = 'gestion.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261014b';
     }
   }
 
