@@ -451,6 +451,10 @@ function cargarProductos() {
     .then(function(d) {
       if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
       _productos = d.productos || [];
+      // DEBUG TEMPORAL
+      console.log('[DBG] pedidosActivos keys:', d._dbg_pedidosKeys);
+      var mani = _productos.find(function(p){ return /man[ií]/i.test(p.nombre); });
+      if (mani) console.log('[DBG] Maní → marca:', mani._dbg_marca, '| brand:', mani.brand, '| pedidos:', JSON.stringify(mani.pedidos));
       document.getElementById('loading-overlay').style.display = 'none';
       renderLista(_productos);
     })
