@@ -23,7 +23,7 @@ html.embedded .layout { height: 100vh; }
 
 /* ── LOGIN ── */
 #login-screen {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; display: none; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #1e3d1a 0%, #2d5a27 100%); padding: 24px;
 }
 .login-box {
@@ -357,6 +357,7 @@ window.addEventListener('load', function() {
       if (u && u.email && u.role) { currentUser = u; mostrarApp(); return; }
     } catch(e) {}
   }
+  document.getElementById('login-screen').style.display = 'flex';
   google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredential, auto_select: false });
   google.accounts.id.renderButton(document.getElementById('google-btn-container'), {
     theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: 280
