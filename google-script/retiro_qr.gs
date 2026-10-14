@@ -2752,6 +2752,27 @@ function apiProductos(email) {
       };
     });
 
+    // Pedidos activos por marca
+    var pedidosActivos = {};
+    try {
+      var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino'];
+      var pedSheet = getPedidosSheet();
+      var pedData  = pedSheet.getDataRange().getValues();
+      for (var pi = 1; pi < pedData.length; pi++) {
+        var norden      = String(pedData[pi][0] || '').trim();
+        var proveedorRaw = String(pedData[pi][2] || '').trim();
+        var estadoPed   = String(pedData[pi][5] || '').trim();
+        if (!norden || !proveedorRaw || ACTIVOS_EST.indexOf(estadoPed.toLowerCase()) === -1) continue;
+        var marcaPed = proveedorRaw.toUpperCase();
+        if (!pedidosActivos[marcaPed]) pedidosActivos[marcaPed] = [];
+        pedidosActivos[marcaPed].push({ norden: norden, estado: estadoPed });
+      }
+    } catch(e) { Logger.log('apiProductos pedidos activos error: ' + e); }
+
+    rows.forEach(function(r) {
+      r.pedidos = pedidosActivos[String(r.brand || '').toUpperCase()] || [];
+    });
+
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
     var result = { ok: true, productos: rows };
