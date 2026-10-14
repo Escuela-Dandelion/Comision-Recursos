@@ -677,6 +677,7 @@ function guardarInfo() {
   btn.disabled = true; setSt('info', 'Guardando...');
   fetch(GAS_URL, {
     method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: _productoActual.id, nombre: nombre, descripcion: desc })
   })
   .then(function(r) { return r.json(); })
@@ -704,6 +705,7 @@ function guardarPrecios() {
     var costo  = document.getElementById('costo-'  + v.id).value;
     return fetch(GAS_URL, {
       method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, precio: precio, precio_promo: promo, costo: costo })
     }).then(function(r) { return r.json(); });
   });
@@ -724,6 +726,7 @@ function guardarStock() {
     var stock  = esInf ? null : document.getElementById('stock-' + v.id).value;
     return fetch(GAS_URL, {
       method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, stock: stock })
     }).then(function(r) { return r.json(); });
   });
@@ -800,6 +803,7 @@ function guardarFoto() {
   btn.disabled = true; setSt('foto', 'Subiendo...');
   fetch(GAS_URL, {
     method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'update_imagen', email: currentUser.email, producto_id: _productoActual.id, base64: _fotoBase64, mime_type: _fotoMime })
   })
   .then(function(r) { return r.json(); })
