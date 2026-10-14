@@ -316,7 +316,7 @@
         <span class="nav-icon">📦</span> Gestión de Productos
       </button>
       <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
-        <span class="nav-icon">📦</span> Pedidos
+        <span class="nav-icon">📋</span> Pedidos Proveedor
       </button>
 
       <button class="nav-item" data-view="qr" data-roles="admin,staff,referente" onclick="showView('qr', this)">
@@ -717,7 +717,7 @@ function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
     { view:'gestion',              icon:'🧺', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp'],                         url:null },
-    { view:'pedidos',              icon:'📋', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
+    { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
     { view:'ventas',               icon:'🛍️', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
     { view:'dashboard-general',    icon:'📊', name:'Dashboard General',                         desc:'Ventas y métricas globales',            roles:['admin','staff','fgp'],                 url:'dashboard-general.html?appv='+APP_V },

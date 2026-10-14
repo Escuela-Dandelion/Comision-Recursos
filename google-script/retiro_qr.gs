@@ -2696,6 +2696,7 @@ function apiProductos(email) {
         imagenes:  (p.images || []).map(function(img) { return { id: String(img.id), src: img.src }; }),
         brand:     String(p.brand || ''),
         publicado: p.published !== false,
+        esDigital: CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.id)) !== -1,
         semaforo:  semProd,
         variantes: variantes
       };

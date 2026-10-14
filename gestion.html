@@ -99,6 +99,10 @@ header .user:hover { color: #fff; }
   display: inline-block; background: #f3f4f6; color: var(--muted);
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
 }
+.badge-digital {
+  display: inline-block; background: #ede9fe; color: #7c3aed;
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
+}
 
 .variantes-tabla {
   border-collapse: collapse; font-size: 12px;
@@ -553,7 +557,7 @@ function renderLista(productos) {
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
-          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + '</div>' +
+          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + '</div>' +
           '<div class="prod-brand">' + esc(p.brand) + '</div>' +
         '</div>' +
       '</div>' +
