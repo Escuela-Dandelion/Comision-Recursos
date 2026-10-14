@@ -2756,26 +2756,30 @@ function apiProductos(email) {
     var pedidosActivos = {};
     try {
       var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino'];
-      var pedSheet = getPedidosSheet();
-      var pedData  = pedSheet.getDataRange().getValues();
+      var ss2 = SpreadsheetApp.openById('1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I');
+      var pedSheet = null;
+      var allSheets = ss2.getSheets();
+      for (var si = 0; si < allSheets.length; si++) {
+        if (String(allSheets[si].getSheetId()) === '857535467') { pedSheet = allSheets[si]; break; }
+      }
+      if (!pedSheet) pedSheet = ss2.getSheets()[0];
+      var pedData = pedSheet.getDataRange().getValues();
       for (var pi = 1; pi < pedData.length; pi++) {
-        var norden      = String(pedData[pi][0] || '').trim();
+        var norden       = String(pedData[pi][0] || '').trim();
         var proveedorRaw = String(pedData[pi][2] || '').trim();
-        var estadoPed   = String(pedData[pi][5] || '').trim();
+        var estadoPed    = String(pedData[pi][5] || '').trim();
         if (!norden || !proveedorRaw || ACTIVOS_EST.indexOf(estadoPed.toLowerCase()) === -1) continue;
         var marcaPed = proveedorRaw.toUpperCase();
         if (!pedidosActivos[marcaPed]) pedidosActivos[marcaPed] = [];
         pedidosActivos[marcaPed].push({ norden: norden, estado: estadoPed });
       }
-    } catch(e) { Logger.log('apiProductos pedidos activos error: ' + e); }
+    } catch(errPed) { Logger.log('apiProductos pedidos activos error: ' + errPed); }
 
-    try {
-      rows.forEach(function(r) {
-        var brandKey = String(r.brand || '').toUpperCase();
-        r.pedidos = pedidosActivos[brandKey] || [];
-        r._dbg_marca = brandKey;
-      });
-    } catch(e) { Logger.log('apiProductos pedidos forEach error: ' + e); }
+    rows.forEach(function(r) {
+      var brandKey = String(r.brand || '').toUpperCase();
+      r.pedidos = pedidosActivos[brandKey] || [];
+      r._dbg_marca = brandKey;
+    });
 
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
