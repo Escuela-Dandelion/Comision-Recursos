@@ -445,6 +445,22 @@ function cargarProductos() {
     .catch(function() { document.getElementById('loading-overlay').textContent = 'Error de conexión.'; });
 }
 
+function recargarProductos() {
+  fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return;
+      _productos = d.productos || [];
+      var idActual = _productoActual ? _productoActual.id : null;
+      renderLista(_productos);
+      if (idActual) {
+        var p = _productos.find(function(x) { return x.id === idActual; });
+        if (p) { _productoActual = p; renderEditStock(p.variantes); renderEditPrecios(p.variantes); }
+      }
+    })
+    .catch(function() {});
+}
+
 // ── LISTA ──────────────────────────────────────────────────────
 
 function stockClass(v) {
@@ -689,7 +705,6 @@ function guardarPrecios() {
     var costo  = document.getElementById('costo-'  + v.id).value;
     return fetch(GAS_URL, {
       method: 'POST', redirect: 'follow',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, precio: precio, precio_promo: promo, costo: costo })
     }).then(function(r) { return r.json(); });
   });
@@ -710,7 +725,6 @@ function guardarStock() {
     var stock  = esInf ? null : document.getElementById('stock-' + v.id).value;
     return fetch(GAS_URL, {
       method: 'POST', redirect: 'follow',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_variante', email: currentUser.email, producto_id: _productoActual.id, variante_id: v.id, stock: stock })
     }).then(function(r) { return r.json(); });
   });
@@ -718,7 +732,11 @@ function guardarStock() {
     btn.disabled = false;
     var errores = resultados.filter(function(r) { return !r.ok; });
     if (errores.length) { setSt('stock', errores[0].error || 'Error', false); }
-    else { setSt('stock', '✓ Guardado', true); actualizarVariantesLocales('stock'); }
+    else {
+      setSt('stock', '✓ Guardado', true);
+      actualizarVariantesLocales('stock');
+      setTimeout(function() { recargarProductos(); }, 800);
+    }
   }).catch(function(err) { btn.disabled = false; setSt('stock', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
 }
 
