@@ -688,13 +688,19 @@ function renderEditStock(variantes) {
           '<label class="field-label">Umbral de alerta <span style="color:var(--muted);font-weight:400">(naranja)</span></label>' +
           '<input class="field" id="umbral-' + v.id + '" type="number" step="1" min="0" ' +
             'value="' + (v.umbralOverride !== null && v.umbralOverride !== undefined ? v.umbralOverride : '') + '" ' +
-            'placeholder="auto (' + (v.umbral || '—') + ')" style="max-width:120px">' +
+            'placeholder="auto (' + (v.umbral || '—') + ')" ' +
+            'data-auto="' + (v.umbral || '') + '" ' +
+            'onfocus="if(!this.value&&this.dataset.auto)this.value=this.dataset.auto" ' +
+            'style="max-width:120px">' +
         '</div>' +
         '<div>' +
           '<label class="field-label">Piso crítico <span style="color:var(--muted);font-weight:400">(rojo)</span></label>' +
           '<input class="field" id="piso-' + v.id + '" type="number" step="1" min="0" ' +
             'value="' + (v.pisoOverride !== null && v.pisoOverride !== undefined ? v.pisoOverride : '') + '" ' +
-            'placeholder="auto (' + (v.piso || '—') + ')" style="max-width:120px">' +
+            'placeholder="auto (' + (v.piso || '—') + ')" ' +
+            'data-auto="' + (v.piso || '') + '" ' +
+            'onfocus="if(!this.value&&this.dataset.auto)this.value=this.dataset.auto" ' +
+            'style="max-width:120px">' +
         '</div>' +
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = usar valor calculado automáticamente.</div>' +
