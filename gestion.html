@@ -109,7 +109,8 @@ header .user:hover { color: #fff; }
 .variantes-tabla col.col-stock    { width: 8%; }
 .variantes-tabla col.col-sem      { width: 5%; }
 .variantes-tabla col.col-vel      { width: 8%; }
-.variantes-tabla col.col-umbral   { width: 8%; }
+.variantes-tabla col.col-umbral   { width: 7%; }
+.variantes-tabla col.col-piso     { width: 6%; }
 .variantes-tabla col.col-precio   { width: 10%; }
 .variantes-tabla col.col-costo    { width: 10%; }
 .variantes-tabla col.col-margen   { width: 9%; }
@@ -535,6 +536,7 @@ function renderLista(productos) {
           '<td style="text-align:center"><span class="sem-dot ' + sem + '"></span></td>' +
           '<td class="num">' + (v.velMes || '—') + '</td>' +
           '<td class="num" style="white-space:nowrap">' + (v.umbral !== undefined && v.umbral !== null ? v.umbral : '—') + (v.umbral ? '<button class="tip-btn-g" onclick="toggleTipG(\'' + v.id + '\',event)">i</button><div class="tip-box-g" id="gtip-' + v.id + '">' + umbralTipG(v) + '</div>' : '') + '</td>' +
+          '<td class="num">' + (v.piso !== undefined && v.piso !== null ? v.piso : '—') + '</td>' +
           '<td class="num">' + pesos(v.precio) + '</td>' +
           '<td class="num">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</td>' +
           '<td class="num">' + margenStr + '</td>' +
@@ -542,8 +544,8 @@ function renderLista(productos) {
           '</tr>';
       }).join('');
       variantesHtml = '<table class="variantes-tabla">' +
-        '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-sem"><col class="col-vel"><col class="col-umbral"><col class="col-precio"><col class="col-costo"><col class="col-margen"><col class="col-variante"></colgroup>' +
-        '<thead><tr><th>SKU</th><th class="num">Stock</th><th></th><th class="num">Vel/mes</th><th class="num">Umbral</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Margen</th><th>Variante</th></tr></thead>' +
+        '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-sem"><col class="col-vel"><col class="col-umbral"><col class="col-piso"><col class="col-precio"><col class="col-costo"><col class="col-margen"><col class="col-variante"></colgroup>' +
+        '<thead><tr><th>SKU</th><th class="num">Stock</th><th></th><th class="num">Vel/mes</th><th class="num">Umbral</th><th class="num">Piso</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Margen</th><th>Variante</th></tr></thead>' +
         '<tbody>' + filas + '</tbody></table>';
     }
 
@@ -681,13 +683,21 @@ function renderEditStock(variantes) {
         '<label class="field-label">Cantidad</label>' +
         '<input class="field" id="stock-' + v.id + '" type="number" step="1" min="0" value="' + (esInf ? '' : v.stock) + '" style="max-width:140px">' +
       '</div>' +
-      '<div style="margin-top:10px">' +
-        '<label class="field-label">Umbral de alerta</label>' +
-        '<input class="field" id="umbral-' + v.id + '" type="number" step="1" min="0" ' +
-          'value="' + (v.umbralOverride !== null && v.umbralOverride !== undefined ? v.umbralOverride : '') + '" ' +
-          'placeholder="auto (' + (v.umbral || '—') + ')" style="max-width:140px">' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = usar valor calculado automáticamente.</div>' +
+      '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">' +
+        '<div>' +
+          '<label class="field-label">Umbral de alerta <span style="color:var(--muted);font-weight:400">(naranja)</span></label>' +
+          '<input class="field" id="umbral-' + v.id + '" type="number" step="1" min="0" ' +
+            'value="' + (v.umbralOverride !== null && v.umbralOverride !== undefined ? v.umbralOverride : '') + '" ' +
+            'placeholder="auto (' + (v.umbral || '—') + ')" style="max-width:120px">' +
+        '</div>' +
+        '<div>' +
+          '<label class="field-label">Piso crítico <span style="color:var(--muted);font-weight:400">(rojo)</span></label>' +
+          '<input class="field" id="piso-' + v.id + '" type="number" step="1" min="0" ' +
+            'value="' + (v.pisoOverride !== null && v.pisoOverride !== undefined ? v.pisoOverride : '') + '" ' +
+            'placeholder="auto (' + (v.piso || '—') + ')" style="max-width:120px">' +
+        '</div>' +
       '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = usar valor calculado automáticamente.</div>' +
     '</div>';
   }).join('');
   document.getElementById('edit-stock').innerHTML = html;
@@ -762,10 +772,12 @@ function guardarStock() {
     var stock  = esInf ? null : document.getElementById('stock-' + v.id).value;
     var umbralEl = document.getElementById('umbral-' + v.id);
     var umbralVal = umbralEl ? umbralEl.value.trim() : '';
+    var pisoEl = document.getElementById('piso-' + v.id);
+    var pisoVal = pisoEl ? pisoEl.value.trim() : '';
     var _pSt = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), stock: stock === null ? 'null' : String(stock) });
     var stockFetch = fetch(GAS_URL + '?' + _pSt.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
     var clave = _productoActual.id + '_' + v.id;
-    var _pUmb = new URLSearchParams({ action: 'saveStockOverride', clave: clave, nombre_variante: v.nombre || v.sku || '', umbral: umbralVal });
+    var _pUmb = new URLSearchParams({ action: 'saveStockOverride', clave: clave, nombre_variante: v.nombre || v.sku || '', umbral: umbralVal, piso: pisoVal });
     var umbralFetch = fetch(GAS_URL + '?' + _pUmb.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
     return Promise.all([stockFetch, umbralFetch]).then(function(rs) { return rs[0]; });
   });

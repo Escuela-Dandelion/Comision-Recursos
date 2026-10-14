@@ -2671,6 +2671,9 @@ function apiProductos(email) {
           stock:          (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
           umbral:         umbral,
           umbralOverride: (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : null,
+          piso:           piso,
+          pisoOverride:   (ov.pisoOverride   !== null && ov.pisoOverride   !== undefined) ? ov.pisoOverride   : null,
+          leadTime:       cfg.leadTime || 10,
           velMes:         velMes,
           semaforo:       semaforo,
           activo:         v.visible !== false
