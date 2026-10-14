@@ -2630,7 +2630,7 @@ function apiProductos(email) {
           umbral:  umbral,
           velMes:  velMes,
           semaforo: semaforo,
-          activo:  v.active !== false
+          activo:  v.active === true
         };
       });
 
