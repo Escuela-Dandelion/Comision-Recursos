@@ -74,7 +74,7 @@ header .user:hover { color: #fff; }
   border-bottom: 1px solid var(--border); background: #fff;
   cursor: pointer; transition: background .15s;
 }
-.prod-row:nth-child(even) { background: #f9fafb; }
+.prod-row.par { background: #f3f4f6; }
 .prod-row:hover { background: #eef2ee; }
 .prod-row.activo { background: var(--green-light); border-left: 3px solid var(--green); }
 
@@ -435,7 +435,7 @@ function renderLista(productos) {
     return;
   }
 
-  lista.innerHTML = productos.map(function(p) {
+  lista.innerHTML = productos.map(function(p, i) {
     var imgHtml = p.imagen
       ? '<img class="prod-img" src="' + esc(p.imagen) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
         '<div class="prod-img-placeholder" style="display:none">📦</div>'
@@ -458,7 +458,7 @@ function renderLista(productos) {
         '<tbody>' + filas + '</tbody></table>';
     }
 
-    return '<div class="prod-row" id="row-' + p.id + '" onclick="abrirEditor(\'' + p.id + '\')">' +
+    return '<div class="prod-row' + (i % 2 === 1 ? ' par' : '') + '" id="row-' + p.id + '" onclick="abrirEditor(\'' + p.id + '\')">' +
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
