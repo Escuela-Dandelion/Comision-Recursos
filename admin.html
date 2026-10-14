@@ -315,6 +315,9 @@
       <button class="nav-item" data-view="gestion" data-roles="admin,fgp" onclick="showView('gestion', this)">
         <span class="nav-icon">📦</span> Gestión de Productos
       </button>
+      <button class="nav-item" data-view="digitales" data-roles="admin,digital,fgp" onclick="showView('digitales', this)">
+        <span class="nav-icon">🎟</span> Productos Digitales
+      </button>
       <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
         <span class="nav-icon">📋</span> Pedidos Proveedor
       </button>
@@ -332,9 +335,6 @@
       </a>
       <a class="nav-item" href="dashboard-referentes.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
-      </a>
-      <a class="nav-item" href="ventas-digitales.html" target="_blank" data-roles="admin,digital" style="text-decoration:none">
-        <span class="nav-icon">🎟</span> Ventas Productos Digitales ↗
       </a>
       <div class="nav-section-label">Recursos</div>
       <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-comision-recursos.html#resumen" target="_blank" style="text-decoration:none">
@@ -365,6 +365,11 @@
     <!-- INVENTARIO -->
     <div class="view" id="view-inventario">
       <iframe class="view-iframe" src="stock.html?auth=1" id="iframe-inventario"></iframe>
+    </div>
+
+    <!-- DIGITALES -->
+    <div class="view" id="view-digitales" style="padding:0;overflow:hidden;">
+      <iframe class="view-iframe" src="ventas-digitales.html?auth=1" id="iframe-digitales" style="width:100%;height:calc(100vh - var(--header-h));border:none;display:block;"></iframe>
     </div>
 
     <!-- QR -->
@@ -717,6 +722,7 @@ function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
     { view:'gestion',              icon:'🧺', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp'],                         url:null },
+    { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital','fgp'],               url:null },
     { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
     { view:'ventas',               icon:'🛍️', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
