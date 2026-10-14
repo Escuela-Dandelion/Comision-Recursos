@@ -677,7 +677,6 @@ function guardarInfo() {
   btn.disabled = true; setSt('info', 'Guardando...');
   fetch(GAS_URL, {
     method: 'POST', redirect: 'follow',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: _productoActual.id, nombre: nombre, descripcion: desc })
   })
   .then(function(r) { return r.json(); })
@@ -801,7 +800,6 @@ function guardarFoto() {
   btn.disabled = true; setSt('foto', 'Subiendo...');
   fetch(GAS_URL, {
     method: 'POST', redirect: 'follow',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'update_imagen', email: currentUser.email, producto_id: _productoActual.id, base64: _fotoBase64, mime_type: _fotoMime })
   })
   .then(function(r) { return r.json(); })
