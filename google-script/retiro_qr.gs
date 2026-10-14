@@ -2666,7 +2666,7 @@ function apiProductos(email) {
           umbralOverride: (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : null,
           velMes:         velMes,
           semaforo:       semaforo,
-          activo:         v.active === true
+          activo:         v.active !== false
         };
       });
 
