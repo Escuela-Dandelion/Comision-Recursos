@@ -315,7 +315,7 @@
       <button class="nav-item" data-view="gestion" data-roles="admin,fgp" onclick="showView('gestion', this)">
         <span class="nav-icon">📦</span> Gestión de Productos
       </button>
-      <button class="nav-item" data-view="digitales" data-roles="admin,digital,fgp" onclick="showView('digitales', this)">
+      <button class="nav-item" data-view="digitales" data-roles="admin,digital" onclick="showView('digitales', this)">
         <span class="nav-icon">🎟</span> Productos Digitales
       </button>
       <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
@@ -722,7 +722,7 @@ function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
     { view:'gestion',              icon:'🧺', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp'],                         url:null },
-    { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital','fgp'],               url:null },
+    { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital'],                     url:null },
     { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
     { view:'ventas',               icon:'🛍️', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
