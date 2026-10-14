@@ -60,7 +60,7 @@ header .user:hover { color: #fff; }
   padding: 16px 24px 12px; background: #fff; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10;
 }
-.lista-header h1 { font-size: 18px; font-weight: 800; color: var(--green-dark); flex: 1; }
+.lista-header h1 { font-size: 18px; font-weight: 800; color: var(--green-dark); }
 .search-box {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
@@ -247,8 +247,10 @@ textarea.field { min-height: 90px; resize: vertical; }
     <!-- Lista de productos -->
     <div class="lista-wrap" id="lista-wrap">
       <div class="lista-header">
-        <h1>Productos</h1>
-        <p style="font-size:12px; color:var(--muted); margin-top:2px; width:100%;">Aquí verás solo los productos que vos podés administrar.</p>
+        <div style="flex:1; min-width:0;">
+          <h1>Productos</h1>
+          <p style="font-size:12px; color:var(--muted); margin-top:2px;">Aquí verás solo los productos que vos podés administrar.</p>
+        </div>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
           <input id="buscar" type="text" placeholder="Buscar por nombre o SKU..." oninput="filtrar()">
