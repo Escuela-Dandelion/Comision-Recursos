@@ -716,11 +716,12 @@ function aplicarPermisos(role) {
 function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
-    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'],                      url:null },
-    { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'],                url:null },
-    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'],           url:null },
-    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'],                      url:'dashboard-general.html?appv='+APP_V },
-    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'],           url:'dashboard-referentes.html?appv='+APP_V },
+    { view:'gestion',              icon:'🧺', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp'],                         url:null },
+    { view:'pedidos',              icon:'📋', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
+    { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
+    { view:'ventas',               icon:'🛍️', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
+    { view:'dashboard-general',    icon:'📊', name:'Dashboard General',                         desc:'Ventas y métricas globales',            roles:['admin','staff','fgp'],                 url:'dashboard-general.html?appv='+APP_V },
+    { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',                                desc:'Dashboard de tu grado',                 roles:['admin','staff','fgp','referente'],     url:'dashboard-referentes.html?appv='+APP_V },
   ];
 
   var html = cards
