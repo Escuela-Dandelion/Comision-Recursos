@@ -2772,11 +2772,12 @@ function apiProductos(email) {
     rows.forEach(function(r) {
       var marcaKey = invDetectarMarca(r.nombre) || String(r.brand || '').toUpperCase();
       r.pedidos = pedidosActivos[marcaKey] || [];
+      r._dbg_marca = marcaKey;
     });
 
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
-    var result = { ok: true, productos: rows };
+    var result = { ok: true, productos: rows, _dbg_pedidosKeys: Object.keys(pedidosActivos) };
 
     // Guardar en cache
     try { cache.put(cacheKey, JSON.stringify(result), 300); } catch(e) {}
