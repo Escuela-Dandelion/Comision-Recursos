@@ -452,7 +452,7 @@ function recargarProductos() {
       if (!d.ok) return;
       _productos = d.productos || [];
       var idActual = _productoActual ? _productoActual.id : null;
-      renderLista(_productos);
+      filtrar();
       if (idActual) {
         var p = _productos.find(function(x) { return x.id === idActual; });
         if (p) { _productoActual = p; renderEditStock(p.variantes); renderEditPrecios(p.variantes); }
