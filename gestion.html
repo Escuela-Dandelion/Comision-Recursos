@@ -450,11 +450,15 @@ function cargarProductos() {
   fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
+      var dbgEl = document.getElementById('dbg-panel');
+      if (!d.ok) {
+        if (dbgEl) dbgEl.innerHTML = '<b>ERROR GAS:</b> ' + (d.error || 'desconocido') + '<br><b>Response:</b> ' + JSON.stringify(d);
+        document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido');
+        return;
+      }
       _productos = d.productos || [];
       // DEBUG TEMPORAL
       var mani = _productos.find(function(p){ return /man[ií]/i.test(p.nombre); });
-      var dbgEl = document.getElementById('dbg-panel');
       if (dbgEl) dbgEl.innerHTML = '<b>Pedidos keys:</b> ' + (d._dbg_pedidosKeys || []).join(', ') + '<br>' + (mani ? '<b>Maní marca:</b> ' + mani._dbg_marca + ' | <b>brand:</b> ' + mani.brand + ' | <b>pedidos:</b> ' + JSON.stringify(mani.pedidos) : 'No se encontró producto maní');
       document.getElementById('loading-overlay').style.display = 'none';
       renderLista(_productos);

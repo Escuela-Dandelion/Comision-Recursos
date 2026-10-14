@@ -2787,7 +2787,7 @@ function apiProductos(email) {
     return result;
   } catch(err) {
     Logger.log('Error apiProductos: ' + err);
-    return { ok: false, error: 'Error al cargar productos.' };
+    return { ok: false, error: 'Error al cargar productos: ' + err.toString() };
   }
 }
 
