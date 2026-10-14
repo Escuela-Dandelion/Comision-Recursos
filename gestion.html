@@ -295,7 +295,6 @@ textarea.field { min-height: 90px; resize: vertical; }
         </div>
         <span id="contador"></span>
       </div>
-      <div id="dbg-panel" style="background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:11px;margin-bottom:12px;display:block;word-break:break-all">Cargando debug...</div>
       <div id="loading-overlay">Cargando productos...</div>
       <div id="lista-productos"></div>
     </div>
@@ -450,16 +449,8 @@ function cargarProductos() {
   fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      var dbgEl = document.getElementById('dbg-panel');
-      if (!d.ok) {
-        if (dbgEl) dbgEl.innerHTML = '<b>ERROR GAS:</b> ' + (d.error || 'desconocido') + '<br><b>Response:</b> ' + JSON.stringify(d);
-        document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido');
-        return;
-      }
+      if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
       _productos = d.productos || [];
-      // DEBUG TEMPORAL
-      var mani = _productos.find(function(p){ return /man[ií]/i.test(p.nombre); });
-      if (dbgEl) dbgEl.innerHTML = '<b>Pedidos keys:</b> ' + (d._dbg_pedidosKeys || []).join(', ') + '<br>' + (mani ? '<b>Maní marca:</b> ' + mani._dbg_marca + ' | <b>brand:</b> ' + mani.brand + ' | <b>pedidos:</b> ' + JSON.stringify(mani.pedidos) : 'No se encontró producto maní');
       document.getElementById('loading-overlay').style.display = 'none';
       renderLista(_productos);
     })
@@ -531,7 +522,7 @@ function pedidosBadgeHtml(pedidos) {
     var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
     var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : 'solicitado';
     var emoji = est === 'en-camino' ? '🚚' : est === 'confirmado' ? '✅' : '📋';
-    return '<span class="pedido-badge ' + cls + '" onclick="event.stopPropagation()" title="Ver pedido ' + esc(p.norden) + '">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</span>';
+    return '<a href="pedidos.html?id=' + encodeURIComponent(p.norden) + '" target="_blank" class="pedido-badge ' + cls + '" onclick="event.stopPropagation()" title="Ver pedido ' + esc(p.norden) + '">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</a>';
   }).join('');
 }
 
