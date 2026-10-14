@@ -2587,9 +2587,59 @@ function apiProductos(email) {
       });
     }
 
+    var velResult  = getVelocidades();
+    var velocidades = velResult.velocidades;
+    var diasActivos = velResult.diasActivos;
+    var overrides   = leerOverridesStock();
+    var configMarcas = leerConfigAlertas();
+    var ORDEN_SEM = { rojo: 0, naranja: 1, verde: 2 };
+
     var rows = productos.map(function(p) {
       var nombre = typeof p.name        === 'object' ? (p.name.es        || p.name.pt        || Object.values(p.name)[0]        || '') : (p.name        || '');
       var desc   = typeof p.description === 'object' ? (p.description.es || p.description.pt || '') : (p.description || '');
+      var marcaUp = String(p.brand || '').toUpperCase();
+      var cfg     = configMarcas[marcaUp] || { leadTime: 10, stockMinimo: CONFIG_STOCK.STOCK_MINIMO };
+
+      var variantes = (p.variants || []).map(function(v) {
+        var vn = typeof v.name === 'object' ? (Object.values(v.name).filter(Boolean)[0] || '') : (v.name || '');
+        var ov = overrides[p.id + '_' + v.id] || {};
+        var velMes  = buscarVelocidad(nombre, vn || null, velocidades) || 0;
+        var umbral  = (ov.umbralOverride !== null && ov.umbralOverride !== undefined)
+                        ? ov.umbralOverride
+                        : calcularUmbral(nombre, cfg.leadTime, velocidades, diasActivos, vn || null);
+        var piso    = (ov.pisoOverride   !== null && ov.pisoOverride   !== undefined)
+                        ? ov.pisoOverride
+                        : cfg.stockMinimo;
+        var precio  = parseFloat(v.price || 0);
+        var costo   = parseFloat(v.cost  || 0);
+        var margen  = precio > 0 ? Math.round(((precio - costo) / precio) * 100) : null;
+        var semaforo = 'verde';
+        if (v.stock !== null && v.stock !== undefined) {
+          var st = parseInt(v.stock);
+          if (st < piso)     semaforo = 'rojo';
+          else if (st <= umbral) semaforo = 'naranja';
+        }
+        return {
+          id:      String(v.id),
+          sku:     v.sku || '',
+          nombre:  vn,
+          precio:  precio,
+          costo:   costo,
+          margen:  margen,
+          stock:   (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
+          umbral:  umbral,
+          velMes:  velMes,
+          semaforo: semaforo,
+          activo:  v.active !== false
+        };
+      });
+
+      // semáforo del producto = el peor de sus variantes activas
+      var semProd = 'verde';
+      variantes.forEach(function(v) {
+        if (v.activo && ORDEN_SEM[v.semaforo] < ORDEN_SEM[semProd]) semProd = v.semaforo;
+      });
+
       return {
         id:        String(p.id),
         nombre:    nombre,
@@ -2598,21 +2648,13 @@ function apiProductos(email) {
         imagenes:  (p.images || []).map(function(img) { return { id: String(img.id), src: img.src }; }),
         brand:     String(p.brand || ''),
         publicado: p.published !== false,
-        variantes: (p.variants || []).map(function(v) {
-          var vn = typeof v.name === 'object' ? (Object.values(v.name).filter(Boolean)[0] || '') : (v.name || '');
-          return {
-            id:          String(v.id),
-            sku:         v.sku || '',
-            nombre:      vn,
-            precio:      parseFloat(v.price || 0),
-            precio_promo: parseFloat(v.promotional_price || 0),
-            costo:       parseFloat(v.cost || 0),
-            stock:       (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
-            activo:      v.active !== false
-          };
-        })
+        semaforo:  semProd,
+        variantes: variantes
       };
     });
+
+    // Ordenar: rojo → naranja → verde
+    rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
     return { ok: true, productos: rows };
   } catch(err) {
     Logger.log('Error apiProductos: ' + err);

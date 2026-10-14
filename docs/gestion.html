@@ -105,11 +105,15 @@ header .user:hover { color: #fff; }
   margin: 0 24px 12px; width: calc(100% - 48px);
   table-layout: fixed;
 }
-.variantes-tabla col.col-sku      { width: 38%; }
-.variantes-tabla col.col-stock    { width: 16%; }
-.variantes-tabla col.col-precio   { width: 16%; }
-.variantes-tabla col.col-promo    { width: 14%; }
-.variantes-tabla col.col-variante { width: 16%; }
+.variantes-tabla col.col-sku      { width: 24%; }
+.variantes-tabla col.col-stock    { width: 8%; }
+.variantes-tabla col.col-sem      { width: 5%; }
+.variantes-tabla col.col-vel      { width: 8%; }
+.variantes-tabla col.col-umbral   { width: 8%; }
+.variantes-tabla col.col-precio   { width: 10%; }
+.variantes-tabla col.col-costo    { width: 10%; }
+.variantes-tabla col.col-margen   { width: 9%; }
+.variantes-tabla col.col-variante { width: 18%; }
 .variantes-tabla th {
   text-align: left; color: var(--muted); font-weight: 600; font-size: 10px;
   text-transform: uppercase; letter-spacing: .5px; padding: 4px 8px 4px 0;
@@ -119,6 +123,18 @@ header .user:hover { color: #fff; }
 .variantes-tabla tr.inactiva td { color: #c4c9d0; }
 .variantes-tabla .num { text-align: right; }
 .badge-inactiva { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+.sem-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sem-dot.rojo   { background: #ef4444; }
+.sem-dot.naranja { background: #f97316; }
+.sem-dot.verde  { background: #22c55e; }
+.prod-sem { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
+.prod-sem.rojo   { background: #ef4444; }
+.prod-sem.naranja { background: #f97316; }
+.prod-sem.verde  { background: #22c55e; }
+.pill-filtro { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; background: #f3f4f6; color: var(--muted); transition: all .15s; }
+.pill-filtro.activa-rojo    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+.pill-filtro.activa-naranja { background: #ffedd5; color: #9a3412; border-color: #f97316; }
+.pill-filtro.activa-verde   { background: #dcfce7; color: #166534; border-color: #22c55e; }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
@@ -252,6 +268,11 @@ textarea.field { min-height: 90px; resize: vertical; }
         <div style="flex:1; min-width:0;">
           <h1>Productos</h1>
           <p style="font-size:12px; color:var(--muted); margin-top:2px;">Aquí verás solo los productos que vos podés administrar.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="pill-filtro" id="pill-rojo"    onclick="toggleFiltroSem('rojo')"><span class="sem-dot rojo"></span>Rojo</span>
+          <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
+          <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
         </div>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
@@ -456,17 +477,23 @@ function renderLista(productos) {
       var filas = p.variantes.map(function(v) {
         var sc = stockClass(v);
         var inactiva = v.activo === false;
+        var sem = v.semaforo || 'verde';
+        var margenStr = v.margen !== null && v.margen !== undefined ? v.margen + '%' : '—';
         return '<tr' + (inactiva ? ' class="inactiva"' : '') + '>' +
           '<td>' + esc(v.sku || v.nombre) + (inactiva ? ' <span class="badge-inactiva">Inactiva</span>' : '') + '</td>' +
-          '<td><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
+          '<td class="num"><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
+          '<td style="text-align:center"><span class="sem-dot ' + sem + '"></span></td>' +
+          '<td class="num">' + (v.velMes || '—') + '</td>' +
+          '<td class="num">' + (v.umbral !== undefined && v.umbral !== null ? v.umbral : '—') + '</td>' +
           '<td class="num">' + pesos(v.precio) + '</td>' +
-          '<td class="num">' + (v.precio_promo > 0 ? pesos(v.precio_promo) : '—') + '</td>' +
+          '<td class="num">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</td>' +
+          '<td class="num">' + margenStr + '</td>' +
           '<td>' + esc(v.nombre) + '</td>' +
           '</tr>';
       }).join('');
       variantesHtml = '<table class="variantes-tabla">' +
-        '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-precio"><col class="col-promo"><col class="col-variante"></colgroup>' +
-        '<thead><tr><th>SKU</th><th>Stock</th><th class="num">Precio</th><th class="num">Promo</th><th>Variante</th></tr></thead>' +
+        '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-sem"><col class="col-vel"><col class="col-umbral"><col class="col-precio"><col class="col-costo"><col class="col-margen"><col class="col-variante"></colgroup>' +
+        '<thead><tr><th>SKU</th><th class="num">Stock</th><th></th><th class="num">Vel/mes</th><th class="num">Umbral</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Margen</th><th>Variante</th></tr></thead>' +
         '<tbody>' + filas + '</tbody></table>';
     }
 
@@ -474,7 +501,7 @@ function renderLista(productos) {
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
-          '<div class="prod-nombre">' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + '</div>' +
+          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + '</div>' +
           '<div class="prod-brand">' + esc(p.brand) + '</div>' +
         '</div>' +
       '</div>' +
@@ -483,10 +510,22 @@ function renderLista(productos) {
   }).join('');
 }
 
+var _filtroSem = null;
+
+function toggleFiltroSem(color) {
+  _filtroSem = _filtroSem === color ? null : color;
+  ['rojo','naranja','verde'].forEach(function(c) {
+    var el = document.getElementById('pill-' + c);
+    el.className = 'pill-filtro' + (_filtroSem === c ? ' activa-' + c : '');
+  });
+  filtrar();
+}
+
 function filtrar() {
   var q = document.getElementById('buscar').value.toLowerCase().trim();
-  if (!q) { renderLista(_productos); return; }
   var filtrados = _productos.filter(function(p) {
+    if (_filtroSem && p.semaforo !== _filtroSem) return false;
+    if (!q) return true;
     if (p.nombre.toLowerCase().indexOf(q) !== -1) return true;
     return (p.variantes || []).some(function(v) { return (v.sku || '').toLowerCase().indexOf(q) !== -1; });
   });
@@ -634,7 +673,7 @@ function guardarInfo() {
       if (row) row.querySelector('.prod-nombre').childNodes[0].textContent = nombre;
     } else { setSt('info', d.error || 'Error', false); }
   })
-  .catch(function() { btn.disabled = false; setSt('info', 'Error de red', false); });
+  .catch(function(err) { btn.disabled = false; setSt('info', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
 }
 
 function guardarPrecios() {
@@ -656,7 +695,7 @@ function guardarPrecios() {
     var errores = resultados.filter(function(r) { return !r.ok; });
     if (errores.length) { setSt('precios', errores[0].error || 'Error', false); }
     else { setSt('precios', '✓ Guardado', true); actualizarVariantesLocales('precios'); }
-  }).catch(function() { btn.disabled = false; setSt('precios', 'Error de red', false); });
+  }).catch(function(err) { btn.disabled = false; setSt('precios', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
 }
 
 function guardarStock() {
@@ -677,7 +716,7 @@ function guardarStock() {
     var errores = resultados.filter(function(r) { return !r.ok; });
     if (errores.length) { setSt('stock', errores[0].error || 'Error', false); }
     else { setSt('stock', '✓ Guardado', true); actualizarVariantesLocales('stock'); }
-  }).catch(function() { btn.disabled = false; setSt('stock', 'Error de red', false); });
+  }).catch(function(err) { btn.disabled = false; setSt('stock', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
 }
 
 function actualizarVariantesLocales(tipo) {
