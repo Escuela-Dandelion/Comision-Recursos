@@ -2763,17 +2763,19 @@ function apiProductos(email) {
         var proveedorRaw = String(pedData[pi][2] || '').trim();
         var estadoPed   = String(pedData[pi][5] || '').trim();
         if (!norden || !proveedorRaw || ACTIVOS_EST.indexOf(estadoPed.toLowerCase()) === -1) continue;
-        var marcaPed = invDetectarMarca(proveedorRaw) || proveedorRaw.toUpperCase();
+        var marcaPed = proveedorRaw.toUpperCase();
         if (!pedidosActivos[marcaPed]) pedidosActivos[marcaPed] = [];
         pedidosActivos[marcaPed].push({ norden: norden, estado: estadoPed });
       }
     } catch(e) { Logger.log('apiProductos pedidos activos error: ' + e); }
 
-    rows.forEach(function(r) {
-      var marcaKey = invDetectarMarca(r.nombre) || String(r.brand || '').toUpperCase();
-      r.pedidos = pedidosActivos[marcaKey] || [];
-      r._dbg_marca = marcaKey;
-    });
+    try {
+      rows.forEach(function(r) {
+        var brandKey = String(r.brand || '').toUpperCase();
+        r.pedidos = pedidosActivos[brandKey] || [];
+        r._dbg_marca = brandKey;
+      });
+    } catch(e) { Logger.log('apiProductos pedidos forEach error: ' + e); }
 
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
