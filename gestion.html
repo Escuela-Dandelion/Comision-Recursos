@@ -522,7 +522,7 @@ function pedidosBadgeHtml(pedidos) {
     var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
     var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : 'solicitado';
     var emoji = est === 'en-camino' ? '🚚' : est === 'confirmado' ? '✅' : '📋';
-    return '<a href="pedidos.html?id=' + encodeURIComponent(p.norden) + '" target="_blank" class="pedido-badge ' + cls + '" onclick="event.stopPropagation()" title="Ver pedido ' + esc(p.norden) + '">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</a>';
+    return '<span class="pedido-badge ' + cls + '" onclick="event.stopPropagation();window.parent.postMessage({type:\'ddl-nav\',view:\'pedidos\',id:' + JSON.stringify(p.norden) + '},\'*\')" title="Ver pedido ' + esc(p.norden) + '" style="cursor:pointer">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</span>';
   }).join('');
 }
 
