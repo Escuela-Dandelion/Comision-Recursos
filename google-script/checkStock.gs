@@ -107,16 +107,16 @@ function calcularVelocidades() {
         if (mesesParaUsar[k].mes === mes && mesesParaUsar[k].anio === anio) { enVentana = true; break; }
       }
       if (!enVentana) continue;
-      const nombre   = String(data[j][5] || '').trim();
+      const sku      = String(data[j][6] || '').trim();
       const cantidad = parseInt(data[j][7]) || 0;
-      if (!nombre || cantidad <= 0) continue;
-      velocidades[nombre] = (velocidades[nombre] || 0) + cantidad;
+      if (!sku || cantidad <= 0) continue;
+      velocidades[sku] = (velocidades[sku] || 0) + cantidad;
     }
 
     // Convertir a promedio mensual: dividir el total por la cantidad de meses
     const nMeses = mesesParaUsar.length;
-    Object.keys(velocidades).forEach(function(nombre) {
-      velocidades[nombre] = Math.round(velocidades[nombre] / nMeses);
+    Object.keys(velocidades).forEach(function(sku) {
+      velocidades[sku] = Math.round(velocidades[sku] / nMeses);
     });
     // diasActivos = 30 → la fórmula (vel_mensual / 30) × leadTime × safety da el umbral correcto
     diasActivos = 30;
@@ -138,13 +138,13 @@ function getVelocidades() {
 
   if (esTercerLunes() && !props.getProperty(llave)) {
     const result = calcularVelocidades();
-    props.setProperty('VELOCIDADES_CACHE', JSON.stringify(result.velocidades));
+    props.setProperty('VELOCIDADES_CACHE_V2', JSON.stringify(result.velocidades));
     props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
     props.setProperty(llave, '1');
     Logger.log('Velocidades recalculadas y guardadas para este mes.');
     return result;
   }
-  const cached = props.getProperty('VELOCIDADES_CACHE');
+  const cached = props.getProperty('VELOCIDADES_CACHE_V2');
   if (cached) {
     const diasActivos = parseInt(props.getProperty('DIAS_ACTIVOS_CACHE')) || CONFIG_STOCK.VELOCIDAD_DIAS;
     return { velocidades: JSON.parse(cached), diasActivos: diasActivos };
@@ -153,32 +153,19 @@ function getVelocidades() {
   // Sin cache aún (primera vez): calcular aunque no sea 3er lunes
   Logger.log('Sin cache de velocidades — calculando por primera vez.');
   const result = calcularVelocidades();
-  props.setProperty('VELOCIDADES_CACHE', JSON.stringify(result.velocidades));
+  props.setProperty('VELOCIDADES_CACHE_V2', JSON.stringify(result.velocidades));
   props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
   return result;
 }
 
 // ── BUSCAR VELOCIDAD ─────────────────────────────────────────
-// Prueba: nombre exacto → nombre + "(variante)" → case-insensitive
-function buscarVelocidad(nombreProducto, nombreVariante, velocidades) {
-  if (velocidades[nombreProducto] !== undefined) return velocidades[nombreProducto];
-  if (nombreVariante) {
-    const conVar = nombreProducto + ' (' + nombreVariante + ')';
-    if (velocidades[conVar] !== undefined) return velocidades[conVar];
-  }
-  const lowProd  = nombreProducto.toLowerCase();
-  const lowConVar = nombreVariante ? (nombreProducto + ' (' + nombreVariante + ')').toLowerCase() : null;
-  var found;
-  Object.keys(velocidades).forEach(function(k) {
-    const kl = k.toLowerCase();
-    if (kl === lowProd || (lowConVar && kl === lowConVar)) found = velocidades[k];
-  });
-  return found !== undefined ? found : 0;
+function buscarVelocidad(sku, velocidades) {
+  return velocidades[sku] || 0;
 }
 
 // ── UMBRAL REACTIVO (buffer de lead time, cualquier día) ───
-function calcularUmbral(nombreProducto, leadTime, velocidades, diasActivos, nombreVariante) {
-  const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
+function calcularUmbral(sku, leadTime, velocidades, diasActivos) {
+  const total = buscarVelocidad(sku, velocidades);
   if (!total) return CONFIG_STOCK.STOCK_UMBRAL;
   return Math.ceil((total / diasActivos) * leadTime * CONFIG_STOCK.SAFETY_FACTOR);
 }
@@ -203,10 +190,9 @@ function leerOverridesStock() {
 }
 
 // ── UMBRAL MENSUAL (demanda proyectada del mes siguiente, 3er lunes) ──
-function calcularUmbralMensual(nombreProducto, velocidades, diasActivos, nombreVariante) {
-  const total = buscarVelocidad(nombreProducto, nombreVariante || null, velocidades);
+function calcularUmbralMensual(sku, velocidades, diasActivos) {
+  const total = buscarVelocidad(sku, velocidades);
   if (!total) return null;
-  // diasActivos días activos → proyectar a 30 días de mes activo
   return Math.ceil((total / diasActivos) * 30);
 }
 
@@ -310,11 +296,12 @@ function _checkStockBajoInterno() {
         return;
       }
       const stock      = parseInt(variante.stock);
-      const velocidad  = buscarVelocidad(nombreProd, nombreVar, velocidades);
+      const sku        = variante.sku || '';
+      const velocidad  = buscarVelocidad(sku, velocidades);
       const ov         = overrides[clave] || {};
       const umbral     = (ov.umbralOverride !== null && ov.umbralOverride !== undefined)
                            ? ov.umbralOverride
-                           : calcularUmbral(nombreProd, cfg.leadTime, velocidades, diasActivos, nombreVar);
+                           : calcularUmbral(sku, cfg.leadTime, velocidades, diasActivos);
       const claveHoy    = clave + '_d_' + yyyyMMdd;
       const stockMinimo = (ov.pisoOverride !== null && ov.pisoOverride !== undefined)
                            ? ov.pisoOverride
@@ -353,7 +340,7 @@ function _checkStockBajoInterno() {
       // Condición A: stock bajo y no alertado en el período correspondiente (diario o 48h)
       const condA = (stock <= umbral || stock < stockMinimo) && !alertasEnviadas[claveGate];
       // Condición B (3er lunes): ¿hay suficiente para abastecer el mes siguiente?
-      const umbralMensual = esLunes3 ? calcularUmbralMensual(nombreProd, velocidades, diasActivos, nombreVar) : null;
+      const umbralMensual = esLunes3 ? calcularUmbralMensual(sku, velocidades, diasActivos) : null;
       const condB = esLunes3 && umbralMensual !== null && stock < umbralMensual && !alertasEnviadas[claveLunes];
 
       if (!condA && !condB) {
@@ -696,7 +683,7 @@ function forzarAlertasMarca() {
 
 function resetearVelocidades() {
   const props = PropertiesService.getScriptProperties();
-  props.deleteProperty('VELOCIDADES_CACHE');
+  props.deleteProperty('VELOCIDADES_CACHE_V2');
   props.deleteProperty('DIAS_ACTIVOS_CACHE');
   Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
 }

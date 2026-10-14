@@ -2645,10 +2645,11 @@ function apiProductos(email) {
       var variantes = (p.variants || []).map(function(v) {
         var vn = typeof v.name === 'object' ? (Object.values(v.name).filter(Boolean)[0] || '') : (v.name || '');
         var ov = overrides[p.id + '_' + v.id] || {};
-        var velMes  = buscarVelocidad(nombre, vn || null, velocidades) || 0;
+        var sku     = v.sku || '';
+        var velMes  = buscarVelocidad(sku, velocidades) || 0;
         var umbral  = (ov.umbralOverride !== null && ov.umbralOverride !== undefined)
                         ? ov.umbralOverride
-                        : calcularUmbral(nombre, cfg.leadTime, velocidades, diasActivos, vn || null);
+                        : calcularUmbral(sku, cfg.leadTime, velocidades, diasActivos);
         var piso    = (ov.pisoOverride   !== null && ov.pisoOverride   !== undefined)
                         ? ov.pisoOverride
                         : cfg.stockMinimo;
@@ -2677,7 +2678,7 @@ function apiProductos(email) {
           velMes:         velMes,
           semaforo:       semaforo,
           activo:         v.visible !== false,
-          _dbg_clave_vel: nombre + (vn ? ' (' + vn + ')' : '')
+          _dbg_clave_vel: sku
         };
       });
 
