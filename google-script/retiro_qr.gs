@@ -2673,11 +2673,7 @@ function apiProductos(email) {
           umbralOverride: (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : null,
           velMes:         velMes,
           semaforo:       semaforo,
-          activo:         v.active !== false,
-          _dbg_active:    v.active,
-          _dbg_available: v.available,
-          _dbg_published: v.published,
-          _dbg_visible:   v.visible
+          activo:         v.visible !== false
         };
       });
 
