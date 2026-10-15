@@ -107,6 +107,8 @@ header .user:hover { color: #fff; }
   display: inline-block; background: #ede9fe; color: #7c3aed;
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
 }
+.badge-stock-rojo   { display: inline-block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; }
+.badge-stock-naranja { display: inline-block; background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; }
 
 .variantes-tabla {
   border-collapse: collapse; font-size: 12px;
@@ -571,7 +573,7 @@ function renderLista(productos) {
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
-          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + pedidosBadgeHtml(p.pedidos) + '</div>' +
+          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + (p.semaforo === 'rojo' ? '<span class="badge-stock-rojo">⚠️ Stock bajo</span>' : p.semaforo === 'naranja' ? '<span class="badge-stock-naranja">⚠️ Stock bajo</span>' : '') + pedidosBadgeHtml(p.pedidos) + '</div>' +
           '<div class="prod-brand">' + esc(p.brand) + '</div>' +
         '</div>' +
       '</div>' +
