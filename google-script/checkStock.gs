@@ -33,6 +33,11 @@ const FGP_POR_MARCA = {
   'MIX Y FRUTOS SECOS':       { nombre: 'Pía Lucarno',       email: 'pialucarno@gmail.com',       nombre2: 'Maria Martini',   email2: 'martinimaria39@gmail.com',  tel_proveedor: '' }
 };
 
+// Override por nombre de producto (tiene precedencia sobre FGP_POR_MARCA)
+const FGP_POR_PRODUCTO = {
+  'PASTA DE MAN': { nombre: 'Monica Chesta', email: 'monicachesta@gmail.com', nombre2: 'Maria Martini', email2: 'martinimaria39@gmail.com' }
+};
+
 // ── CONFIG POR MARCA — pestaña ConfigAlertas (col A: Marca, col B: Lead time días) ──
 function leerConfigAlertas() {
   const defaults = {
@@ -276,11 +281,15 @@ function _checkStockBajoInterno() {
 
   productos.forEach(function(producto) {
     const marca      = (producto.brand || '').toUpperCase();
-    const fgp        = FGP_POR_MARCA[marca];
+    const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
+    // Override por producto tiene precedencia sobre marca
+    var fgp = null;
+    const nombreUp = nombreProd.toUpperCase();
+    Object.keys(FGP_POR_PRODUCTO).forEach(function(key) { if (nombreUp.indexOf(key) !== -1) fgp = FGP_POR_PRODUCTO[key]; });
+    if (!fgp) fgp = FGP_POR_MARCA[marca];
     if (!fgp) return;
 
     const cfg        = configMarca[marca] || { leadTime: 14 };
-    const nombreProd = producto.name && producto.name.es ? producto.name.es : String(producto.name || '');
 
     producto.variants.forEach(function(variante) {
       const nombreVar  = variante.values && variante.values.length > 0
