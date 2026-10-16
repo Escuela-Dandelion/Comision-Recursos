@@ -799,8 +799,8 @@ function showView(viewId, navBtn, opts) {
   // Cargar gestión de productos con email del usuario actual
   if (viewId === 'gestion') {
     var gestionIframe = document.getElementById('iframe-gestion');
-    if (gestionIframe && gestionIframe.src.indexOf('gestion.html') === -1 && currentUser && currentUser.email) {
-      gestionIframe.src = 'gestion.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261014b';
+    if (gestionIframe && gestionIframe.src.indexOf('gestion-productos.html') === -1 && currentUser && currentUser.email) {
+      gestionIframe.src = 'gestion-productos.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261016';
     }
   }
 
