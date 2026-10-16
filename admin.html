@@ -312,7 +312,7 @@
       </button>
 
       <div class="nav-section-label">Gestión</div>
-      <button class="nav-item" data-view="gestion" data-roles="admin,fgp,digital" onclick="showView('gestion', this)">
+      <button class="nav-item" data-view="gestion-productos" data-roles="admin,fgp,digital" onclick="showView('gestion-productos', this)">
         <span class="nav-icon">🏷️</span> Gestión de Productos
       </button>
       <button class="nav-item" data-view="digitales" data-roles="admin,digital" onclick="showView('digitales', this)">
@@ -527,9 +527,9 @@
     </div>
 
     <!-- GESTIÓN DE PRODUCTOS -->
-    <div class="view" id="view-gestion">
+    <div class="view" id="view-gestion-productos">
       <div class="view-title">🏷️ Gestión de Productos</div>
-      <iframe id="iframe-gestion" class="view-iframe" src=""></iframe>
+      <iframe id="iframe-gestion-productos" class="view-iframe" src=""></iframe>
     </div>
 
   </main>
@@ -726,7 +726,7 @@ function aplicarPermisos(role) {
 function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
-    { view:'gestion',              icon:'🏷️', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','digital'],               url:null },
+    { view:'gestion-productos',    icon:'🏷️', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','digital'],               url:null },
     { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital'],                     url:null },
     { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
@@ -797,8 +797,8 @@ function showView(viewId, navBtn, opts) {
   }
 
   // Cargar gestión de productos con email del usuario actual
-  if (viewId === 'gestion') {
-    var gestionIframe = document.getElementById('iframe-gestion');
+  if (viewId === 'gestion-productos') {
+    var gestionIframe = document.getElementById('iframe-gestion-productos');
     if (gestionIframe && gestionIframe.src.indexOf('gestion-productos.html') === -1 && currentUser && currentUser.email) {
       gestionIframe.src = 'gestion-productos.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261016';
     }
