@@ -1524,8 +1524,7 @@ function aplicarFiltros() {
   // Filtro estado
   if (estadosFiltro.size > 0) {
     resultado = resultado.filter(p => estadosFiltro.has(p.estado));
-  } else {
-    // "En proceso": excluir cerrados aunque estén en memoria por haber usado "Todos"
+  } else if (!_incluyeCerrados) {
     resultado = resultado.filter(p => p.estado !== 'Cerrado');
   }
 
