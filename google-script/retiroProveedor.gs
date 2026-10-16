@@ -88,13 +88,6 @@ function doGet(e) {
         const excluidos = excluir.split(',').map(function(s){ return s.trim(); });
         pedidos = pedidos.filter(function(p){ return excluidos.indexOf(p.estado) === -1; });
       }
-      // Filtrar por marcas si el usuario no es admin
-      if (email && MARCAS_POR_EMAIL.hasOwnProperty(email) && MARCAS_POR_EMAIL[email] !== null) {
-        const marcas = MARCAS_POR_EMAIL[email].map(function(m){ return m.toUpperCase(); });
-        pedidos = pedidos.filter(function(p){
-          return marcas.indexOf(String(p.proveedor || '').toUpperCase()) !== -1;
-        });
-      }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, pedidos: pedidos }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -108,10 +101,6 @@ function doGet(e) {
     }
 
     if (action === 'getProveedores') {
-      const email = (e.parameter.email || '').toLowerCase().trim();
-      const marcasUsuario = email && MARCAS_POR_EMAIL.hasOwnProperty(email) && MARCAS_POR_EMAIL[email] !== null
-        ? MARCAS_POR_EMAIL[email].map(function(m){ return m.toUpperCase(); })
-        : null; // null = admin, ve todo
       // 1. Teles guardados en la tab Proveedores
       const ss    = SpreadsheetApp.openById(CONFIG_RETIRO.PEDIDOS_SHEET_ID);
       const sheet = ss.getSheetByName('Proveedores');
@@ -134,12 +123,6 @@ function doGet(e) {
         if (!listaMap[key]) listaMap[key] = { nombre: key, tel: telMap[key] };
       });
       let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
-      // 4. Filtrar por marcas del usuario si no es admin
-      if (marcasUsuario !== null) {
-        lista = lista.filter(function(p){
-          return marcasUsuario.indexOf(String(p.nombre || '').toUpperCase()) !== -1;
-        });
-      }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, proveedores: lista }))
         .setMimeType(ContentService.MimeType.JSON);
