@@ -448,7 +448,7 @@ function mostrarApp() {
 // ── DATOS ──────────────────────────────────────────────────────
 
 function cargarProductos() {
-  fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
+  fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow', cache: 'no-store' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
@@ -460,7 +460,7 @@ function cargarProductos() {
 }
 
 function recargarProductos() {
-  fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow' })
+  fetch(GAS_URL + '?action=api_productos&email=' + encodeURIComponent(currentUser.email), { redirect: 'follow', cache: 'no-store' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) return;

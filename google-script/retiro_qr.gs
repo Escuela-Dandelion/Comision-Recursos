@@ -2643,7 +2643,8 @@ function _invalidarCacheRetiros() {
 }
 
 function _productosCacheKey(email) {
-  return 'PROD_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  var v = PropertiesService.getScriptProperties().getProperty('PROD_CACHE_VERSION') || '0';
+  return 'PROD_v' + v + '_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
 function _invalidarCacheProductos(email) {
@@ -2752,7 +2753,12 @@ function apiProductos(email) {
       };
     });
 
-    // Pedidos activos por marca
+    // Pedidos activos por marca — normalización elimina artículos para comparación robusta
+    function normMarca(s) {
+      return String(s || '').toUpperCase()
+        .replace(/\b(DE|LA|EL|LOS|LAS|DEL|Y|E)\b/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
     var pedidosActivos = {};
     try {
       var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino'];
@@ -2769,14 +2775,14 @@ function apiProductos(email) {
         var proveedorRaw = String(pedData[pi][2] || '').trim();
         var estadoPed    = String(pedData[pi][5] || '').trim();
         if (!norden || !proveedorRaw || ACTIVOS_EST.indexOf(estadoPed.toLowerCase()) === -1) continue;
-        var marcaPed = proveedorRaw.toUpperCase();
+        var marcaPed = normMarca(proveedorRaw);
         if (!pedidosActivos[marcaPed]) pedidosActivos[marcaPed] = [];
         pedidosActivos[marcaPed].push({ norden: norden, estado: estadoPed });
       }
     } catch(errPed) { Logger.log('apiProductos pedidos activos error: ' + errPed); }
 
     rows.forEach(function(r) {
-      var brandKey = String(r.brand || '').toUpperCase();
+      var brandKey = normMarca(r.brand);
       r.pedidos = pedidosActivos[brandKey] || [];
     });
 

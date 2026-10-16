@@ -135,31 +135,20 @@ function calcularVelocidades() {
   return { velocidades: velocidades, diasActivos: diasActivos };
 }
 
-// ── VELOCIDADES CON CACHE — se recalcula una vez por mes en el 3er lunes ──
+// ── VELOCIDADES CON CACHE — clave mes-específica, se recalcula automáticamente cada mes ──
 function getVelocidades() {
-  const hoy   = new Date();
-  const llave = 'VEL_' + hoy.getFullYear() + '_' + hoy.getMonth();
-  const props = PropertiesService.getScriptProperties();
-
-  if (esTercerLunes() && !props.getProperty(llave)) {
-    const result = calcularVelocidades();
-    props.setProperty('VELOCIDADES_CACHE_V2', JSON.stringify(result.velocidades));
-    props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
-    props.setProperty(llave, '1');
-    Logger.log('Velocidades recalculadas y guardadas para este mes.');
-    return result;
-  }
-  const cached = props.getProperty('VELOCIDADES_CACHE_V2');
+  const hoy      = new Date();
+  const cacheKey = 'VELOCIDADES_V3_' + hoy.getFullYear() + '_' + hoy.getMonth();
+  const props    = PropertiesService.getScriptProperties();
+  const cached   = props.getProperty(cacheKey);
   if (cached) {
     const diasActivos = parseInt(props.getProperty('DIAS_ACTIVOS_CACHE')) || CONFIG_STOCK.VELOCIDAD_DIAS;
     return { velocidades: JSON.parse(cached), diasActivos: diasActivos };
   }
-
-  // Sin cache aún (primera vez): calcular aunque no sea 3er lunes
-  Logger.log('Sin cache de velocidades — calculando por primera vez.');
   const result = calcularVelocidades();
-  props.setProperty('VELOCIDADES_CACHE_V2', JSON.stringify(result.velocidades));
+  props.setProperty(cacheKey, JSON.stringify(result.velocidades));
   props.setProperty('DIAS_ACTIVOS_CACHE', String(result.diasActivos));
+  Logger.log('Velocidades recalculadas y guardadas (clave: ' + cacheKey + ').');
   return result;
 }
 
@@ -694,7 +683,16 @@ function resetearVelocidades() {
   const props = PropertiesService.getScriptProperties();
   props.deleteProperty('VELOCIDADES_CACHE_V2');
   props.deleteProperty('DIAS_ACTIVOS_CACHE');
-  Logger.log('Cache de velocidades reseteado — se recalculará en la próxima corrida.');
+  // Borrar clave mes-específica del mes actual (V3)
+  const hoy = new Date();
+  props.deleteProperty('VELOCIDADES_V3_' + hoy.getFullYear() + '_' + hoy.getMonth());
+  const r = calcularVelocidades();
+  props.setProperty('VELOCIDADES_CACHE_V2', JSON.stringify(r.velocidades));
+  props.setProperty('DIAS_ACTIVOS_CACHE', String(r.diasActivos));
+  // Invalidar caché de apiProductos para todos los usuarios
+  const v = parseInt(props.getProperty('PROD_CACHE_VERSION') || '0') + 1;
+  props.setProperty('PROD_CACHE_VERSION', String(v));
+  Logger.log('Velocidades recalculadas (v' + v + '): ' + JSON.stringify(r.velocidades));
 }
 
 // ── EMAIL DE PRUEBA (training — no toca TiendaNube) ────────
