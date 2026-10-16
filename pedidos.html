@@ -1022,7 +1022,7 @@ async function cargarLista(incluyeCerrados) {
     document.getElementById('listaContent').style.display  = '';
     generarMesesRapidos();
     poblarFiltroProveedor();
-    renderLista(todosLosPedidos);
+    aplicarFiltros();
     cargarProveedoresMap();
     cargarProductosTN();
   } catch (err) {
@@ -1553,8 +1553,8 @@ function aplicarFiltros() {
   }
 
   // Filtro proveedor
-  const filtProv = document.getElementById('filtroProveedor').value;
-  if (filtProv) resultado = resultado.filter(p => p.proveedor === filtProv);
+  const filtProv = (document.getElementById('filtroProveedor').value || '').trim().toLowerCase();
+  if (filtProv) resultado = resultado.filter(p => (p.proveedor || '').trim().toLowerCase() === filtProv);
 
   // Filtro producto (texto libre sobre el campo productos)
   const filtProd = (document.getElementById('filtroProducto').value || '').trim().toLowerCase();
