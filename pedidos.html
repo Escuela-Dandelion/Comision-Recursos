@@ -1519,6 +1519,12 @@ function autoFormatFecha(input) {
 }
 
 function aplicarFiltros() {
+  const _lista = document.getElementById('pedidosList');
+  if (_lista) { _lista.style.opacity = '0.35'; _lista.style.pointerEvents = 'none'; }
+  setTimeout(function() { _aplicarFiltrosSync(); }, 0);
+}
+function _aplicarFiltrosSync() {
+  const _lista = document.getElementById('pedidosList');
   let resultado = todosLosPedidos;
 
   // Filtro estado
@@ -1572,6 +1578,7 @@ function aplicarFiltros() {
     : '';
 
   renderLista(resultado);
+  if (_lista) { _lista.style.opacity = ''; _lista.style.pointerEvents = ''; }
 }
 
 function poblarFiltroProveedor() {
