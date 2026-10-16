@@ -2655,14 +2655,6 @@ function apiProductos(email) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso para gestionar productos.' };
 
-  // Intentar devolver desde cache (TTL 5 min)
-  var cache = CacheService.getScriptCache();
-  var cacheKey = _productosCacheKey(email);
-  var cached = cache.get(cacheKey);
-  if (cached) {
-    try { return JSON.parse(cached); } catch(e) {}
-  }
-
   try {
     var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200';
     var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
@@ -2788,12 +2780,7 @@ function apiProductos(email) {
 
     // Ordenar: rojo → naranja → verde
     rows.sort(function(a, b) { return ORDEN_SEM[a.semaforo] - ORDEN_SEM[b.semaforo]; });
-    var result = { ok: true, productos: rows };
-
-    // Guardar en cache
-    try { cache.put(cacheKey, JSON.stringify(result), 300); } catch(e) {}
-
-    return result;
+    return { ok: true, productos: rows };
   } catch(err) {
     Logger.log('Error apiProductos: ' + err);
     return { ok: false, error: 'Error al cargar productos: ' + err.toString() };
