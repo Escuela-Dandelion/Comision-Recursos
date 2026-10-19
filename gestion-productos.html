@@ -98,6 +98,7 @@ header .user:hover { color: #fff; }
 .prod-info { flex: 1; min-width: 0; }
 .prod-nombre { font-size: 14px; font-weight: 700; color: var(--green); margin-bottom: 2px; }
 .prod-brand  { font-size: 11px; color: var(--muted); }
+.prod-pills  { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .badge-nopub {
   display: inline-block; background: #f3f4f6; color: var(--muted);
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
@@ -624,8 +625,9 @@ function renderLista(productos) {
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
-          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + (p.semaforo === 'rojo' ? '<span class="badge-stock-rojo">⚠️ Stock bajo</span>' : p.semaforo === 'naranja' ? '<span class="badge-stock-naranja">⚠️ Stock bajo</span>' : '') + pedidosBadgeHtml(p.pedidos) + '</div>' +
+          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + (p.semaforo === 'rojo' ? '<span class="badge-stock-rojo">⚠️ Stock bajo</span>' : p.semaforo === 'naranja' ? '<span class="badge-stock-naranja">⚠️ Stock bajo</span>' : '') + '</div>' +
           '<div class="prod-brand">' + esc(p.brand) + '</div>' +
+          (p.pedidos && p.pedidos.length ? '<div class="prod-pills">' + pedidosBadgeHtml(p.pedidos) + '</div>' : '') +
         '</div>' +
       '</div>' +
       variantesHtml +
