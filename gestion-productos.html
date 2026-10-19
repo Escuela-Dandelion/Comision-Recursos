@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestión de Productos — Diente de León</title>
 <link rel="icon" type="image/png" href="favicon.png">
@@ -103,6 +106,8 @@ header .user:hover { color: #fff; }
 .pedido-badge.solicitado { background: #fff8e1; color: #b45309; border-color: #fcd34d; }
 .pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .pedido-badge.en-camino  { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.pedido-badge.entregado  { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.pedido-badge.recibido   { background: #f0fdf4; color: #166534; border-color: #86efac; }
 .badge-digital {
   display: inline-block; background: #ede9fe; color: #7c3aed;
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
@@ -249,9 +254,42 @@ textarea.field { min-height: 90px; resize: vertical; }
   padding: 80px 24px; text-align: center; color: var(--muted);
 }
 
+.variantes-mobile { display: none; }
+
 @media (max-width: 700px) {
+  /* Panel: full-screen overlay */
   .panel { width: 100%; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 50; }
+  html.embedded .panel { top: 0; }
+
+  /* Header de lista: 3 filas apiladas */
+  .lista-header { flex-wrap: wrap; padding: 10px 14px 8px; gap: 6px; align-items: flex-start; }
+  .lista-header > div:first-child { order: 1; flex: 0 0 100% !important; min-width: 0; }
+  #contador { order: 4; flex: 0 0 auto; align-self: center; font-size: 11px; }
+  .lista-header > div:nth-child(2) { order: 2; flex: 1 1 auto; }
+  .search-box { order: 3; flex: 1 1 auto; max-width: 100%; }
+  .lista-header h1 { font-size: 15px; }
+
+  /* Filas de producto: menos padding, imagen más chica */
+  .prod-main { padding: 10px 14px 6px; gap: 10px; }
+  .prod-img             { width: 52px; height: 52px; }
+  .prod-img-placeholder { width: 52px; height: 52px; font-size: 20px; }
+  .prod-nombre { font-size: 13px; }
+
+  /* Tabla de variantes: oculta */
   .variantes-tabla { display: none; }
+
+  /* Variantes mobile: tarjetas compactas */
+  .variantes-mobile { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+  .var-card {
+    display: flex; flex-direction: column; gap: 3px;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 7px 10px; flex: 1 1 140px; min-width: 120px;
+  }
+  .var-card.inactiva-card { opacity: 0.5; }
+  .var-card-nombre { font-size: 11px; font-weight: 700; color: #374151; }
+  .var-card-row    { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+  .var-card-precio { font-size: 12px; font-weight: 700; color: var(--green); }
+  .var-card-vel    { font-size: 10px; color: var(--muted); }
 }
 </style>
 </head>
@@ -281,7 +319,7 @@ textarea.field { min-height: 90px; resize: vertical; }
       <div class="lista-header">
         <div style="flex:1; min-width:0;">
           <h1>Productos</h1>
-          <p style="font-size:11px; color:#6b7280; margin-top:2px;">Aquí verás solo los productos que vos podés administrar.</p>
+          <p style="font-size:11px; color:#6b7280; margin-top:2px; line-height:1.4;">Aquí verás solo los productos que vos podés administrar.</p>
         </div>
         <div style="border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px;">
           <span style="font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);">Estado de inventario</span>
@@ -522,9 +560,9 @@ function pedidosBadgeHtml(pedidos) {
   if (!pedidos || !pedidos.length) return '';
   return pedidos.map(function(p) {
     var est = (p.estado || '').toLowerCase().replace(/\s+/g, '-');
-    var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : 'solicitado';
-    var emoji = est === 'en-camino' ? '🚚' : est === 'confirmado' ? '✅' : '📋';
-    return '<span class="pedido-badge ' + cls + '" onclick="event.stopPropagation();window.parent.postMessage({type:\'ddl-nav\',view:\'pedidos\',id:' + JSON.stringify(p.norden) + '},\'*\')" title="Ver pedido ' + esc(p.norden) + '" style="cursor:pointer">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</span>';
+    var cls = est === 'en-camino' ? 'en-camino' : est === 'confirmado' ? 'confirmado' : est === 'entregado-en-escuela' ? 'entregado' : est === 'recibido' ? 'recibido' : est === 'en-proceso' ? 'en-camino' : 'solicitado';
+    var emoji = est === 'en-camino' ? '🚚' : est === 'confirmado' ? '✅' : est === 'entregado-en-escuela' ? '🏫' : est === 'recibido' ? '📦' : est === 'en-proceso' ? '⚙️' : '📋';
+    return '<span class="pedido-badge ' + cls + '" onclick="event.stopPropagation();window.parent.postMessage({type:\'ddl-nav\',view:\'pedidos\',id:\'' + esc(p.norden) + '\'},\'*\')" title="Ver pedido ' + esc(p.norden) + '" style="cursor:pointer">' + emoji + ' ' + esc(p.norden) + ' · ' + esc(p.estado) + '</span>';
   }).join('');
 }
 
@@ -563,10 +601,23 @@ function renderLista(productos) {
           '<td>' + esc(v.nombre) + (inactiva ? ' <span class="badge-inactiva">Inactivo</span>' : '') + '</td>' +
           '</tr>';
       }).join('');
+      var filasMobile = p.variantes.map(function(v) {
+        var sc = stockClass(v);
+        var inactiva = v.activo === false;
+        return '<div class="var-card' + (inactiva ? ' inactiva-card' : '') + '">' +
+          '<div class="var-card-nombre">' + esc(v.nombre) + '</div>' +
+          '<div class="var-card-row">' +
+            '<span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span>' +
+            '<span class="var-card-precio">' + pesos(v.precio) + '</span>' +
+            (v.velMes ? '<span class="var-card-vel">📈 ' + v.velMes + '/mes</span>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
       variantesHtml = '<table class="variantes-tabla">' +
         '<colgroup><col class="col-sku"><col class="col-stock"><col class="col-sem"><col class="col-vel"><col class="col-umbral"><col class="col-piso"><col class="col-precio"><col class="col-costo"><col class="col-margen"><col class="col-variante"></colgroup>' +
         '<thead><tr><th>SKU</th><th class="num">Stock</th><th></th><th class="num">Vel/mes</th><th class="num">Umbral</th><th class="num">Piso</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Margen</th><th>Variante</th></tr></thead>' +
-        '<tbody>' + filas + '</tbody></table>';
+        '<tbody>' + filas + '</tbody></table>' +
+        '<div class="variantes-mobile">' + filasMobile + '</div>';
     }
 
     return '<div class="prod-row' + (i % 2 === 1 ? ' par' : '') + '" id="row-' + p.id + '" onclick="abrirEditor(\'' + p.id + '\')">' +

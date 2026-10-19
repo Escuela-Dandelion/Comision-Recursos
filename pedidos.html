@@ -213,6 +213,11 @@
     .detalle-topbar { gap: 6px; }
   }
 
+  /* Lista view: título toma fila completa, botones van abajo */
+  @media (max-width: 700px) {
+    #listaView .detalle-topbar > div:first-child { flex: 0 0 100%; }
+  }
+
   /* ── MOBILE: tabla → tarjetas ─────────────────────────────── */
   @media (max-width: 600px) {
     .pedidos-table       { display: block; }
@@ -331,7 +336,7 @@
   <div class="detalle-topbar">
     <div style="flex:1;min-width:0;">
       <div style="font-size:15px;font-weight:800;color:#2d5a27;">Órdenes de Pedido</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px;">Aquí verás solo los pedidos de los proveedores que vos gestionás.</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;line-height:1.4;">Aquí verás solo los pedidos de los proveedores que vos gestionás.</div>
     </div>
     <button class="btn-accion-top btn-nueva-orden" onclick="abrirNuevaOrden()">📋 Nueva Orden</button>
     <a href="https://calendar.google.com/calendar/embed?src=d464a84a472a8802d4b6cd6641f19b2c71d71f257b5409e975d0cc4ee66bf0ad%40group.calendar.google.com&ctz=America%2FArgentina%2FCordoba&hl=es" target="_blank" class="btn-accion-top btn-pool" style="text-decoration:none">📅 Calendario de Retiros</a>
@@ -1463,27 +1468,25 @@ function claseEstado(estado) {
 }
 
 // Estado activo del filtro
-let estadosFiltro = new Set(); // vacío = "En proceso" (todos)
+let estadosFiltro = new Set(['Todos']); // 'Todos' = sin filtro de estado
 let pagoFiltro = 'Todos';
 
 function filtrar(btn) {
   const estado = btn.dataset.estado;
-  if (estado === 'Todos') {
-    estadosFiltro.clear();
-    document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  } else {
-    document.querySelector('#filtros .filtro-btn[data-estado="Todos"]').classList.remove('active');
-    if (estadosFiltro.has(estado)) {
-      estadosFiltro.delete(estado);
-      btn.classList.remove('active');
-      if (estadosFiltro.size === 0) {
-        document.querySelector('#filtros .filtro-btn[data-estado="Todos"]').classList.add('active');
-      }
-    } else {
-      estadosFiltro.add(estado);
-      btn.classList.add('active');
+  if (estadosFiltro.has(estado)) {
+    estadosFiltro.delete(estado);
+    btn.classList.remove('active');
+    // si quedó vacío, volver a activar Todos
+    if (estadosFiltro.size === 0) {
+      estadosFiltro.add('Todos');
+      document.querySelector('#filtros .filtro-btn[data-estado="Todos"]').classList.add('active');
     }
+  } else {
+    estadosFiltro.add(estado);
+    btn.classList.add('active');
+    // deseleccionar "Todos incl. cerrados" si estaba activo
+    const btnTIC = document.getElementById('btn-todos-incl-cerrados');
+    if (btnTIC) btnTIC.classList.remove('active');
   }
   aplicarFiltros();
 }
@@ -1527,8 +1530,8 @@ function _aplicarFiltrosSync() {
   const _lista = document.getElementById('pedidosList');
   let resultado = todosLosPedidos;
 
-  // Filtro estado
-  if (estadosFiltro.size > 0) {
+  // Filtro estado: 'Todos' en el set = sin filtro (muestra todo no-Cerrado)
+  if (estadosFiltro.size > 0 && !estadosFiltro.has('Todos')) {
     resultado = resultado.filter(p => estadosFiltro.has(p.estado));
   } else if (!_incluyeCerrados) {
     resultado = resultado.filter(p => p.estado !== 'Cerrado');
@@ -2426,16 +2429,13 @@ function filtrarCerrado(btn) {
 }
 
 function mostrarTodos() {
-  // Incluir cerrados y mostrar filtro Cerrado
+  estadosFiltro = new Set();
+  document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('btn-todos-incl-cerrados').classList.add('active');
   if (!_incluyeCerrados) {
     cargarLista(true);
   } else {
-    // Ya están cargados, solo filtrar por Todos
-    estadosFiltro = new Set();
-    document.querySelectorAll('#filtros .filtro-btn').forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('btn-todos-incl-cerrados').classList.add('active');
-    renderLista(todosLosPedidos);
-    actualizarContador();
+    aplicarFiltros();
   }
 }
 
