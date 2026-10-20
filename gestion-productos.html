@@ -60,14 +60,18 @@ header .user:hover { color: #fff; }
   transition: flex .3s ease;
 }
 .lista-header {
-  padding: 16px 24px 12px; background: #fff; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10;
+  padding: 14px 24px 10px; background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 10px;
+  position: sticky; top: 0; z-index: 10;
 }
 .lista-header h1 { font-size: 18px; font-weight: 800; color: var(--green-dark); }
+.lista-header-controles {
+  display: flex; align-items: center; gap: 10px;
+}
 .search-box {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
-  background: #f9fafb; flex: 1; max-width: 320px;
+  background: #f9fafb; flex: 1;
 }
 .search-box input { border: none; background: none; outline: none; font-size: 13px; width: 100%; }
 #contador { font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -287,14 +291,14 @@ textarea.field { min-height: 90px; resize: vertical; }
   .panel { width: 100%; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 50; }
   html.embedded .panel { top: 0; }
 
-  /* Header de lista: 3 filas apiladas */
-  .lista-header { flex-wrap: wrap; padding: 10px 14px 8px; gap: 6px; align-items: flex-start; }
-  .lista-titulo { order: 1; flex: 0 0 100%; min-width: 0; }
-  #contador { order: 4; flex: 0 0 auto; align-self: center; font-size: 11px; }
-  .lista-header > div:nth-child(2) { order: 2; flex: 1 1 auto; }
-  #filtros-marca-wrap { order: 3; flex: 0 0 100%; width: 100%; }
-  .search-box { order: 4; flex: 1 1 auto; max-width: 100%; }
+  /* Header de lista */
+  .lista-header { padding: 10px 14px 8px; gap: 8px; }
   .lista-header h1 { font-size: 15px; }
+  .lista-header-controles { flex-wrap: wrap; gap: 6px; }
+  .lista-header-controles > div:first-child { flex: 0 0 auto; }
+  #filtros-marca-wrap { flex: 1 1 140px !important; min-width: 120px; }
+  .search-box { flex: 1 1 140px; min-width: 120px; }
+  #contador { font-size: 11px; }
 
   /* Filas de producto: menos padding, imagen más chica */
   .prod-main { padding: 10px 8px 6px; gap: 8px; }
@@ -350,28 +354,30 @@ textarea.field { min-height: 90px; resize: vertical; }
           <h1>Productos</h1>
           <p style="font-size:11px; color:#6b7280; margin-top:2px; line-height:1.4;">Aquí verás solo los productos que vos podés administrar.</p>
         </div>
-        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px;">
-          <span style="font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);">Estado de inventario</span>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span class="pill-filtro" id="pill-rojo"    onclick="toggleFiltroSem('rojo')"><span class="sem-dot rojo"></span>Rojo</span>
-            <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
-            <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
+        <div class="lista-header-controles">
+          <div style="border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px; flex-shrink:0;">
+            <span style="font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);">Inventario</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="pill-filtro" id="pill-rojo"    onclick="toggleFiltroSem('rojo')"><span class="sem-dot rojo"></span>Rojo</span>
+              <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
+              <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
+            </div>
           </div>
+          <div class="marca-select-wrap" id="filtros-marca-wrap" style="display:none; flex:1;">
+            <input id="filtro-marca-input" type="text" placeholder="Proveedor / Marca..."
+              autocomplete="off"
+              onfocus="abrirMarcaDropdown()"
+              oninput="filtrarOpcionesMarca()"
+              onkeydown="marcaKeydown(event)">
+            <span class="chevron">▼</span>
+            <div class="marca-dropdown" id="marca-dropdown"></div>
+          </div>
+          <div class="search-box">
+            <span style="color:#9ca3af">🔍</span>
+            <input id="buscar" type="text" placeholder="Buscar por nombre o SKU..." oninput="filtrar()">
+          </div>
+          <span id="contador"></span>
         </div>
-        <div class="marca-select-wrap" id="filtros-marca-wrap" style="display:none;">
-          <input id="filtro-marca-input" type="text" placeholder="Proveedor / Marca..."
-            autocomplete="off"
-            onfocus="abrirMarcaDropdown()"
-            oninput="filtrarOpcionesMarca()"
-            onkeydown="marcaKeydown(event)">
-          <span class="chevron">▼</span>
-          <div class="marca-dropdown" id="marca-dropdown"></div>
-        </div>
-        <div class="search-box">
-          <span style="color:#9ca3af">🔍</span>
-          <input id="buscar" type="text" placeholder="Buscar por nombre o SKU..." oninput="filtrar()">
-        </div>
-        <span id="contador"></span>
       </div>
       <div id="loading-overlay">Cargando productos...</div>
       <div id="lista-productos"></div>
