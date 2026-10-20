@@ -99,6 +99,7 @@ header .user:hover { color: #fff; }
 .prod-nombre { font-size: 14px; font-weight: 700; color: var(--green); margin-bottom: 2px; }
 .prod-brand  { font-size: 11px; color: var(--muted); }
 .prod-pills  { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.lista-titulo { flex: 1; min-width: 0; }
 .badge-nopub {
   display: inline-block; background: #f3f4f6; color: var(--muted);
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
@@ -264,33 +265,35 @@ textarea.field { min-height: 90px; resize: vertical; }
 
   /* Header de lista: 3 filas apiladas */
   .lista-header { flex-wrap: wrap; padding: 10px 14px 8px; gap: 6px; align-items: flex-start; }
-  .lista-header > div:first-child { order: 1; flex: 0 0 100% !important; min-width: 0; }
+  .lista-titulo { order: 1; flex: 0 0 100%; min-width: 0; }
   #contador { order: 4; flex: 0 0 auto; align-self: center; font-size: 11px; }
   .lista-header > div:nth-child(2) { order: 2; flex: 1 1 auto; }
   .search-box { order: 3; flex: 1 1 auto; max-width: 100%; }
   .lista-header h1 { font-size: 15px; }
 
   /* Filas de producto: menos padding, imagen más chica */
-  .prod-main { padding: 10px 14px 6px; gap: 10px; }
+  .prod-main { padding: 10px 8px 6px; gap: 8px; }
   .prod-img             { width: 52px; height: 52px; }
   .prod-img-placeholder { width: 52px; height: 52px; font-size: 20px; }
   .prod-nombre { font-size: 13px; }
+  .badge-stock-rojo, .badge-stock-naranja { padding: 1px 5px; font-size: 10px; margin-left: 3px; }
 
   /* Tabla de variantes: oculta */
   .variantes-tabla { display: none; }
 
   /* Variantes mobile: tarjetas compactas */
-  .variantes-mobile { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+  .variantes-mobile { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 10px; }
   .var-card {
     display: flex; flex-direction: column; gap: 3px;
     background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
-    padding: 7px 10px; flex: 1 1 140px; min-width: 120px;
+    padding: 6px 8px; flex: 1 1 130px; min-width: 110px;
   }
   .var-card.inactiva-card { opacity: 0.5; }
   .var-card-nombre { font-size: 11px; font-weight: 700; color: #374151; }
-  .var-card-row    { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
-  .var-card-precio { font-size: 12px; font-weight: 700; color: var(--green); }
-  .var-card-vel    { font-size: 10px; color: var(--muted); }
+  .var-card-row    { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; margin-top: 2px; overflow: hidden; }
+  .var-card-row .stock-badge { font-size: 10px; padding: 1px 5px; flex-shrink: 0; }
+  .var-card-precio { font-size: 11px; font-weight: 700; color: var(--green); white-space: nowrap; }
+  .var-card-vel    { font-size: 10px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
 }
 </style>
 </head>
@@ -318,7 +321,7 @@ textarea.field { min-height: 90px; resize: vertical; }
     <!-- Lista de productos -->
     <div class="lista-wrap" id="lista-wrap">
       <div class="lista-header">
-        <div style="flex:1; min-width:0;">
+        <div class="lista-titulo">
           <h1>Productos</h1>
           <p style="font-size:11px; color:#6b7280; margin-top:2px; line-height:1.4;">Aquí verás solo los productos que vos podés administrar.</p>
         </div>

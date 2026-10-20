@@ -213,9 +213,11 @@
     .detalle-topbar { gap: 6px; }
   }
 
+  .lista-titulo { flex: 1; min-width: 0; }
+
   /* Lista view: título toma fila completa, botones van abajo */
   @media (max-width: 700px) {
-    #listaView .detalle-topbar > div:first-child { flex: 0 0 100%; }
+    .lista-titulo { flex: 0 0 100%; }
   }
 
   /* ── MOBILE: tabla → tarjetas ─────────────────────────────── */
