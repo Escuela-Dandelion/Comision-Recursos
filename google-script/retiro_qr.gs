@@ -1954,7 +1954,7 @@ var AUTH_EMAILS = {
   'yaninafuentes33@gmail.com':       { role: 'referente', name: 'Yana' },
   'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
-  'francoalini@gmail.com':           { role: 'ADMIN', name: 'Franco', marcas: ['NAZARENO'] },
+  'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', marcas: ['NAZARENO'] },
   'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
   'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' }
 };

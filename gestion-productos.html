@@ -156,6 +156,10 @@ header .user:hover { color: #fff; }
 .pill-filtro.activa-rojo    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
 .pill-filtro.activa-naranja { background: #ffedd5; color: #9a3412; border-color: #f97316; }
 .pill-filtro.activa-verde   { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.pill-filtro.activa-marca   { background: var(--green-light); color: var(--green-dark); border-color: var(--green); }
+#filtros-marca-wrap { border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px; }
+#filtros-marca-wrap .label-filtro { font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+#filtros-marca { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
@@ -268,7 +272,8 @@ textarea.field { min-height: 90px; resize: vertical; }
   .lista-titulo { order: 1; flex: 0 0 100%; min-width: 0; }
   #contador { order: 4; flex: 0 0 auto; align-self: center; font-size: 11px; }
   .lista-header > div:nth-child(2) { order: 2; flex: 1 1 auto; }
-  .search-box { order: 3; flex: 1 1 auto; max-width: 100%; }
+  #filtros-marca-wrap { order: 3; flex: 0 0 100%; }
+  .search-box { order: 4; flex: 1 1 auto; max-width: 100%; }
   .lista-header h1 { font-size: 15px; }
 
   /* Filas de producto: menos padding, imagen más chica */
@@ -332,6 +337,10 @@ textarea.field { min-height: 90px; resize: vertical; }
             <span class="pill-filtro" id="pill-naranja" onclick="toggleFiltroSem('naranja')"><span class="sem-dot naranja"></span>Naranja</span>
             <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
           </div>
+        </div>
+        <div id="filtros-marca-wrap" style="display:none;">
+          <span class="label-filtro">Proveedor / Marca</span>
+          <div id="filtros-marca"></div>
         </div>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
@@ -496,6 +505,7 @@ function cargarProductos() {
       if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
       _productos = d.productos || [];
       document.getElementById('loading-overlay').style.display = 'none';
+      renderFiltrosMarca(_productos);
       renderLista(_productos);
     })
     .catch(function() { document.getElementById('loading-overlay').textContent = 'Error de conexión.'; });
@@ -638,7 +648,8 @@ function renderLista(productos) {
   }).join('');
 }
 
-var _filtroSem = null;
+var _filtroSem   = null;
+var _filtroMarca = null;
 
 function toggleFiltroSem(color) {
   _filtroSem = _filtroSem === color ? null : color;
@@ -649,10 +660,32 @@ function toggleFiltroSem(color) {
   filtrar();
 }
 
+function renderFiltrosMarca(productos) {
+  var marcas = [];
+  productos.forEach(function(p) { if (p.brand && marcas.indexOf(p.brand) === -1) marcas.push(p.brand); });
+  marcas.sort();
+  var wrap = document.getElementById('filtros-marca-wrap');
+  var cont = document.getElementById('filtros-marca');
+  if (marcas.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  cont.innerHTML = marcas.map(function(m) {
+    return '<span class="pill-filtro" data-marca="' + m + '" onclick="toggleFiltroMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</span>';
+  }).join('');
+}
+
+function toggleFiltroMarca(marca) {
+  _filtroMarca = _filtroMarca === marca ? null : marca;
+  document.querySelectorAll('#filtros-marca .pill-filtro').forEach(function(el) {
+    el.className = 'pill-filtro' + (el.dataset.marca === _filtroMarca ? ' activa-marca' : '');
+  });
+  filtrar();
+}
+
 function filtrar() {
   var q = document.getElementById('buscar').value.toLowerCase().trim();
   var filtrados = _productos.filter(function(p) {
-    if (_filtroSem && p.semaforo !== _filtroSem) return false;
+    if (_filtroSem   && p.semaforo !== _filtroSem)   return false;
+    if (_filtroMarca && p.brand    !== _filtroMarca) return false;
     if (!q) return true;
     if (p.nombre.toLowerCase().indexOf(q) !== -1) return true;
     return (p.variantes || []).some(function(v) { return (v.sku || '').toLowerCase().indexOf(q) !== -1; });
