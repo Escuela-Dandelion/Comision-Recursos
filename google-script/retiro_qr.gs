@@ -1945,8 +1945,8 @@ var AUTH_EMAILS = {
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
   'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
-  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
-  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO'] },
+  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
+  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },
@@ -2753,7 +2753,7 @@ function apiProductos(email) {
     }
     var pedidosActivos = {};
     try {
-      var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino'];
+      var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino', 'entregado en escuela', 'recibido', 'en proceso'];
       var ss2 = SpreadsheetApp.openById('1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I');
       var pedSheet = null;
       var allSheets = ss2.getSheets();
@@ -2790,6 +2790,10 @@ function apiProductos(email) {
 function apiUpdateProducto(email, productoId, nombre, descripcion) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
   var body = {};
   if (nombre      !== undefined && nombre      !== null) body.name        = { es: nombre };
   if (descripcion !== undefined && descripcion !== null) body.description = { es: descripcion };
@@ -2804,6 +2808,10 @@ function apiUpdateProducto(email, productoId, nombre, descripcion) {
 function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, costo, stock) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
   var body = {};
   if (precio      !== undefined && precio      !== null && precio      !== '') body.price             = parseFloat(precio);
   if (precioPromo !== undefined && precioPromo !== null && precioPromo !== '') body.promotional_price = parseFloat(precioPromo) > 0 ? parseFloat(precioPromo) : null;
@@ -2820,6 +2828,10 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
 function apiUpdateImagen(email, productoId, base64Data, mimeType) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
   if (!base64Data) return { ok: false, error: 'Imagen requerida.' };
   try {
     var prodUrl = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
