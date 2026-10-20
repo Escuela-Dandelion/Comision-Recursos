@@ -156,10 +156,30 @@ header .user:hover { color: #fff; }
 .pill-filtro.activa-rojo    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
 .pill-filtro.activa-naranja { background: #ffedd5; color: #9a3412; border-color: #f97316; }
 .pill-filtro.activa-verde   { background: #dcfce7; color: #166534; border-color: #22c55e; }
-.pill-filtro.activa-marca   { background: var(--green-light); color: var(--green-dark); border-color: var(--green); }
-#filtros-marca-wrap { border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px; }
-#filtros-marca-wrap .label-filtro { font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
-#filtros-marca { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.marca-select-wrap { position:relative; min-width:160px; }
+.marca-select-wrap input {
+  width:100%; border:1px solid var(--border); border-radius:8px;
+  padding:7px 28px 7px 10px; font-size:12px; background:#f9fafb;
+  outline:none; cursor:pointer; color:var(--green-dark); font-weight:600;
+}
+.marca-select-wrap input::placeholder { color:var(--muted); font-weight:400; }
+.marca-select-wrap input.activa { border-color:var(--green); background:var(--green-light); }
+.marca-select-wrap .chevron {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  pointer-events:none; color:var(--muted); font-size:10px;
+}
+.marca-dropdown {
+  display:none; position:absolute; top:calc(100% + 4px); left:0; right:0;
+  background:#fff; border:1px solid var(--border); border-radius:8px;
+  box-shadow:0 4px 12px rgba(0,0,0,.1); z-index:200; max-height:220px; overflow-y:auto;
+}
+.marca-dropdown.open { display:block; }
+.marca-opt {
+  padding:8px 12px; font-size:12px; cursor:pointer; color:#1a1a2e;
+}
+.marca-opt:hover { background:var(--green-light); color:var(--green-dark); }
+.marca-opt.seleccionada { background:var(--green-light); color:var(--green-dark); font-weight:700; }
+.marca-opt.oculta { display:none; }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
@@ -272,7 +292,7 @@ textarea.field { min-height: 90px; resize: vertical; }
   .lista-titulo { order: 1; flex: 0 0 100%; min-width: 0; }
   #contador { order: 4; flex: 0 0 auto; align-self: center; font-size: 11px; }
   .lista-header > div:nth-child(2) { order: 2; flex: 1 1 auto; }
-  #filtros-marca-wrap { order: 3; flex: 0 0 100%; }
+  #filtros-marca-wrap { order: 3; flex: 0 0 100%; width: 100%; }
   .search-box { order: 4; flex: 1 1 auto; max-width: 100%; }
   .lista-header h1 { font-size: 15px; }
 
@@ -338,9 +358,14 @@ textarea.field { min-height: 90px; resize: vertical; }
             <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
           </div>
         </div>
-        <div id="filtros-marca-wrap" style="display:none;">
-          <span class="label-filtro">Proveedor / Marca</span>
-          <div id="filtros-marca"></div>
+        <div class="marca-select-wrap" id="filtros-marca-wrap" style="display:none;">
+          <input id="filtro-marca-input" type="text" placeholder="Proveedor / Marca..."
+            autocomplete="off"
+            onfocus="abrirMarcaDropdown()"
+            oninput="filtrarOpcionesMarca()"
+            onkeydown="marcaKeydown(event)">
+          <span class="chevron">▼</span>
+          <div class="marca-dropdown" id="marca-dropdown"></div>
         </div>
         <div class="search-box">
           <span style="color:#9ca3af">🔍</span>
@@ -665,21 +690,62 @@ function renderFiltrosMarca(productos) {
   productos.forEach(function(p) { if (p.brand && marcas.indexOf(p.brand) === -1) marcas.push(p.brand); });
   marcas.sort();
   var wrap = document.getElementById('filtros-marca-wrap');
-  var cont = document.getElementById('filtros-marca');
   if (marcas.length < 2) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'flex';
-  cont.innerHTML = marcas.map(function(m) {
-    return '<span class="pill-filtro" data-marca="' + m + '" onclick="toggleFiltroMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</span>';
+  wrap.style.display = 'block';
+  var dd = document.getElementById('marca-dropdown');
+  dd.innerHTML = marcas.map(function(m) {
+    return '<div class="marca-opt" data-marca="' + m + '" onmousedown="seleccionarMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</div>';
   }).join('');
 }
 
-function toggleFiltroMarca(marca) {
-  _filtroMarca = _filtroMarca === marca ? null : marca;
-  document.querySelectorAll('#filtros-marca .pill-filtro').forEach(function(el) {
-    el.className = 'pill-filtro' + (el.dataset.marca === _filtroMarca ? ' activa-marca' : '');
+function abrirMarcaDropdown() {
+  filtrarOpcionesMarca();
+  document.getElementById('marca-dropdown').classList.add('open');
+}
+
+function cerrarMarcaDropdown() {
+  document.getElementById('marca-dropdown').classList.remove('open');
+  // Si el texto no coincide con la selección actual, restaurar
+  var input = document.getElementById('filtro-marca-input');
+  input.value = _filtroMarca || '';
+  if (!_filtroMarca) input.classList.remove('activa');
+}
+
+function filtrarOpcionesMarca() {
+  var q = document.getElementById('filtro-marca-input').value.toLowerCase();
+  document.querySelectorAll('#marca-dropdown .marca-opt').forEach(function(el) {
+    var match = el.dataset.marca.toLowerCase().indexOf(q) !== -1;
+    el.classList.toggle('oculta', !match);
+    el.classList.toggle('seleccionada', el.dataset.marca === _filtroMarca);
   });
+  document.getElementById('marca-dropdown').classList.add('open');
+}
+
+function seleccionarMarca(marca) {
+  if (_filtroMarca === marca) {
+    _filtroMarca = null;
+    document.getElementById('filtro-marca-input').value = '';
+    document.getElementById('filtro-marca-input').classList.remove('activa');
+  } else {
+    _filtroMarca = marca;
+    document.getElementById('filtro-marca-input').value = marca;
+    document.getElementById('filtro-marca-input').classList.add('activa');
+  }
+  document.getElementById('marca-dropdown').classList.remove('open');
   filtrar();
 }
+
+function marcaKeydown(e) {
+  if (e.key === 'Escape') { _filtroMarca = null; cerrarMarcaDropdown(); filtrar(); }
+  if (e.key === 'Enter') {
+    var visible = document.querySelectorAll('#marca-dropdown .marca-opt:not(.oculta)');
+    if (visible.length === 1) seleccionarMarca(visible[0].dataset.marca);
+  }
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.marca-select-wrap')) cerrarMarcaDropdown();
+});
 
 function filtrar() {
   var q = document.getElementById('buscar').value.toLowerCase().trim();
