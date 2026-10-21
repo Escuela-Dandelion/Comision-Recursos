@@ -88,6 +88,13 @@ function doGet(e) {
         const excluidos = excluir.split(',').map(function(s){ return s.trim(); });
         pedidos = pedidos.filter(function(p){ return excluidos.indexOf(p.estado) === -1; });
       }
+      const marcasFGP = MARCAS_POR_EMAIL[email];
+      if (Array.isArray(marcasFGP)) {
+        pedidos = pedidos.filter(function(p) {
+          const marca = invDetectarMarca(p.proveedor || '') || (p.proveedor || '').toUpperCase();
+          return marcasFGP.indexOf(marca) !== -1;
+        });
+      }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, pedidos: pedidos }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -875,6 +882,7 @@ const MARCAS_POR_EMAIL = {
   'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN'],
   'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
   'lourdelcastillo@gmail.com':       ['LA YAYA','ODDIS'],
+  'francoalini@gmail.com':           ['NAZARENO'],
 };
 
 const INV_PISO_MARCA = {
