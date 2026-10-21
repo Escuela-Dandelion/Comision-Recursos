@@ -244,14 +244,14 @@ textarea.field { min-height: 90px; resize: vertical; }
 .input-precio input { padding-left: 22px; }
 
 /* stock editor */
-.stock-opciones { display: flex; gap: 6px; margin-bottom: 10px; }
-.btn-stock-modo {
-  padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px;
-  font-size: 12px; cursor: pointer; background: #fff; transition: all .15s;
-}
-.btn-stock-modo.activo { background: var(--green); color: #fff; border-color: var(--green); }
 .stock-infinito-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; }
 .stock-infinito-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+.stock-ubicaciones { display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.stock-ubicaciones > div { flex: 1; min-width: 100px; }
+.stock-total-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px; }
+.stock-total-row.redistrib { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.stock-total-row.cambia    { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+.stock-total-row .total-num { font-weight: 700; font-size: 14px; }
 
 /* foto */
 .foto-preview {
@@ -853,7 +853,10 @@ function renderEditPrecios(variantes) {
 
 function renderEditStock(variantes) {
   var html = variantes.map(function(v, i) {
-    var esInf = v.stock === null;
+    var esInf  = v.stock === null;
+    var stockP = v.stockP !== null && v.stockP !== undefined ? v.stockP : '';
+    var stockS = v.stockS !== null && v.stockS !== undefined ? v.stockS : '';
+    var total  = v.stock !== null && v.stock !== undefined ? v.stock : '';
     return '<div class="variante-editor">' +
       '<div class="variante-nombre">' + esc(v.nombre || v.sku || 'Variante ' + (i+1)) + '</div>' +
       '<div class="stock-infinito-row" style="margin-bottom:8px">' +
@@ -861,8 +864,23 @@ function renderEditStock(variantes) {
         '<label for="inf-' + v.id + '">Stock infinito</label>' +
       '</div>' +
       '<div id="stock-num-wrap-' + v.id + '" style="' + (esInf ? 'display:none' : '') + '">' +
-        '<label class="field-label">Cantidad</label>' +
-        '<input class="field" id="stock-' + v.id + '" type="number" step="1" min="0" value="' + (esInf ? '' : v.stock) + '" style="max-width:140px">' +
+        '<div class="stock-ubicaciones">' +
+          '<div>' +
+            '<label class="field-label">Primario</label>' +
+            '<input class="field" id="stockP-' + v.id + '" type="number" step="1" min="0" value="' + stockP + '" ' +
+              'data-total-original="' + total + '" ' +
+              'oninput="actualizarTotalStock(\'' + v.id + '\')" style="max-width:100px">' +
+          '</div>' +
+          '<div>' +
+            '<label class="field-label">Secundario</label>' +
+            '<input class="field" id="stockS-' + v.id + '" type="number" step="1" min="0" value="' + stockS + '" ' +
+              'oninput="actualizarTotalStock(\'' + v.id + '\')" style="max-width:100px">' +
+          '</div>' +
+        '</div>' +
+        '<div class="stock-total-row redistrib" id="stock-status-' + v.id + '">' +
+          '<span>Total: <span class="total-num" id="stock-total-' + v.id + '">' + total + '</span></span>' +
+          '<span id="stock-status-msg-' + v.id + '">· Ingresá cantidades por ubicación</span>' +
+        '</div>' +
       '</div>' +
       '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">' +
         '<div>' +
@@ -884,7 +902,7 @@ function renderEditStock(variantes) {
             'style="max-width:120px">' +
         '</div>' +
       '</div>' +
-      '<div style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = usar valor calculado automáticamente.</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px">Umbral/Piso vacío = valor calculado automáticamente.</div>' +
     '</div>';
   }).join('');
   document.getElementById('edit-stock').innerHTML = html;
@@ -893,6 +911,24 @@ function renderEditStock(variantes) {
 function toggleInfinito(varianteId) {
   var checked = document.getElementById('inf-' + varianteId).checked;
   document.getElementById('stock-num-wrap-' + varianteId).style.display = checked ? 'none' : 'block';
+}
+
+function actualizarTotalStock(varianteId) {
+  var pEl = document.getElementById('stockP-' + varianteId);
+  var sEl = document.getElementById('stockS-' + varianteId);
+  var p   = parseInt(pEl.value) || 0;
+  var s   = parseInt(sEl.value) || 0;
+  var nuevo    = p + s;
+  var anterior = parseInt(pEl.dataset.totalOriginal);
+  var totalEl  = document.getElementById('stock-total-' + varianteId);
+  var statusEl = document.getElementById('stock-status-' + varianteId);
+  var msgEl    = document.getElementById('stock-status-msg-' + varianteId);
+  totalEl.textContent = nuevo;
+  var cambia = !isNaN(anterior) && nuevo !== anterior;
+  statusEl.className = 'stock-total-row ' + (cambia ? 'cambia' : 'redistrib');
+  msgEl.textContent  = cambia
+    ? '· Cambia de ' + anterior + ' a ' + nuevo + ' — actualizará TiendaNube'
+    : '· Solo redistribución interna — no actualiza TiendaNube';
 }
 
 // ── GUARDAR ──────────────────────────────────────────────────────
@@ -952,22 +988,67 @@ function guardarPrecios() {
 
 function guardarStock() {
   if (!_productoActual) return;
+
+  // Detectar variantes donde el total cambia
+  var conCambioTotal = _productoActual.variantes.filter(function(v) {
+    if (document.getElementById('inf-' + v.id).checked) return false;
+    var pEl = document.getElementById('stockP-' + v.id);
+    if (!pEl) return false;
+    var p = parseInt(pEl.value) || 0;
+    var s = parseInt(document.getElementById('stockS-' + v.id).value) || 0;
+    var anterior = parseInt(pEl.dataset.totalOriginal);
+    return !isNaN(anterior) && (p + s) !== anterior;
+  });
+
+  if (conCambioTotal.length > 0) {
+    var resumen = conCambioTotal.map(function(v) {
+      var p = parseInt(document.getElementById('stockP-' + v.id).value) || 0;
+      var s = parseInt(document.getElementById('stockS-' + v.id).value) || 0;
+      var ant = parseInt(document.getElementById('stockP-' + v.id).dataset.totalOriginal);
+      return (v.nombre || v.sku) + ': ' + ant + ' → ' + (p+s);
+    }).join('\n');
+    if (!confirm('El stock total cambia en las siguientes variantes y se sincronizará con TiendaNube:\n\n' + resumen + '\n\n¿Confirmar?')) return;
+  }
+
   var btn = document.getElementById('btn-guardar-stock');
   btn.disabled = true; setSt('stock', 'Guardando...');
+
   var promesas = _productoActual.variantes.map(function(v) {
-    var esInf  = document.getElementById('inf-' + v.id).checked;
-    var stock  = esInf ? null : document.getElementById('stock-' + v.id).value;
-    var umbralEl = document.getElementById('umbral-' + v.id);
-    var umbralVal = umbralEl ? umbralEl.value.trim() : '';
-    var pisoEl = document.getElementById('piso-' + v.id);
-    var pisoVal = pisoEl ? pisoEl.value.trim() : '';
-    var _pSt = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), stock: stock === null ? 'null' : String(stock) });
-    var stockFetch = fetch(GAS_URL + '?' + _pSt.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
-    var clave = _productoActual.id + '_' + v.id;
-    var _pUmb = new URLSearchParams({ action: 'saveStockOverride', clave: clave, nombre_variante: v.nombre || v.sku || '', umbral: umbralVal, piso: pisoVal });
-    var umbralFetch = fetch(GAS_URL + '?' + _pUmb.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    var esInf = document.getElementById('inf-' + v.id).checked;
+    var umbralVal = (document.getElementById('umbral-' + v.id) || {}).value || '';
+    var pisoVal   = (document.getElementById('piso-'   + v.id) || {}).value || '';
+    var clave     = _productoActual.id + '_' + v.id;
+
+    var umbralFetch = fetch(GAS_URL + '?' + new URLSearchParams({
+      action: 'saveStockOverride', clave: clave,
+      nombre_variante: v.nombre || v.sku || '',
+      umbral: umbralVal.trim(), piso: pisoVal.trim()
+    }).toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+
+    var stockFetch;
+    if (esInf) {
+      stockFetch = fetch(GAS_URL + '?' + new URLSearchParams({
+        action: 'update_variante', email: currentUser.email,
+        producto_id: String(_productoActual.id), variante_id: String(v.id), stock: 'null'
+      }).toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    } else {
+      var pEl = document.getElementById('stockP-' + v.id);
+      var sEl = document.getElementById('stockS-' + v.id);
+      var stockP = pEl ? (parseInt(pEl.value) || 0) : 0;
+      var stockS = sEl ? (parseInt(sEl.value) || 0) : 0;
+      var anterior = pEl ? pEl.dataset.totalOriginal : '';
+      stockFetch = fetch(GAS_URL + '?' + new URLSearchParams({
+        action: 'update_stock_ubicaciones', email: currentUser.email,
+        producto_id: String(_productoActual.id), variante_id: String(v.id),
+        nombre_variante: v.nombre || v.sku || '',
+        stock_p: String(stockP), stock_s: String(stockS),
+        stock_total_anterior: String(anterior)
+      }).toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    }
+
     return Promise.all([stockFetch, umbralFetch]).then(function(rs) { return rs[0]; });
   });
+
   Promise.all(promesas).then(function(resultados) {
     btn.disabled = false;
     var errores = resultados.filter(function(r) { return !r.ok; });
@@ -990,7 +1071,14 @@ function actualizarVariantesLocales(tipo) {
     }
     if (tipo === 'stock') {
       var esInf = document.getElementById('inf-' + v.id).checked;
-      v.stock   = esInf ? null : (parseInt(document.getElementById('stock-' + v.id).value) || 0);
+      if (esInf) { v.stock = null; }
+      else {
+        var pEl = document.getElementById('stockP-' + v.id);
+        var sEl = document.getElementById('stockS-' + v.id);
+        v.stockP = pEl ? (parseInt(pEl.value) || 0) : v.stockP;
+        v.stockS = sEl ? (parseInt(sEl.value) || 0) : v.stockS;
+        v.stock  = (v.stockP || 0) + (v.stockS || 0);
+      }
     }
   });
   // Refrescar fila en la lista

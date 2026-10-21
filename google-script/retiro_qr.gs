@@ -310,6 +310,19 @@ function doGetInterno(e) {
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'update_stock_ubicaciones') {
+    var res = apiUpdateStockUbicaciones(
+      e.parameter.email        || '',
+      e.parameter.producto_id  || '',
+      e.parameter.variante_id  || '',
+      e.parameter.nombre_variante || '',
+      e.parameter.stock_p,
+      e.parameter.stock_s,
+      e.parameter.stock_total_anterior
+    );
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (action === 'saveStockOverride') {
     try {
       var clave   = e.parameter.clave || '';
@@ -2713,6 +2726,8 @@ function apiProductos(email) {
           costo:          costo,
           margen:         margen,
           stock:          (v.stock === null || v.stock === undefined) ? null : parseInt(v.stock),
+          stockP:         (ov.stockP !== null && ov.stockP !== undefined) ? ov.stockP : null,
+          stockS:         (ov.stockS !== null && ov.stockS !== undefined) ? ov.stockS : null,
           umbral:         umbral,
           umbralOverride: (ov.umbralOverride !== null && ov.umbralOverride !== undefined) ? ov.umbralOverride : null,
           piso:           piso,
@@ -2823,6 +2838,52 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
   if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateVariante error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar variante.' }; }
   _invalidarCacheProductos(email);
   return { ok: true };
+}
+
+function apiUpdateStockUbicaciones(email, productoId, varianteId, nombreVariante, stockPStr, stockSStr, stockAnteriorStr) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
+
+  var stockP = (stockPStr !== undefined && stockPStr !== '' && stockPStr !== null) ? parseInt(stockPStr) : 0;
+  var stockS = (stockSStr !== undefined && stockSStr !== '' && stockSStr !== null) ? parseInt(stockSStr) : 0;
+  var nuevoTotal    = stockP + stockS;
+  var totalAnterior = (stockAnteriorStr !== undefined && stockAnteriorStr !== '' && stockAnteriorStr !== null) ? parseInt(stockAnteriorStr) : null;
+  var totalCambio   = totalAnterior === null || nuevoTotal !== totalAnterior;
+
+  // Guardar P/S en ConfigStock (cols 5 y 6)
+  try {
+    var ss  = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
+    var sh  = ss.getSheetByName('ConfigStock');
+    if (!sh) { sh = ss.insertSheet('ConfigStock'); sh.appendRow(['Clave','Nombre','Umbral Override','Piso Override','Stock Primario','Stock Secundario']); }
+    var dat = sh.getDataRange().getValues();
+    var clave = productoId + '_' + varianteId;
+    var found = false;
+    for (var k = 1; k < dat.length; k++) {
+      if (String(dat[k][0]).trim() === clave) {
+        sh.getRange(k + 1, 5).setValue(stockP);
+        sh.getRange(k + 1, 6).setValue(stockS);
+        found = true; break;
+      }
+    }
+    if (!found) sh.appendRow([clave, nombreVariante, '', '', stockP, stockS]);
+  } catch(err) {
+    Logger.log('Error guardando stock ubicaciones: ' + err);
+    return { ok: false, error: 'Error al guardar en sheet.' };
+  }
+
+  // Solo sincronizar TiendaNube si el total cambió
+  if (totalCambio) {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
+    var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify({ stock: nuevoTotal }), muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) return { ok: false, error: 'Stock guardado localmente pero error al sincronizar TiendaNube.' };
+  }
+
+  _invalidarCacheProductos(email);
+  return { ok: true, totalCambio: totalCambio, nuevoTotal: nuevoTotal, stockP: stockP, stockS: stockS };
 }
 
 function apiUpdateImagen(email, productoId, base64Data, mimeType) {

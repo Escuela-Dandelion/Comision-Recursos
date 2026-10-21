@@ -176,7 +176,9 @@ function leerOverridesStock() {
       if (!clave) continue;
       map[clave] = {
         umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
-        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null
+        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
+        stockP:         data[i][4] !== '' && data[i][4] !== null && data[i][4] !== undefined ? parseInt(data[i][4]) : null,
+        stockS:         data[i][5] !== '' && data[i][5] !== null && data[i][5] !== undefined ? parseInt(data[i][5]) : null
       };
     }
   } catch(e) { Logger.log('leerOverridesStock error: ' + e); }
