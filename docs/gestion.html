@@ -476,7 +476,7 @@ function stockLabel(v) {
 }
 function stockCelda(v) {
   var badge = '<span class="stock-badge ' + stockClass(v) + '">' + stockLabel(v) + '</span>';
-  if (v.stock !== null && v.stockP !== undefined && v.stockS !== undefined) {
+  if (v.stock !== null && v.stockP != null && v.stockS != null) {
     badge += '<div class="stock-ubic">' + v.stockP + 'P&nbsp;·&nbsp;' + v.stockS + 'S</div>';
   }
   return badge;
