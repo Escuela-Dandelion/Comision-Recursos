@@ -1099,11 +1099,14 @@ function getStockDashboard() {
   return { ok: true, productos: resultado, diasActivos: diasActivos };
 }
 
+function normalizarTexto(s) {
+  return String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 function invDetectarMarca(nombreProd) {
-  const n = nombreProd.toUpperCase();
+  const n = normalizarTexto(nombreProd);
   var found = null;
   Object.keys(INV_FGP).forEach(function(marca) {
-    if (n.indexOf(marca) !== -1) found = marca;
+    if (n.indexOf(normalizarTexto(marca)) !== -1) found = marca;
   });
   return found;
 }
