@@ -191,6 +191,7 @@ header .user:hover { color: #fff; }
 .stock-bajo { background: #fef9c3; color: #854d0e; }
 .stock-cero { background: #fee2e2; color: #991b1b; }
 .stock-inf  { background: #f3f4f6; color: var(--muted); }
+.stock-ubic { font-size: 10px; color: var(--muted); text-align: right; margin-top: 2px; white-space: nowrap; }
 
 /* ── PANEL EDITOR ── */
 .panel {
@@ -623,6 +624,13 @@ function stockLabel(v) {
   if (v.stock === null) return '∞ Infinito';
   return v.stock;
 }
+function stockCelda(v) {
+  var badge = '<span class="stock-badge ' + stockClass(v) + '">' + stockLabel(v) + '</span>';
+  if (v.stock !== null && v.stockP != null && v.stockS != null) {
+    badge += '<div class="stock-ubic">' + v.stockP + 'P&nbsp;·&nbsp;' + v.stockS + 'S</div>';
+  }
+  return badge;
+}
 function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
 function esc(s)   { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -660,7 +668,7 @@ function renderLista(productos) {
         var margenStr = v.margen !== null && v.margen !== undefined ? v.margen + '%' : '—';
         return '<tr' + (inactiva ? ' class="inactiva"' : '') + '>' +
           '<td>' + esc(v.sku || v.nombre) + '</td>' +
-          '<td class="num"><span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span></td>' +
+          '<td class="num">' + stockCelda(v) + '</td>' +
           '<td style="text-align:center"><span class="sem-dot ' + sem + '"></span></td>' +
           '<td class="num">' + (v.velMes || '—') + '</td>' +
           '<td class="num" style="white-space:nowrap">' + (v.umbral !== undefined && v.umbral !== null ? v.umbral : '—') + (v.umbral ? '<button class="tip-btn-g" onclick="toggleTipG(\'' + v.id + '\',event)">i</button><div class="tip-box-g" id="gtip-' + v.id + '">' + umbralTipG(v) + '</div>' : '') + '</td>' +
@@ -677,7 +685,7 @@ function renderLista(productos) {
         return '<div class="var-card' + (inactiva ? ' inactiva-card' : '') + '">' +
           '<div class="var-card-nombre">' + esc(v.nombre) + '</div>' +
           '<div class="var-card-row">' +
-            '<span class="stock-badge ' + sc + '">' + stockLabel(v) + '</span>' +
+            stockCelda(v) +
             '<span class="var-card-precio">' + pesos(v.precio) + '</span>' +
             (v.velMes ? '<span class="var-card-vel">📈 ' + v.velMes + '/mes</span>' : '') +
           '</div>' +
