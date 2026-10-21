@@ -1,3 +1,4 @@
+// v2026-10-21 — Stock por ubicación (Primario/Secundario), permisos FGP, Franco como FGP
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
