@@ -419,9 +419,17 @@
           <div style="font-size:14px;color:#374151;margin-top:4px" id="qr-pedido-nombre"></div>
           <div style="font-size:13px;color:#6b7280;margin-top:8px" id="qr-pedido-productos"></div>
         </div>
+        <div id="qr-parcial-banner" style="display:none;background:#fff3cd;border:1px solid #f97316;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px">
+          <strong>⚠ Entrega parcial pendiente</strong>
+          <p id="qr-parcial-banner-notas" style="margin:4px 0 0;color:#374151;font-style:italic"></p>
+        </div>
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#374151">
           Entregando como: <strong id="qr-quien-label">—</strong>
         </div>
+        <label id="qr-chk-parcial-label" style="display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="qr-chk-parcial" style="width:16px;height:16px;flex-shrink:0" onchange="actualizarBtnQR()">
+          Queda algo pendiente de entregar
+        </label>
         <div style="margin-bottom:16px">
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;display:block;margin-bottom:6px">Notas (opcional)</label>
           <textarea id="qr-notas" rows="2" placeholder="Ej: se entregó sin el jabón, faltaba stock…"
@@ -1542,10 +1550,26 @@ function onQRScanned(url) {
         el.textContent = d.error || 'Error al verificar.'; el.style.display = 'block';
         setTimeout(function(){ reiniciarQR(); }, 2500); return;
       }
-      _qrData = { id: id, token: token, order: d.order };
+      _qrData = { id: id, token: token, order: d.order, esParcial: d.parcial === true };
       document.getElementById('qr-pedido-numero').textContent = 'Pedido #' + d.order.number;
       document.getElementById('qr-pedido-nombre').textContent = d.order.contact_name;
       document.getElementById('qr-pedido-productos').innerHTML = (d.order.products||[]).map(function(p){ return p.quantity + 'x <strong>' + p.name + '</strong>'; }).join('<br>');
+      var qrBanner = document.getElementById('qr-parcial-banner');
+      var qrChk    = document.getElementById('qr-chk-parcial');
+      var qrBtn    = document.getElementById('qr-btn-confirmar');
+      if (d.parcial) {
+        qrBanner.style.display = 'block';
+        document.getElementById('qr-parcial-banner-notas').textContent = d.notas_previas ? '"' + d.notas_previas + '"' : '';
+        document.getElementById('qr-notas').value = d.notas_previas || '';
+        qrChk.checked = true;
+        qrBtn.setAttribute('data-wasparcial', '1');
+      } else {
+        qrBanner.style.display = 'none';
+        document.getElementById('qr-notas').value = '';
+        qrChk.checked = false;
+        qrBtn.setAttribute('data-wasparcial', '0');
+      }
+      actualizarBtnQR();
       if (_qrUser && _qrUser.name) {
         document.getElementById('qr-quien-label').textContent = _qrUser.name;
         document.getElementById('qr-pedido-wrap').style.display = 'block';
@@ -1570,6 +1594,16 @@ function onQRScanned(url) {
     });
 }
 
+function actualizarBtnQR() {
+  var chk = document.getElementById('qr-chk-parcial');
+  var btn = document.getElementById('qr-btn-confirmar');
+  if (!chk || !btn) return;
+  var esParcialPrevia = btn.getAttribute('data-wasparcial') === '1';
+  btn.textContent = chk.checked
+    ? (esParcialPrevia ? 'Actualizar notas' : '✅ Guardar entrega parcial')
+    : (esParcialPrevia ? 'Confirmar entrega completa' : '✅ Confirmar entrega');
+}
+
 function confirmarEntregaQR() {
   var staff = _qrUser ? _qrUser.name : '';
   var pin   = _qrUser ? (_qrUser.pin || '') : '';
@@ -1585,24 +1619,38 @@ function confirmarEntregaQR() {
   btn.innerHTML = '<div style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px"></div> Confirmando…';
   fb.style.display = 'none';
   var notas    = document.getElementById('qr-notas') ? document.getElementById('qr-notas').value.trim() : '';
+  var qrChk    = document.getElementById('qr-chk-parcial');
+  var parcial  = qrChk && qrChk.checked ? '1' : '0';
   var staffKey = staff.replace(' ', '.') + ' '; // formato esperado por el GAS: Nombre.Apellido[espacio]
-  var url = GAS_URL + '?action=api_entregar&id=' + _qrData.id + '&token=' + _qrData.token + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin);
+  var url = GAS_URL + '?action=api_entregar&id=' + _qrData.id + '&token=' + _qrData.token + '&staff=' + encodeURIComponent(staffKey) + '&pin=' + encodeURIComponent(pin) + '&parcial=' + parcial;
   if (_qrUser && _qrUser.email) url += '&email=' + encodeURIComponent(_qrUser.email);
   if (notas) url += '&notas=' + encodeURIComponent(notas);
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(d){
-      btn.disabled = false; btn.innerHTML = '✅ Confirmar entrega';
       if (d.ok) {
-        document.getElementById('qr-pedido-wrap').style.display = 'none';
-        document.getElementById('qr-ya-entregado').style.display = 'block';
-        document.getElementById('qr-entregado-msg').textContent = '¡Entrega registrada! Pedido #' + _qrData.order.number;
-        _ventasCargadas = false;
+        if (d.parcial) {
+          btn.disabled = false; btn.textContent = 'Actualizar notas';
+          btn.setAttribute('data-wasparcial', '1');
+          var banner = document.getElementById('qr-parcial-banner');
+          banner.style.display = 'block';
+          document.getElementById('qr-parcial-banner-notas').textContent = notas ? '"' + notas + '"' : '';
+          qrChk.checked = true;
+          actualizarBtnQR();
+          fb.textContent = '✅ Entrega parcial anotada.'; fb.style.color='#166534'; fb.style.display='block';
+          _ventasCargadas = false;
+        } else {
+          document.getElementById('qr-pedido-wrap').style.display = 'none';
+          document.getElementById('qr-ya-entregado').style.display = 'block';
+          document.getElementById('qr-entregado-msg').textContent = '¡Entrega registrada! Pedido #' + _qrData.order.number;
+          _ventasCargadas = false;
+        }
       } else {
+        btn.disabled = false; btn.textContent = '✅ Confirmar entrega';
         fb.textContent = '❌ ' + (d.error || 'PIN incorrecto o sin permisos.'); fb.style.color='#dc2626'; fb.style.display='block';
       }
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML='✅ Confirmar entrega'; fb.textContent='❌ Error de conexión.'; fb.style.color='#dc2626'; fb.style.display='block'; });
+    .catch(function(){ btn.disabled=false; btn.textContent='✅ Confirmar entrega'; fb.textContent='❌ Error de conexión.'; fb.style.color='#dc2626'; fb.style.display='block'; });
 }
 
 function verMisEntregas() {
