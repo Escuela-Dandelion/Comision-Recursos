@@ -1269,7 +1269,7 @@ function paginaVerificar(orderId, token) {
     '    var checkParcial=isParcial?"":\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" style="width:20px;height:20px;flex-shrink:0"> Queda algo pendiente de entregar</label>\';' +
     '    var btnLabel=isParcial?"&#x2713; Confirmar entrega completa":"&#x2713; Confirmar entrega";' +
     '    var formHtml=pagoOk' +
-    '      ?(\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select>\')+notasInput+checkParcial+(\'<button id="btn" class="btn" onclick="confirmar()">\'+btnLabel+\'</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\')' +
+    '      ?(\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select>\')+checkParcial+notasInput+(\'<button id="btn" class="btn" onclick="confirmar()">\'+btnLabel+\'</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\')' +
     '      :\'<p style="color:#E63946;text-align:center">No se puede entregar: pago pendiente.</p>\';' +
     '    c.innerHTML=parcialBanner+\'<h2>Pedido #\'+o.number+\'</h2><p>\'+est+\'</p>\'' +
     '      +\'<div class="card"><p style="margin:0 0 4px"><strong>\'+esc(o.contact_name)+\'</strong></p>\'' +
