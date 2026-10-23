@@ -955,28 +955,40 @@ function guardarNotasVenta() {
     .catch(function(){ btn.disabled=false; btn.textContent='Guardar'; fb.textContent='❌ Error de conexión.'; fb.style.display='block'; });
 }
 
+function _actualizarBtnEntregar() {
+  var chk = document.getElementById('v-entregar-parcial');
+  var esParcialModal = document.getElementById('v-entregar-banner-parcial').style.display !== 'none';
+  var btn = document.getElementById('v-entregar-btn');
+  if (esParcialModal) {
+    btn.textContent = chk.checked ? 'Actualizar notas' : 'Confirmar entrega completa';
+  } else {
+    btn.textContent = chk.checked ? 'Guardar entrega parcial' : 'Confirmar entrega';
+  }
+}
+
 function abrirModalEntregar(i) {
   _vRowActual = _ventasFiltradasActuales[i];
   var esParcial = _vRowActual.estado === 'Parcial' || _vRowActual.parcial === true;
-  document.getElementById('v-entregar-titulo').textContent = esParcial ? '⚠ Completar entrega parcial' : '✅ Marcar como entregado';
+  document.getElementById('v-entregar-titulo').textContent = esParcial ? '⚠ Entrega parcial pendiente' : '✅ Marcar como entregado';
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
   document.getElementById('v-entregar-quien').textContent = currentUser ? currentUser.name : '—';
   var banner = document.getElementById('v-entregar-banner-parcial');
   var chkLabel = document.getElementById('v-entregar-chk-label');
   var chk = document.getElementById('v-entregar-parcial');
+  chk.onchange = _actualizarBtnEntregar;
   if (esParcial) {
     banner.style.display = 'block';
     document.getElementById('v-entregar-banner-notas').textContent = _vRowActual.notas ? '"' + _vRowActual.notas + '"' : '';
     document.getElementById('v-entregar-notas').value = _vRowActual.notas || '';
-    chkLabel.style.display = 'none';
-    document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega completa';
+    chkLabel.style.display = 'flex';
+    chk.checked = true;
   } else {
     banner.style.display = 'none';
     document.getElementById('v-entregar-notas').value = '';
     chkLabel.style.display = 'flex';
-    document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega';
+    chk.checked = false;
   }
-  chk.checked = false;
+  _actualizarBtnEntregar();
   document.getElementById('v-entregar-feedback').style.display = 'none';
   document.getElementById('v-entregar-btn').disabled = false;
   document.getElementById('v-modal-entregar').classList.add('open');
