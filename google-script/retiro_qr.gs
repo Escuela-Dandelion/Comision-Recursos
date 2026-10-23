@@ -237,9 +237,10 @@ function doGetInterno(e) {
 
   // Endpoint JSON para verificación de PIN desde el cliente (AJAX)
   if (action === 'api_entregar') {
-    var notasParam = e.parameter.notas || '';
-    var emailParam = e.parameter.email || '';
-    var resultado = apiEntregar(orderId, staffName, pass, token, notasParam, emailParam);
+    var notasParam   = e.parameter.notas   || '';
+    var emailParam   = e.parameter.email   || '';
+    var parcialParam = e.parameter.parcial === '1';
+    var resultado = apiEntregar(orderId, staffName, pass, token, notasParam, emailParam, parcialParam);
     return ContentService
       .createTextOutput(JSON.stringify(resultado))
       .setMimeType(ContentService.MimeType.JSON);
@@ -1093,7 +1094,7 @@ function yaFueEnviado(orderId) {
   return false;
 }
 
-function marcarEntregado(orderId, staffName, notas) {
+function marcarEntregado(orderId, staffName, notas, parcial) {
   var sheet = getSheet();
   var data  = sheet.getDataRange().getValues();
   var buyerEmail  = '';
@@ -1103,21 +1104,27 @@ function marcarEntregado(orderId, staffName, notas) {
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(orderId)) {
-      sheet.getRange(i + 1, 8).setValue('ENTREGADO ✓ — ' + new Date().toLocaleString('es-AR'));
+      var estadoNuevo = parcial
+        ? 'ENTREGA PARCIAL — ' + new Date().toLocaleString('es-AR')
+        : 'ENTREGADO ✓ — ' + new Date().toLocaleString('es-AR');
+      sheet.getRange(i + 1, 8).setValue(estadoNuevo);
       sheet.getRange(i + 1, 9).setValue(staffName);
       if (notas) sheet.getRange(i + 1, 10).setValue(notas);
-      buyerEmail  = data[i][3];
-      buyerName   = data[i][2];
-      orderNumber = data[i][1];
-      productos   = data[i][4];
+      if (!parcial) {
+        buyerEmail  = data[i][3];
+        buyerName   = data[i][2];
+        orderNumber = data[i][1];
+        productos   = data[i][4];
+      }
       break;
     }
   }
 
-  marcarFulfillmentTiendanube(orderId);
-
-  if (buyerEmail) {
-    enviarEmailEntrega(buyerEmail, buyerName, orderNumber, productos);
+  if (!parcial) {
+    marcarFulfillmentTiendanube(orderId);
+    if (buyerEmail) {
+      enviarEmailEntrega(buyerEmail, buyerName, orderNumber, productos);
+    }
   }
 
 }
@@ -1132,18 +1139,25 @@ function apiVerificar(orderId, token) {
     return { ok: false, error: 'QR inválido o expirado.' };
   }
 
-  // ¿Ya fue entregado?
+  // ¿Ya fue entregado o tiene entrega parcial?
   var sheet = getSheet();
   var data  = sheet.getDataRange().getValues();
+  var esParcial    = false;
+  var notasPrevias = '';
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(orderId)) {
-      if (String(data[i][7]).indexOf('ENTREGADO') !== -1) {
+      var estadoCol = String(data[i][7]);
+      if (estadoCol.indexOf('ENTREGADO') !== -1) {
         return {
           ok:            true,
           entregado:     true,
           pedido_numero: data[i][1],
-          estado:        String(data[i][7])
+          estado:        estadoCol
         };
+      }
+      if (estadoCol.indexOf('ENTREGA PARCIAL') !== -1) {
+        esParcial    = true;
+        notasPrevias = String(data[i][9] || '');
       }
       break;
     }
@@ -1160,8 +1174,10 @@ function apiVerificar(orderId, token) {
   }
 
   return {
-    ok:       true,
-    entregado: false,
+    ok:            true,
+    entregado:     false,
+    parcial:       esParcial,
+    notas_previas: notasPrevias,
     order: {
       id:             String(order.id),
       number:         order.number,
@@ -1234,16 +1250,28 @@ function paginaVerificar(orderId, token) {
     '        +\'<br><a href="\'+PORTAL_URL+\'" class="btn-portal">&#x2190; Volver al portal</a></div>\';' +
     '      return;' +
     '    }' +
+    '    var isParcial=d.parcial===true;' +
+    '    var notasPrev=d.notas_previas||"";' +
     '    var o=d.order;' +
     '    var pagoOk=o.payment_status==="paid";' +
     '    var est=pagoOk' +
     '      ?\'<span style="color:#00A650;font-weight:bold;font-size:18px">&#x2713; PAGO CONFIRMADO</span>\'' +
     '      :\'<span style="color:#E63946;font-weight:bold;font-size:18px">&#x26A0; PAGO NO CONFIRMADO</span>\';' +
     '    var items=o.products.map(function(p){return\'<li style="padding:4px 0">\'+p.quantity+\'x <strong>\'+esc(p.name)+\'</strong></li>\';}).join("");' +
+    '    var parcialBanner=isParcial' +
+    '      ?\'<div style="background:#fff3cd;border:1px solid #f97316;border-radius:8px;padding:12px 16px;margin:0 0 12px">\'' +
+    '        +\'<strong>&#x26A0; Entrega parcial pendiente</strong>\'' +
+    '        +\'<p style="margin:6px 0 0;font-size:14px;color:#555">En la entrega anterior qued\\u00f3 algo sin entregar.</p>\'' +
+    '        +(notasPrev?\'<p style="margin:6px 0 0;font-size:13px;color:#374151;background:#fffbeb;padding:6px 10px;border-radius:4px">\\u201C\'+esc(notasPrev)+\'\\u201D</p>\':"")' +
+    '        +\'</div>\':"";\'' +
+    '    var notasInput=\'<label style="display:block;margin-top:16px;font-weight:bold;font-size:14px">Notas (opcional)</label>\'' +
+    '      +\'<textarea id="notas" style="width:100%;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;margin:8px 0;box-sizing:border-box;min-height:70px">\'+esc(isParcial?notasPrev:"")+\'</textarea>\';' +
+    '    var checkParcial=isParcial?"":\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" style="width:20px;height:20px;flex-shrink:0"> Queda algo pendiente de entregar</label>\';' +
+    '    var btnLabel=isParcial?"&#x2713; Confirmar entrega completa":"&#x2713; Confirmar entrega";' +
     '    var formHtml=pagoOk' +
-    '      ?\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select><button id="btn" class="btn" onclick="confirmar()">&#x2713; Confirmar entrega</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\'' +
+    '      ?(\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select>\')+notasInput+checkParcial+(\'<button id="btn" class="btn" onclick="confirmar()">\'+btnLabel+\'</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\')' +
     '      :\'<p style="color:#E63946;text-align:center">No se puede entregar: pago pendiente.</p>\';' +
-    '    c.innerHTML=\'<h2>Pedido #\'+o.number+\'</h2><p>\'+est+\'</p>\'' +
+    '    c.innerHTML=parcialBanner+\'<h2>Pedido #\'+o.number+\'</h2><p>\'+est+\'</p>\'' +
     '      +\'<div class="card"><p style="margin:0 0 4px"><strong>\'+esc(o.contact_name)+\'</strong></p>\'' +
     '      +\'<p style="margin:0;color:#888;font-size:14px">\'+esc(o.contact_email)+\'</p></div>\'' +
     '      +\'<div class="card"><ul style="margin:0;padding-left:18px">\'+items+\'</ul>\'' +
@@ -1260,19 +1288,24 @@ function paginaVerificar(orderId, token) {
     '  var staff=document.getElementById("staff").value;' +
     '  if(!staff){var el=document.getElementById("err");el.textContent="Seleccion\\u00e1 tu nombre.";el.style.color="red";el.style.display="block";return;}' +
     '  var btn=document.getElementById("btn");' +
+    '  var notasEl=document.getElementById("notas");' +
+    '  var notas=notasEl?notasEl.value.trim():"";' +
+    '  var chkEl=document.getElementById("chk-parcial");' +
+    '  var parcial=chkEl&&chkEl.checked?"1":"0";' +
     '  btn.disabled=true;' +
     '  document.getElementById("sp-confirm").style.display="block";' +
     '  document.getElementById("err").style.display="none";' +
-    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+EXTRA;' +
+    '  var url=WEB_URL+"?action=api_entregar&id="+encodeURIComponent(ORDEN_ID)+"&staff="+encodeURIComponent(staff)+"&notas="+encodeURIComponent(notas)+"&parcial="+parcial+EXTRA;' +
     '  fetch(url,{redirect:"follow"})' +
     '    .then(function(r){return r.json();})' +
     '    .then(function(data){' +
     '      if(data.ok){' +
+    '        var esParcialResp=data.parcial===true;' +
     '        document.body.innerHTML=\'<div style="font-family:sans-serif;text-align:center;padding:48px 24px;max-width:420px;margin:auto">\'' +
-    '          +\'<p style="font-size:72px;margin:0">&#x2705;</p>\'' +
-    '          +\'<h2 style="color:#00A650;margin:16px 0 8px">\\u00a1Entrega registrada!</h2>\'' +
-    '          +\'<p style="color:#555;margin-bottom:32px">El pedido fue marcado como entregado.</p>\'' +
-    '          +\'<a href="\'+PORTAL_URL+\'" style="display:inline-block;padding:14px 28px;background:#1a1a6e;color:#fff;border-radius:10px;text-decoration:none;font-size:16px;font-weight:bold">\\u2190 Volver al portal</a></div>\';' +
+    '          +(esParcialResp' +
+    '            ?\'<p style="font-size:72px;margin:0">&#x26A0;&#xFE0F;</p><h2 style="color:#f97316;margin:16px 0 8px">Entrega parcial registrada</h2><p style="color:#555;margin-bottom:32px">La familia volver\\u00e1 por el resto. El QR sigue activo.</p>\'' +
+    '            :\'<p style="font-size:72px;margin:0">&#x2705;</p><h2 style="color:#00A650;margin:16px 0 8px">\\u00a1Entrega registrada!</h2><p style="color:#555;margin-bottom:32px">El pedido fue marcado como entregado.</p>\')+' +
+    '          \'<a href="\'+PORTAL_URL+\'" style="display:inline-block;padding:14px 28px;background:#1a1a6e;color:#fff;border-radius:10px;text-decoration:none;font-size:16px;font-weight:bold">\\u2190 Volver al portal</a></div>\';' +
     '      }else{' +
     '        var el=document.getElementById("err");' +
     '        el.textContent=data.error||"Error desconocido.";' +
@@ -1309,6 +1342,7 @@ function paginaPortalStaff(mostrarExito) {
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var entregado = String(row[7]).indexOf('ENTREGADO') !== -1;
+    var esParcialRow = String(row[7]).indexOf('ENTREGA PARCIAL') !== -1;
     var item = {
       id:        String(row[0]),
       numero:    row[1],
@@ -1317,6 +1351,7 @@ function paginaPortalStaff(mostrarExito) {
       total:     row[5],
       fecha:     row[6] ? new Date(row[6]).toLocaleString('es-AR') : '',
       estado:    row[7],
+      parcial:   esParcialRow,
       urlVer:    'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id=' + row[0] + '&token=' + generarToken(String(row[0])),
       urlAdmin:  webAppUrl + '?action=entregar_admin&id=' + row[0] + '&pass=' + CONFIG.STAFF_TOKEN
     };
@@ -1324,10 +1359,12 @@ function paginaPortalStaff(mostrarExito) {
   }
 
   function filaHtml(item, esEntregado) {
-    var bg    = esEntregado ? '#f5fff8' : '#fff';
+    var bg    = esEntregado ? '#f5fff8' : (item.parcial ? '#fffbeb' : '#fff');
     var badge = esEntregado
       ? '<span style="background:#e0f5e0;color:#00A650;padding:2px 8px;border-radius:12px;font-size:12px">✓ entregado</span>'
-      : '<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:12px;font-size:12px">pendiente</span>';
+      : item.parcial
+        ? '<span style="background:#fff3cd;color:#9a3412;padding:2px 8px;border-radius:12px;font-size:12px">⚠ entrega parcial</span>'
+        : '<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:12px;font-size:12px">pendiente</span>';
 
     var acciones = '';
     if (!esEntregado) {
@@ -1559,7 +1596,7 @@ function getOrderNumber(orderId) {
 // ENTREGA
 // ──────────────────────────────────────────────────────────
 
-function apiEntregar(orderId, staffName, adminPass, token, notas, email) {
+function apiEntregar(orderId, staffName, adminPass, token, notas, email, parcial) {
   if (adminPass) {
     if (adminPass !== CONFIG.STAFF_TOKEN) return { ok: false, error: 'Acceso no autorizado.' };
   } else {
@@ -1568,13 +1605,13 @@ function apiEntregar(orderId, staffName, adminPass, token, notas, email) {
   var staffKey = staffName ? staffName.trim() : '';
   if (!staffKey) return { ok: false, error: 'Seleccioná tu nombre.' };
   try {
-    marcarEntregado(orderId, staffKey, notas || '');
+    marcarEntregado(orderId, staffKey, notas || '', parcial || false);
     _invalidarCacheRetiros();
   } catch(err) {
     Logger.log('Error al marcar entregado: ' + err);
     return { ok: false, error: 'No se pudo registrar la entrega: ' + err.message };
   }
-  return { ok: true };
+  return { ok: true, parcial: parcial || false };
 }
 
 function procesarEntrega(orderId, staffName) {
