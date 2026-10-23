@@ -327,23 +327,25 @@ function doGetInterno(e) {
 
   if (action === 'saveStockOverride') {
     try {
-      var clave   = e.parameter.clave || '';
-      var nomVar  = e.parameter.nombre_variante || '';
-      var umbralV = (e.parameter.umbral !== undefined && e.parameter.umbral !== '') ? parseInt(e.parameter.umbral) : null;
-      var pisoV   = (e.parameter.piso   !== undefined && e.parameter.piso   !== '') ? parseInt(e.parameter.piso)   : null;
+      var clave        = e.parameter.clave || '';
+      var nomVar       = e.parameter.nombre_variante || '';
+      var umbralV      = (e.parameter.umbral !== undefined && e.parameter.umbral !== '') ? parseInt(e.parameter.umbral) : null;
+      var pisoV        = (e.parameter.piso   !== undefined && e.parameter.piso   !== '') ? parseInt(e.parameter.piso)   : null;
+      var alarmaActiva = e.parameter.alarmaActivada !== '0';
       var ss2  = SpreadsheetApp.openById(CONFIG_STOCK.SHEET_ID);
       var sh2  = ss2.getSheetByName('ConfigStock');
-      if (!sh2) { sh2 = ss2.insertSheet('ConfigStock'); sh2.appendRow(['Clave','Nombre','Umbral Override','Piso Override']); }
+      if (!sh2) { sh2 = ss2.insertSheet('ConfigStock'); sh2.appendRow(['Clave','Nombre','Umbral Override','Piso Override','Stock Primario','Stock Secundario','Alarma Activada']); }
       var dat2 = sh2.getDataRange().getValues();
       var found2 = false;
       for (var k = 1; k < dat2.length; k++) {
         if (String(dat2[k][0]).trim() === clave) {
           sh2.getRange(k + 1, 3).setValue(umbralV !== null ? umbralV : '');
           sh2.getRange(k + 1, 4).setValue(pisoV   !== null ? pisoV   : '');
+          sh2.getRange(k + 1, 7).setValue(alarmaActiva);
           found2 = true; break;
         }
       }
-      if (!found2) sh2.appendRow([clave, nomVar, umbralV !== null ? umbralV : '', pisoV !== null ? pisoV : '']);
+      if (!found2) sh2.appendRow([clave, nomVar, umbralV !== null ? umbralV : '', pisoV !== null ? pisoV : '', '', '', alarmaActiva]);
       _invalidarCacheProductos(e.parameter.email || '');
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     } catch(err2) {
@@ -2783,6 +2785,7 @@ function apiProductos(email) {
           velMes:         velMes,
           semaforo:       semaforo,
           activo:         v.visible !== false,
+          alarmaActivada: ov.alarmaActivada !== false,
           _dbg_clave_vel: sku
         };
       });
