@@ -190,6 +190,15 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'saveStockOverride') {
+      const alarmaDesactivada = e.parameter.alarmaDesactivada === '1';
+      guardarOverrideStock(e.parameter.clave, e.parameter.nombre_variante,
+        e.parameter.umbral, e.parameter.piso, alarmaDesactivada);
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, saved: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'getStockDashboard') {
       const dash = getStockDashboard();
       return ContentService
@@ -978,32 +987,36 @@ function invLeerOverrides() {
       const clave = String(data[i][0] || '').trim();
       if (!clave) continue;
       map[clave] = {
-        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
-        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null
+        umbralOverride:     data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
+        pisoOverride:       data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
+        alarmaDesactivada:  data[i][6] === true || data[i][6] === 'TRUE' || data[i][6] === 1
       };
     }
   } catch(e) { Logger.log('invLeerOverrides error: ' + e); }
   return map;
 }
 
-function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride) {
+function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride, alarmaDesactivada) {
   const ss  = SpreadsheetApp.openById(INV_SHEET_ID);
   var sheet = ss.getSheetByName('ConfigStock');
   if (!sheet) {
     sheet = ss.insertSheet('ConfigStock');
-    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override']);
+    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override', 'StockP', 'StockS', 'Alarma Desactivada']);
   }
+  const alarmaVal = alarmaDesactivada === true ? true : false;
   const data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === clave) {
       sheet.getRange(i + 1, 3).setValue(umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '');
       sheet.getRange(i + 1, 4).setValue(pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : '');
+      sheet.getRange(i + 1, 7).setValue(alarmaVal);
       return;
     }
   }
   sheet.appendRow([clave, nombre,
     umbralOverride !== null && umbralOverride !== '' ? umbralOverride : '',
-    pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : ''
+    pisoOverride   !== null && pisoOverride   !== '' ? pisoOverride   : '',
+    '', '', alarmaVal
   ]);
 }
 
@@ -1083,7 +1096,8 @@ function getStockDashboard() {
         pisoMarca: pisoMarca,  pisoOverride:   ov.pisoOverride   !== undefined ? ov.pisoOverride   : null,
         umbralFinal: umbralFinal, pisoFinal: pisoFinal,
         alertaEnviada: alertaEnviada, semaforo: semaforo,
-        violaUmbral: stock <= umbralFinal
+        violaUmbral: stock <= umbralFinal,
+        alarmaDesactivada: ov.alarmaDesactivada === true
       });
     });
 

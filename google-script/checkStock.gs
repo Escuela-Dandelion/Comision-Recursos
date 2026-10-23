@@ -175,10 +175,11 @@ function leerOverridesStock() {
       const clave = String(data[i][0] || '').trim();
       if (!clave) continue;
       map[clave] = {
-        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
-        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
-        stockP:         data[i][4] !== '' && data[i][4] !== null && data[i][4] !== undefined ? parseInt(data[i][4]) : null,
-        stockS:         data[i][5] !== '' && data[i][5] !== null && data[i][5] !== undefined ? parseInt(data[i][5]) : null
+        umbralOverride:    data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
+        pisoOverride:      data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
+        stockP:            data[i][4] !== '' && data[i][4] !== null && data[i][4] !== undefined ? parseInt(data[i][4]) : null,
+        stockS:            data[i][5] !== '' && data[i][5] !== null && data[i][5] !== undefined ? parseInt(data[i][5]) : null,
+        alarmaDesactivada: data[i][6] === true || data[i][6] === 'TRUE' || data[i][6] === 1
       };
     }
   } catch(e) { Logger.log('leerOverridesStock error: ' + e); }
@@ -325,6 +326,11 @@ function _checkStockBajoInterno() {
         ' | clave=' + clave
       );
       // ── FIN DEBUG ──────────────────────────────────────────
+
+      if (ov.alarmaDesactivada) {
+        Logger.log('  [SKIP ALARMA] ' + descripcion + ' — alarma desactivada manualmente');
+        return;
+      }
 
       // Reset al recuperarse el stock
       if (stock > umbral && stock >= stockMinimo) {
