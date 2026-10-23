@@ -1266,8 +1266,8 @@ function paginaVerificar(orderId, token) {
     '        +\'</div>\':"";' +
     '    var notasInput=\'<label style="display:block;margin-top:16px;font-weight:bold;font-size:14px">Notas (opcional)</label>\'' +
     '      +\'<textarea id="notas" style="width:100%;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;margin:8px 0;box-sizing:border-box;min-height:70px">\'+esc(isParcial?notasPrev:"")+\'</textarea>\';' +
-    '    var checkParcial=isParcial?"":\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" style="width:20px;height:20px;flex-shrink:0"> Queda algo pendiente de entregar</label>\';' +
-    '    var btnLabel=isParcial?"&#x2713; Confirmar entrega completa":"&#x2713; Confirmar entrega";' +
+    '    var checkParcial=\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" data-wasparcial="\'+(isParcial?"1":"0")+\'"\'+(isParcial?\' checked\':\'\')+\' style="width:20px;height:20px;flex-shrink:0" onchange="actualizarBtn()"> Queda algo pendiente de entregar</label>\';' +
+    '    var btnLabel=isParcial?"Actualizar notas":"Confirmar entrega";' +
     '    var formHtml=pagoOk' +
     '      ?(\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select>\')+checkParcial+notasInput+(\'<button id="btn" class="btn" onclick="confirmar()">\'+btnLabel+\'</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\')' +
     '      :\'<p style="color:#E63946;text-align:center">No se puede entregar: pago pendiente.</p>\';' +
@@ -1284,6 +1284,13 @@ function paginaVerificar(orderId, token) {
     '    document.getElementById("content").innerHTML=\'<p style="color:red;text-align:center">Error de conexi\\u00f3n. Recarg\\u00e1 la p\\u00e1gina.</p>\';' +
     '    document.getElementById("content").style.display="block";' +
     '  });' +
+    'function actualizarBtn(){' +
+    '  var chk=document.getElementById("chk-parcial");' +
+    '  var btn=document.getElementById("btn");' +
+    '  if(!chk||!btn)return;' +
+    '  var wasParcial=chk.getAttribute("data-wasparcial")==="1";' +
+    '  btn.textContent=chk.checked?(wasParcial?"Actualizar notas":"Guardar entrega parcial"):(wasParcial?"Confirmar entrega completa":"Confirmar entrega");' +
+    '}' +
     'function confirmar(){' +
     '  var staff=document.getElementById("staff").value;' +
     '  if(!staff){var el=document.getElementById("err");el.textContent="Seleccion\\u00e1 tu nombre.";el.style.color="red";el.style.display="block";return;}' +
