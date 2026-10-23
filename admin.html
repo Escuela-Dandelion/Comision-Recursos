@@ -800,7 +800,7 @@ function showView(viewId, navBtn, opts) {
   if (viewId === 'gestion-productos') {
     var gestionIframe = document.getElementById('iframe-gestion-productos');
     if (gestionIframe && gestionIframe.src.indexOf('gestion-productos.html') === -1 && currentUser && currentUser.email) {
-      gestionIframe.src = 'gestion-productos.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261016';
+      gestionIframe.src = 'gestion-productos.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261017';
     }
   }
 
@@ -957,12 +957,28 @@ function guardarNotasVenta() {
 
 function abrirModalEntregar(i) {
   _vRowActual = _ventasFiltradasActuales[i];
+  var esParcial = _vRowActual.estado === 'Parcial' || _vRowActual.parcial === true;
+  document.getElementById('v-entregar-titulo').textContent = esParcial ? '⚠ Completar entrega parcial' : '✅ Marcar como entregado';
   document.getElementById('v-entregar-pedido-info').textContent = 'Pedido #' + _vRowActual.numero + ' — ' + _vRowActual.nombre;
   document.getElementById('v-entregar-quien').textContent = currentUser ? currentUser.name : '—';
-  document.getElementById('v-entregar-notas').value = '';
+  var banner = document.getElementById('v-entregar-banner-parcial');
+  var chkLabel = document.getElementById('v-entregar-chk-label');
+  var chk = document.getElementById('v-entregar-parcial');
+  if (esParcial) {
+    banner.style.display = 'block';
+    document.getElementById('v-entregar-banner-notas').textContent = _vRowActual.notas ? '"' + _vRowActual.notas + '"' : '';
+    document.getElementById('v-entregar-notas').value = _vRowActual.notas || '';
+    chkLabel.style.display = 'none';
+    document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega completa';
+  } else {
+    banner.style.display = 'none';
+    document.getElementById('v-entregar-notas').value = '';
+    chkLabel.style.display = 'flex';
+    document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega';
+  }
+  chk.checked = false;
   document.getElementById('v-entregar-feedback').style.display = 'none';
   document.getElementById('v-entregar-btn').disabled = false;
-  document.getElementById('v-entregar-btn').textContent = 'Confirmar entrega';
   document.getElementById('v-modal-entregar').classList.add('open');
 }
 
@@ -975,8 +991,10 @@ function confirmarEntregaDesdeListado() {
   btn.disabled = true;
   btn.innerHTML = '<div style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></div> Confirmando…';
   fb.style.display = 'none';
+  var chkEl = document.getElementById('v-entregar-parcial');
+  var parcial = chkEl && chkEl.checked ? '1' : '0';
   var staffKey = staff.replace(' ', '.') + ' ';
-  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN);
+  var url = GAS_URL + '?action=api_entregar&id=' + encodeURIComponent(_vRowActual.id) + '&staff=' + encodeURIComponent(staffKey) + '&pass=' + encodeURIComponent(CONFIG_STAFF_TOKEN) + '&parcial=' + parcial;
   if (notas) url += '&notas=' + encodeURIComponent(notas);
   if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
   var controller = new AbortController();
@@ -986,7 +1004,11 @@ function confirmarEntregaDesdeListado() {
     .then(function(d){
       btn.disabled = false; btn.textContent = 'Confirmar entrega';
       if (d.ok) {
-        _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = currentUser ? currentUser.name : staff;
+        if (d.parcial) {
+          _vRowActual.estado = 'Parcial'; _vRowActual.parcial = true; _vRowActual.notas = notas || _vRowActual.notas;
+        } else {
+          _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = currentUser ? currentUser.name : staff;
+        }
         _ventasCargadoEstado = {};
         cerrarVModal('entregar');
         aplicarFiltrosVentas();
@@ -1220,7 +1242,10 @@ function aplicarFiltrosVentas() {
   var hasta     = parseFechaVentas(document.getElementById('vfilt-hasta') ? document.getElementById('vfilt-hasta').value : '');
 
   var rows = _ventas.filter(function(v) {
-    if (_ventasFiltroEstado !== 'Todos' && v.estado !== _ventasFiltroEstado) return false;
+    if (_ventasFiltroEstado !== 'Todos') {
+      var pasaFiltro = v.estado === _ventasFiltroEstado || (_ventasFiltroEstado === 'Pendiente' && (v.estado === 'Parcial' || v.parcial));
+      if (!pasaFiltro) return false;
+    }
     if (grado && v.grado !== grado) return false;
     if (referente && v.staff !== referente) return false;
     if (producto && v.productos.toLowerCase().indexOf(producto) === -1) return false;
@@ -1257,9 +1282,12 @@ function renderVentas(rows) {
     '<thead><tr><th>Pedido</th><th>Comprador</th><th>Productos</th><th>Total</th><th>Estado</th><th>Grado</th><th>Quién entregó</th><th>Notas</th><th style="width:40px"></th></tr></thead><tbody>' +
     rows.map(function(v, i) {
       var entregado = v.estado === 'Entregado';
+      var esParcialV = v.estado === 'Parcial' || v.parcial === true;
       var pill = entregado
         ? '<span style="background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">✅ Entregado</span>'
-        : '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">⏳ Pendiente</span>';
+        : esParcialV
+          ? '<span style="background:#fff3cd;color:#9a3412;border:1px solid #f97316;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">⚠ Parcial</span>'
+          : '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">⏳ Pendiente</span>';
       var prods = v.productos.split(' | ');
       var resumen = prods.length + ' prod. <span id="vchev-' + i + '">↓</span>';
       var detalle = prods.map(function(p){ return '<div style="padding:2px 0;font-size:12px;color:#374151">• ' + p + '</div>'; }).join('');
@@ -1276,7 +1304,7 @@ function renderVentas(rows) {
           '<div class="v-dots-wrap">' +
             '<button class="v-dots-btn" onclick="toggleVMenu(event,' + i + ')">⋯</button>' +
             '<div class="v-dots-menu" id="vmenu-' + i + '">' +
-              (v.estado === 'Pendiente' ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
+              (v.estado === 'Pendiente' || v.estado === 'Parcial' || v.parcial ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
               '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
             '</div>' +
           '</div>' +
@@ -1631,12 +1659,20 @@ function reiniciarQR() {
 <!-- Modal: Marcar Entregado -->
 <div class="v-modal-overlay" id="v-modal-entregar" onclick="if(event.target===this)cerrarVModal('entregar')">
   <div class="v-modal">
-    <h3>✅ Marcar como entregado</h3>
+    <h3 id="v-entregar-titulo">✅ Marcar como entregado</h3>
     <div style="font-size:12px;color:#6b7280;margin-bottom:12px" id="v-entregar-pedido-info"></div>
+    <div id="v-entregar-banner-parcial" style="display:none;background:#fff3cd;border:1px solid #f97316;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px">
+      <strong>⚠ Entrega parcial pendiente</strong>
+      <p id="v-entregar-banner-notas" style="margin:4px 0 0;color:#374151;font-style:italic"></p>
+    </div>
     <label>Quién entrega</label>
     <div id="v-entregar-quien" style="padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:12px"></div>
     <label>Notas (opcional)</label>
-    <textarea id="v-entregar-notas" rows="2" placeholder="Ej: entrega parcial, faltaba stock…"></textarea>
+    <textarea id="v-entregar-notas" rows="2" placeholder="Ej: faltaba un producto, se entrega el resto…"></textarea>
+    <label id="v-entregar-chk-label" style="display:flex;align-items:flex-start;gap:10px;margin:10px 0 4px;font-size:13px;cursor:pointer;font-weight:normal">
+      <input type="checkbox" id="v-entregar-parcial" style="width:16px;height:16px;flex-shrink:0;margin-top:2px">
+      Queda algo pendiente de entregar
+    </label>
     <div id="v-entregar-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
     <div class="v-modal-btns">
       <button class="v-modal-cancel" onclick="cerrarVModal('entregar')">Cancelar</button>

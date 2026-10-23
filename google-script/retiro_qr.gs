@@ -2160,6 +2160,7 @@ function getRetirosData(estadoFiltro, diasFiltro) {
     if (!row[0]) continue;
     var estado        = String(row[7] || '');
     var entregado     = estado.indexOf('ENTREGADO') !== -1;
+    var esParcial     = estado.indexOf('ENTREGA PARCIAL') !== -1;
     var fechaEntrega  = entregado ? estado.replace('ENTREGADO ✓ — ', '').trim() : '';
     var staffRaw      = String(row[8] || '').trim();                   // 'Juan.Diaz' — para lookup de grado
     var staff         = staffRaw.replace('.', ' ');                    // 'Juan Diaz' — para mostrar
@@ -2187,7 +2188,8 @@ function getRetirosData(estadoFiltro, diasFiltro) {
       productos:    String(row[4] || ''),
       total:        String(row[5] || ''),
       fecha:        fechaPedido,
-      estado:       entregado ? 'Entregado' : 'Pendiente',
+      estado:       entregado ? 'Entregado' : (esParcial ? 'Parcial' : 'Pendiente'),
+      parcial:      esParcial,
       fechaEntrega: fechaEntrega,
       staff:        staff,
       grado:         staffToGrado(staffRaw) || String(row[10] || '').trim(),
