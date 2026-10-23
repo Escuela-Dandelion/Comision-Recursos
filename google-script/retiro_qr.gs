@@ -1266,8 +1266,8 @@ function paginaVerificar(orderId, token) {
     '        +\'</div>\':"";' +
     '    var notasInput=\'<label style="display:block;margin-top:16px;font-weight:bold;font-size:14px">Notas (opcional)</label>\'' +
     '      +\'<textarea id="notas" style="width:100%;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;margin:8px 0;box-sizing:border-box;min-height:70px">\'+esc(isParcial?notasPrev:"")+\'</textarea>\';' +
-    '    var checkParcial=\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" data-wasparcial="\'+(isParcial?"1":"0")+\'"\'+(isParcial?\' checked\':\'\')+\' style="width:20px;height:20px;flex-shrink:0" onchange="actualizarBtn()"> Queda algo pendiente de entregar</label>\';' +
-    '    var btnLabel=isParcial?"Actualizar notas":"Confirmar entrega";' +
+    '    var checkParcial=\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" data-wasparcial="\'+(isParcial?"1":"0")+\'" style="width:20px;height:20px;flex-shrink:0" onchange="actualizarBtn()"> Queda algo pendiente de entregar</label>\';' +
+    '    var btnLabel=isParcial?"Confirmar entrega completa":"Confirmar entrega";' +
     '    var formHtml=pagoOk' +
     '      ?(\'<label>Tu nombre:</label><select id="staff">' + staffOptions + '</select>\')+checkParcial+notasInput+(\'<button id="btn" class="btn" onclick="confirmar()">\'+btnLabel+\'</button><p id="sp-confirm"><span class="sc"></span>Registrando entrega...</p>\')' +
     '      :\'<p style="color:#E63946;text-align:center">No se puede entregar: pago pendiente.</p>\';' +

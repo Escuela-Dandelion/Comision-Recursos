@@ -989,7 +989,7 @@ function abrirModalEntregar(i) {
     document.getElementById('v-entregar-banner-notas').textContent = _vRowActual.notas ? '"' + _vRowActual.notas + '"' : '';
     document.getElementById('v-entregar-notas').value = _vRowActual.notas || '';
     chkLabel.style.display = 'flex';
-    chk.checked = true;
+    chk.checked = false;
   } else {
     banner.style.display = 'none';
     document.getElementById('v-entregar-notas').value = '';
@@ -1561,7 +1561,7 @@ function onQRScanned(url) {
         qrBanner.style.display = 'block';
         document.getElementById('qr-parcial-banner-notas').textContent = d.notas_previas ? '"' + d.notas_previas + '"' : '';
         document.getElementById('qr-notas').value = d.notas_previas || '';
-        qrChk.checked = true;
+        qrChk.checked = false;
         qrBtn.setAttribute('data-wasparcial', '1');
       } else {
         qrBanner.style.display = 'none';
