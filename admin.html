@@ -1010,14 +1010,14 @@ function confirmarEntregaDesdeListado() {
           _vRowActual.estado = 'Entregado'; _vRowActual.notas = notas || _vRowActual.notas; _vRowActual.staff = currentUser ? currentUser.name : staff;
         }
         _ventasCargadoEstado = {};
-        cerrarVModal('entregar');
-        aplicarFiltrosVentas();
+        try { cerrarVModal('entregar'); aplicarFiltrosVentas(); } catch(uiErr) { console.error('UI post-entrega:', uiErr); }
       } else { fb.textContent='❌ ' + (d.error||'Error.'); fb.style.color='#dc2626'; fb.style.display='block'; }
     })
     .catch(function(err){
       clearTimeout(timeoutId);
       btn.disabled=false; btn.textContent='Confirmar entrega';
-      fb.textContent = (err && err.name === 'AbortError') ? '❌ Tiempo de espera agotado. Revisá el sheet y volvé a intentar.' : '❌ Error de conexión.';
+      var detalle = err ? (err.name === 'AbortError' ? 'timeout' : (err.message || err.name || 'sin detalle')) : 'sin detalle';
+      fb.textContent = (err && err.name === 'AbortError') ? '❌ Tiempo de espera agotado. Revisá el sheet y volvé a intentar.' : '❌ Error: ' + detalle;
       fb.style.color='#dc2626'; fb.style.display='block';
     });
 }
