@@ -1263,7 +1263,7 @@ function paginaVerificar(orderId, token) {
     '        +\'<strong>&#x26A0; Entrega parcial pendiente</strong>\'' +
     '        +\'<p style="margin:6px 0 0;font-size:14px;color:#555">En la entrega anterior qued\\u00f3 algo sin entregar.</p>\'' +
     '        +(notasPrev?\'<p style="margin:6px 0 0;font-size:13px;color:#374151;background:#fffbeb;padding:6px 10px;border-radius:4px">\\u201C\'+esc(notasPrev)+\'\\u201D</p>\':"")' +
-    '        +\'</div>\':"";\'' +
+    '        +\'</div>\':"";' +
     '    var notasInput=\'<label style="display:block;margin-top:16px;font-weight:bold;font-size:14px">Notas (opcional)</label>\'' +
     '      +\'<textarea id="notas" style="width:100%;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;margin:8px 0;box-sizing:border-box;min-height:70px">\'+esc(isParcial?notasPrev:"")+\'</textarea>\';' +
     '    var checkParcial=isParcial?"":\'<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:15px;cursor:pointer"><input type="checkbox" id="chk-parcial" style="width:20px;height:20px;flex-shrink:0"> Queda algo pendiente de entregar</label>\';' +
