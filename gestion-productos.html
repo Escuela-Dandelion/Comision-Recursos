@@ -938,7 +938,7 @@ function renderEditStock(variantes) {
       '<div style="font-size:11px;color:var(--muted);margin-top:4px">Umbral/Piso vacío = valor calculado automáticamente.</div>' +
       '<div style="margin-top:10px">' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">' +
-          '<input type="checkbox" id="alarma-' + v.id + '" ' + (v.alarmaDesactivada ? '' : 'checked') + ' style="width:15px;height:15px;flex-shrink:0">' +
+          '<input type="checkbox" id="alarma-' + v.id + '" ' + (v.alarmaActivada === false ? '' : 'checked') + ' style="width:15px;height:15px;flex-shrink:0">' +
           '<span>Alarma de stock activada</span>' +
         '</label>' +
       '</div>' +
@@ -1081,7 +1081,7 @@ function _ejecutarGuardarStock() {
       action: 'saveStockOverride', clave: clave,
       nombre_variante: v.nombre || v.sku || '',
       umbral: umbralVal.trim(), piso: pisoVal.trim(),
-      alarmaDesactivada: (alarmaChk && !alarmaChk.checked) ? '1' : '0'
+      alarmaActivada: (alarmaChk && alarmaChk.checked) ? '1' : '0'
     }).toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
 
     var stockFetch;

@@ -191,9 +191,9 @@ function doGet(e) {
     }
 
     if (action === 'saveStockOverride') {
-      const alarmaDesactivada = e.parameter.alarmaDesactivada === '1';
+      const alarmaActivada = e.parameter.alarmaActivada !== '0';
       guardarOverrideStock(e.parameter.clave, e.parameter.nombre_variante,
-        e.parameter.umbral, e.parameter.piso, alarmaDesactivada);
+        e.parameter.umbral, e.parameter.piso, alarmaActivada);
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, saved: true }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -987,23 +987,23 @@ function invLeerOverrides() {
       const clave = String(data[i][0] || '').trim();
       if (!clave) continue;
       map[clave] = {
-        umbralOverride:     data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
-        pisoOverride:       data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
-        alarmaDesactivada:  data[i][6] === true || data[i][6] === 'TRUE' || data[i][6] === 1
+        umbralOverride: data[i][2] !== '' && data[i][2] !== null ? parseInt(data[i][2]) : null,
+        pisoOverride:   data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
+        alarmaActivada: !(data[i][6] === false || data[i][6] === 'FALSE' || data[i][6] === 0)
       };
     }
   } catch(e) { Logger.log('invLeerOverrides error: ' + e); }
   return map;
 }
 
-function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride, alarmaDesactivada) {
+function guardarOverrideStock(clave, nombre, umbralOverride, pisoOverride, alarmaActivada) {
   const ss  = SpreadsheetApp.openById(INV_SHEET_ID);
   var sheet = ss.getSheetByName('ConfigStock');
   if (!sheet) {
     sheet = ss.insertSheet('ConfigStock');
-    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override', 'StockP', 'StockS', 'Alarma Desactivada']);
+    sheet.appendRow(['Clave', 'Nombre', 'Umbral Override', 'Piso Override', 'Stock Primario', 'Stock Secundario', 'Alarma Activada']);
   }
-  const alarmaVal = alarmaDesactivada === true ? true : false;
+  const alarmaVal = alarmaActivada !== false;
   const data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === clave) {
@@ -1097,7 +1097,7 @@ function getStockDashboard() {
         umbralFinal: umbralFinal, pisoFinal: pisoFinal,
         alertaEnviada: alertaEnviada, semaforo: semaforo,
         violaUmbral: stock <= umbralFinal,
-        alarmaDesactivada: ov.alarmaDesactivada === true
+        alarmaActivada: ov.alarmaActivada !== false
       });
     });
 

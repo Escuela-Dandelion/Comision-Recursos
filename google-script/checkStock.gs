@@ -179,7 +179,7 @@ function leerOverridesStock() {
         pisoOverride:      data[i][3] !== '' && data[i][3] !== null ? parseInt(data[i][3]) : null,
         stockP:            data[i][4] !== '' && data[i][4] !== null && data[i][4] !== undefined ? parseInt(data[i][4]) : null,
         stockS:            data[i][5] !== '' && data[i][5] !== null && data[i][5] !== undefined ? parseInt(data[i][5]) : null,
-        alarmaDesactivada: data[i][6] === true || data[i][6] === 'TRUE' || data[i][6] === 1
+        alarmaActivada: !(data[i][6] === false || data[i][6] === 'FALSE' || data[i][6] === 0)
       };
     }
   } catch(e) { Logger.log('leerOverridesStock error: ' + e); }
@@ -327,7 +327,7 @@ function _checkStockBajoInterno() {
       );
       // ── FIN DEBUG ──────────────────────────────────────────
 
-      if (ov.alarmaDesactivada) {
+      if (ov.alarmaActivada === false) {
         Logger.log('  [SKIP ALARMA] ' + descripcion + ' — alarma desactivada manualmente');
         return;
       }
