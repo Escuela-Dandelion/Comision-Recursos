@@ -225,7 +225,7 @@ function doGetInterno(e) {
   var entregado = e.parameter.entregado || '';
 
   if (action === 'version') {
-    return ContentService.createTextOutput('Version_1.6_digitales');
+    return ContentService.createTextOutput('v2026-10-23-parcial');
   }
 
   if (action === 'portal') {
