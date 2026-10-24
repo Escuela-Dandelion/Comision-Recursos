@@ -564,6 +564,11 @@ function cargarProductos() {
       document.getElementById('loading-overlay').style.display = 'none';
       renderFiltrosMarca(_productos);
       renderLista(_productos);
+      var autoId = new URLSearchParams(window.location.search).get('productoId');
+      if (autoId) {
+        var p = _productos.find(function(x) { return x.id === autoId; });
+        if (p) abrirEditor(p.id);
+      }
     })
     .catch(function() { document.getElementById('loading-overlay').textContent = 'Error de conexión.'; });
 }

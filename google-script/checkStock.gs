@@ -1,4 +1,4 @@
-// v2026-10-24 — alarmaActivada por variante en leerOverridesStock + skip en checkStockBajo
+// v2026-10-24b — email stock: links a gestion-productos.html con productoId, no a TiendaNube
 // ============================================================
 // DIENTE DE LEÓN — Alerta de Stock Bajo + Orden de Pedido
 // ============================================================
@@ -412,8 +412,11 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
   const tieneOrdenActiva    = ordenInfo && ESTADOS_ACTIVOS.indexOf(ordenInfo.estado) !== -1;
   const tieneOrdenEntregada = ordenInfo && ordenInfo.estado === 'Entregado en Escuela';
 
+  const BASE_GESTION = 'https://escuela-dandelion.github.io/Comision-Recursos/gestion-productos.html';
   const listaHtml = items.map(function(item) {
-    var linea = '<li style="margin-bottom:10px"><strong>' + item.descripcion + '</strong> — ' + item.stock + ' unidades en stock';
+    var productoId = item.clave ? item.clave.split('_')[0] : '';
+    var urlGestion = productoId ? BASE_GESTION + '?productoId=' + productoId : BASE_GESTION;
+    var linea = '<li style="margin-bottom:10px"><strong><a href="' + urlGestion + '" style="color:#3a7d44;text-decoration:none">' + item.descripcion + '</a></strong> — ' + item.stock + ' unidades en stock';
     if (item.umbralMensual !== null && item.umbralMensual !== undefined) {
       linea += '<br><span style="color:#92400e;font-size:13px">Según los últimos meses debés contar con <strong>' + item.umbralMensual + ' u.</strong>';
       if (item.cantSugerida > 0) {
@@ -440,14 +443,14 @@ function enviarAlertaStock(fgp, marca, items, ordenInfo) {
 
   if (tieneOrdenEntregada) {
     // ── Caso: pedido llegó pero el stock no fue actualizado en TiendaNube ──
-    asunto      = 'Diente de León — Actualizá el stock en TiendaNube: ' + marca;
-    intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado en Escuela</strong>, pero el stock en TiendaNube todavía no fue actualizado.';
-    const urlInventario = 'https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM';
-    cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock en TiendaNube, los avisos dejarán de llegar automáticamente.</p>';
+    asunto      = 'Diente de León — Actualizá el stock: ' + marca;
+    intro       = 'El pedido ' + _linkOrden + ' de <strong>' + marca + '</strong> figura como <strong>Entregado en Escuela</strong>, pero el stock todavía no fue actualizado.';
+    var urlGestionMarca = BASE_GESTION + (items[0] && items[0].clave ? '?productoId=' + items[0].clave.split('_')[0] : '');
+    cuerpoExtra = '<p style="margin-top:12px">Una vez que actualices el stock, los avisos dejarán de llegar automáticamente.</p>';
     botonesHtml = `
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0">
-        <p><strong>📦 Actualizá el stock en TiendaNube:</strong></p>
-        <p><a href="${urlInventario}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Ir al Inventario</a></p>
+        <p><strong>📦 Actualizá el stock:</strong></p>
+        <p><a href="${urlGestionMarca}" style="display:inline-block;background:#3a7d44;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700">Actualizar stock en Gestión de Productos</a></p>
         <br>
         <p>Podés <a href="${urlAdminOrden}" style="color:#3a7d44;font-weight:700">ver la orden aquí</a>.</p>`;
 
