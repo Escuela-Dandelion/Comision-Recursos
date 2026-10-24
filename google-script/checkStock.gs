@@ -1,3 +1,4 @@
+// v2026-10-24 — alarmaActivada por variante en leerOverridesStock + skip en checkStockBajo
 // ============================================================
 // DIENTE DE LEÓN — Alerta de Stock Bajo + Orden de Pedido
 // ============================================================

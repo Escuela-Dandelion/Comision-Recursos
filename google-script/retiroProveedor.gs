@@ -1,3 +1,4 @@
+// v2026-10-24 — alarmaActivada en invLeerOverrides, guardarOverrideStock, getStockDashboard + doGet saveStockOverride
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
