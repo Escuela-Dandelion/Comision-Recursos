@@ -1,4 +1,4 @@
-// v2026-10-23 — Entrega parcial QR+admin, alarmaActivada por variante en ConfigStock
+// v2026-10-23b — alarmaActivada en apiProductos + saveStockOverride col G
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -225,7 +225,7 @@ function doGetInterno(e) {
   var entregado = e.parameter.entregado || '';
 
   if (action === 'version') {
-    return ContentService.createTextOutput('v2026-10-23-parcial');
+    return ContentService.createTextOutput('v2026-10-23b-alarma');
   }
 
   if (action === 'portal') {
