@@ -1,4 +1,4 @@
-// v2026-10-23b — alarmaActivada en apiProductos + saveStockOverride col G
+// v2026-10-27b — toggle_publicado: activar/desactivar producto desde gestion-productos.html
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -351,6 +351,15 @@ function doGetInterno(e) {
     } catch(err2) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err2) })).setMimeType(ContentService.MimeType.JSON);
     }
+  }
+
+  if (action === 'toggle_publicado') {
+    var res = apiTogglePublicado(
+      e.parameter.email       || '',
+      e.parameter.producto_id || '',
+      e.parameter.publicado === '1'
+    );
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
   if (action === 'preview_informe') {
@@ -2016,7 +2025,8 @@ var AUTH_EMAILS = {
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
   'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', marcas: ['NAZARENO'] },
   'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
-  'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' }
+  'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' },
+  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', marcas: ['TIENDA LIMÓN'] }
 };
 
 // Lista blanca de teléfonos de referentes (sin el +, formato internacional)
@@ -2672,6 +2682,31 @@ function _tnHeaders() {
     'Content-Type':   'application/json',
     'User-Agent':     CONFIG.TIENDA_NOMBRE + ' (gestion-productos)'
   };
+}
+
+function apiTogglePublicado(email, productoId, publicado) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'No autorizado' };
+  if (!productoId) return { ok: false, error: 'producto_id requerido' };
+  try {
+    var url = 'https://api.tiendanube.com/v1/' + CONFIG_STOCK.STORE_ID + '/products/' + productoId;
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'patch',
+      headers: {
+        'Authentication': 'bearer ' + CONFIG_STOCK.API_TOKEN,
+        'Content-Type': 'application/json',
+        'User-Agent': 'DandelionGAS/1.0 (robertson.ine@gmail.com)'
+      },
+      payload: JSON.stringify({ published: publicado }),
+      muteHttpExceptions: true
+    });
+    var code = resp.getResponseCode();
+    if (code !== 200 && code !== 201) return { ok: false, error: 'TiendaNube error ' + code + ': ' + resp.getContentText().substring(0, 100) };
+    _invalidarCacheProductos(email);
+    return { ok: true, publicado: publicado };
+  } catch(err) {
+    return { ok: false, error: String(err) };
+  }
 }
 
 function _puedeGestionarMarca(user, brand) {

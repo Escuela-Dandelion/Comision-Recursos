@@ -310,6 +310,22 @@ textarea.field { min-height: 90px; resize: vertical; }
 .modal-btn.primario { background: var(--green); color: #fff; }
 .modal-btn.primario:hover { background: var(--green-dark); }
 
+/* ── TOGGLE PUBLICADO ── */
+.toggle-pub { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+.toggle-pub input { opacity:0; width:0; height:0; }
+.toggle-pub-slider {
+  position:absolute; cursor:pointer; inset:0;
+  background:#d1d5db; border-radius:24px; transition:.2s;
+}
+.toggle-pub-slider:before {
+  position:absolute; content:''; height:18px; width:18px;
+  left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-pub input:checked + .toggle-pub-slider { background:var(--green); }
+.toggle-pub input:checked + .toggle-pub-slider:before { transform:translateX(20px); }
+.toggle-pub input:disabled + .toggle-pub-slider { opacity:.5; cursor:not-allowed; }
+
 .variantes-mobile { display: none; }
 
 @media (max-width: 700px) {
@@ -414,6 +430,21 @@ textarea.field { min-height: 90px; resize: vertical; }
       <div class="panel-header">
         <h2 id="panel-titulo">Editar producto</h2>
         <button class="btn-cerrar" onclick="cerrarPanel()" title="Cerrar">✕</button>
+      </div>
+
+      <!-- Visibilidad -->
+      <div class="panel-section" style="padding:12px 20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Visibilidad en tienda</div>
+            <div id="publicado-label" style="font-size:13px;font-weight:600;color:#374151;">—</div>
+          </div>
+          <label class="toggle-pub">
+            <input type="checkbox" id="toggle-publicado" onchange="togglePublicado()">
+            <span class="toggle-pub-slider"></span>
+          </label>
+        </div>
+        <span class="save-status" id="st-publicado" style="display:block;margin-top:6px;min-height:16px;"></span>
       </div>
 
       <!-- Nombre y descripción -->
@@ -836,8 +867,14 @@ function abrirEditor(productoId) {
   // Stock
   renderEditStock(p.variantes);
 
+  // Publicado
+  var togEl = document.getElementById('toggle-publicado');
+  togEl.checked  = !!p.publicado;
+  togEl.disabled = false;
+  document.getElementById('publicado-label').textContent = p.publicado ? 'Publicado' : 'No listado';
+
   // Limpiar status
-  ['info','foto','precios','stock'].forEach(function(k) { setSt(k,''); });
+  ['info','foto','precios','stock','publicado'].forEach(function(k) { setSt(k,''); });
 
   document.getElementById('panel').classList.add('visible');
 }
@@ -1161,6 +1198,50 @@ function actualizarVariantesLocales(tipo) {
     var tabla = row.querySelector('.variantes-tabla tbody');
     if (tabla) tabla.innerHTML = filas;
   }
+}
+
+// ── PUBLICADO ────────────────────────────────────────────────────
+
+function togglePublicado() {
+  if (!_productoActual) return;
+  var togEl   = document.getElementById('toggle-publicado');
+  var checked = togEl.checked;
+  togEl.disabled = true;
+  setSt('publicado', 'Guardando...');
+  var params = new URLSearchParams({
+    action: 'toggle_publicado',
+    email: currentUser.email,
+    producto_id: String(_productoActual.id),
+    publicado: checked ? '1' : '0'
+  });
+  fetch(GAS_URL + '?' + params.toString(), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      togEl.disabled = false;
+      if (d.ok) {
+        _productoActual.publicado = checked;
+        document.getElementById('publicado-label').textContent = checked ? 'Publicado' : 'No listado';
+        setSt('publicado', checked ? '✓ Ahora visible en la tienda' : '✓ Ocultado de la tienda', true);
+        var row = document.getElementById('row-' + _productoActual.id);
+        if (row) {
+          var nombreEl = row.querySelector('.prod-nombre');
+          if (nombreEl) {
+            var semClass = _productoActual.semaforo || 'verde';
+            var extra = !checked ? '<span class="badge-nopub">No listado</span>' : '';
+            if (_productoActual.esDigital) extra += '<span class="badge-digital">Producto digital</span>';
+            nombreEl.innerHTML = '<span class="prod-sem ' + semClass + '"></span>' + esc(_productoActual.nombre) + extra;
+          }
+        }
+      } else {
+        togEl.checked = !checked;
+        setSt('publicado', d.error || 'Error al guardar', false);
+      }
+    })
+    .catch(function() {
+      togEl.disabled = false;
+      togEl.checked  = !checked;
+      setSt('publicado', 'Error de red', false);
+    });
 }
 
 // ── FOTO ──────────────────────────────────────────────────────────
