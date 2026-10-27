@@ -254,22 +254,14 @@ textarea.field { min-height: 90px; resize: vertical; }
 .stock-total-row.cambia    { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
 .stock-total-row .total-num { font-weight: 700; font-size: 14px; }
 
-/* foto */
-.foto-preview {
-  width: 100%; aspect-ratio: 1; object-fit: cover;
-  border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; display: block;
-}
-.foto-preview-placeholder {
-  width: 100%; aspect-ratio: 1; background: #f3f4f6; border: 2px dashed var(--border);
-  border-radius: 8px; display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 6px; margin-bottom: 10px; color: var(--muted); font-size: 13px;
-}
-.btn-upload {
-  width: 100%; padding: 10px; background: none; border: 1px solid var(--border);
-  border-radius: 7px; font-size: 13px; cursor: pointer; color: var(--green);
-  font-weight: 600; transition: background .15s;
-}
-.btn-upload:hover { background: var(--green-light); }
+/* galería fotos */
+.galeria-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-bottom:10px; }
+.galeria-item { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#f9fafb; }
+.galeria-item img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
+.galeria-item-vacia { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:#f3f4f6; border-bottom:1px dashed var(--border); font-size:28px; color:#d1d5db; }
+.galeria-item-label { padding:4px 7px; font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--border); background:#fff; }
+.btn-galeria { width:100%; padding:5px 8px; font-size:11px; border:none; border-top:1px solid var(--border); cursor:pointer; background:#fff; color:var(--green); font-weight:600; transition:background .15s; }
+.btn-galeria:hover { background:var(--green-light); }
 
 /* botones guardar */
 .btn-guardar {
@@ -462,21 +454,13 @@ textarea.field { min-height: 90px; resize: vertical; }
         <span class="save-status" id="st-info"></span>
       </div>
 
-      <!-- Foto -->
+      <!-- Fotos -->
       <div class="panel-section">
-        <h3>Foto</h3>
-        <div id="foto-wrap">
-          <div class="foto-preview-placeholder" id="foto-placeholder">
-            <span style="font-size:32px">🖼️</span>
-            <span>Sin imagen</span>
-          </div>
-          <img id="foto-preview" class="foto-preview" style="display:none">
-        </div>
+        <h3>Fotos</h3>
+        <div id="galeria-fotos" class="galeria-grid"></div>
         <input type="file" id="foto-input" accept="image/*" style="display:none" onchange="onFotoSeleccionada(event)">
-        <button class="btn-upload" onclick="document.getElementById('foto-input').click()">
-          ⬆ Seleccionar imagen (1280 × 1280)
-        </button>
         <div id="foto-nueva-preview" style="margin-top:10px;display:none">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px" id="foto-target-label"></div>
           <img id="foto-nueva-img" style="width:100%;border-radius:8px;border:1px solid var(--border)">
           <div style="display:flex;gap:10px;margin-top:8px;align-items:center">
             <button class="btn-guardar" id="btn-guardar-foto" onclick="guardarFoto()">Subir foto</button>
@@ -511,8 +495,10 @@ var CLIENT_ID   = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleuser
 var currentUser = null;
 var _productos  = [];
 var _productoActual = null;
-var _fotoBase64 = null;
-var _fotoMime   = null;
+var _fotoBase64           = null;
+var _fotoMime             = null;
+var _fotoTargetVarianteId = null;
+var _fotoTargetImagenId   = null;
 
 // ── AUTH ──────────────────────────────────────────────────────
 
@@ -852,15 +838,8 @@ function abrirEditor(productoId) {
   document.getElementById('edit-nombre').value       = p.nombre;
   quill.root.innerHTML = p.descripcion || '';
 
-  // Foto
-  if (p.imagen) {
-    document.getElementById('foto-placeholder').style.display = 'none';
-    var prev = document.getElementById('foto-preview');
-    prev.src = p.imagen; prev.style.display = 'block';
-  } else {
-    document.getElementById('foto-placeholder').style.display = 'flex';
-    document.getElementById('foto-preview').style.display = 'none';
-  }
+  // Fotos
+  renderGaleria(p);
 
   // Precios
   renderEditPrecios(p.variantes);
@@ -1246,6 +1225,63 @@ function togglePublicado() {
 
 // ── FOTO ──────────────────────────────────────────────────────────
 
+function renderGaleria(p) {
+  var imageToVariante = {};
+  (p.variantes || []).forEach(function(v) {
+    if (v.image_id) imageToVariante[v.image_id] = v;
+  });
+
+  var html = '';
+  var imagenes = p.imagenes || [];
+
+  if (imagenes.length === 0) {
+    html = '<div class="galeria-item" style="grid-column:1/-1">' +
+      '<div class="galeria-item-vacia">🖼️</div>' +
+      '<div class="galeria-item-label">Sin imágenes</div>' +
+      '<button class="btn-galeria" onclick="iniciarSubidaFoto(null,null)">+ Subir imagen</button>' +
+    '</div>';
+  } else {
+    imagenes.forEach(function(img) {
+      var v     = imageToVariante[img.id];
+      var label = v ? v.nombre : (imagenes.length === 1 ? 'Imagen del producto' : 'Sin variante');
+      var vid   = v ? v.id : '';
+      html += '<div class="galeria-item">' +
+        '<img src="' + esc(img.src) + '" loading="lazy">' +
+        '<div class="galeria-item-label" title="' + esc(label) + '">' + esc(label) + '</div>' +
+        '<button class="btn-galeria" onclick="iniciarReemplazoFoto(\'' + esc(img.id) + '\',\'' + esc(vid) + '\',\'' + esc(label) + '\')">Reemplazar</button>' +
+      '</div>';
+    });
+    if (p.variantes && p.variantes.length > 1) {
+      p.variantes.forEach(function(v) {
+        if (!v.image_id) {
+          html += '<div class="galeria-item">' +
+            '<div class="galeria-item-vacia">📷</div>' +
+            '<div class="galeria-item-label" title="' + esc(v.nombre) + '">' + esc(v.nombre) + '</div>' +
+            '<button class="btn-galeria" onclick="iniciarSubidaFoto(\'' + esc(v.id) + '\',\'' + esc(v.nombre) + '\')">+ Subir</button>' +
+          '</div>';
+        }
+      });
+    }
+  }
+
+  document.getElementById('galeria-fotos').innerHTML = html;
+}
+
+function iniciarSubidaFoto(varianteId, varianteNombre) {
+  _fotoTargetVarianteId = varianteId || null;
+  _fotoTargetImagenId   = null;
+  document.getElementById('foto-target-label').textContent =
+    varianteNombre ? 'Nueva foto — ' + varianteNombre : 'Nueva imagen del producto';
+  document.getElementById('foto-input').click();
+}
+
+function iniciarReemplazoFoto(imagenId, varianteId, varianteNombre) {
+  _fotoTargetVarianteId = varianteId || null;
+  _fotoTargetImagenId   = imagenId  || null;
+  document.getElementById('foto-target-label').textContent = 'Reemplazar foto — ' + varianteNombre;
+  document.getElementById('foto-input').click();
+}
+
 function onFotoSeleccionada(event) {
   var file = event.target.files[0];
   if (!file) return;
@@ -1263,6 +1299,7 @@ function onFotoSeleccionada(event) {
 
 function cancelarFoto() {
   _fotoBase64 = null; _fotoMime = null;
+  _fotoTargetVarianteId = null; _fotoTargetImagenId = null;
   document.getElementById('foto-nueva-preview').style.display = 'none';
   document.getElementById('foto-input').value = '';
   setSt('foto', '');
@@ -1275,19 +1312,50 @@ function guardarFoto() {
   fetch(GAS_URL, {
     method: 'POST', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'update_imagen', email: currentUser.email, producto_id: _productoActual.id, base64: _fotoBase64, mime_type: _fotoMime })
+    body: JSON.stringify({
+      action:            'update_imagen_variante',
+      email:             currentUser.email,
+      producto_id:       _productoActual.id,
+      variante_id:       _fotoTargetVarianteId || '',
+      imagen_id_antiguo: _fotoTargetImagenId   || '',
+      base64:            _fotoBase64,
+      mime_type:         _fotoMime
+    })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     btn.disabled = false;
     if (d.ok) {
       setSt('foto', '✓ Imagen actualizada', true);
-      var nuevaSrc = document.getElementById('foto-nueva-img').src;
-      _productoActual.imagen = nuevaSrc;
-      document.getElementById('foto-placeholder').style.display = 'none';
-      var prev = document.getElementById('foto-preview');
-      prev.src = nuevaSrc; prev.style.display = 'block';
+      if (d.imagen) {
+        var newImg = { id: d.imagen.id, src: d.imagen.src };
+        _productoActual.imagenes = _productoActual.imagenes || [];
+        if (_fotoTargetImagenId) {
+          var idx = _productoActual.imagenes.findIndex ? _productoActual.imagenes.findIndex(function(i) { return i.id === _fotoTargetImagenId; }) : -1;
+          if (idx !== -1) _productoActual.imagenes[idx] = newImg;
+          else _productoActual.imagenes.push(newImg);
+          // Clear old image_id from any variant that had it
+          (_productoActual.variantes || []).forEach(function(v) {
+            if (v.image_id === _fotoTargetImagenId) v.image_id = null;
+          });
+        } else {
+          _productoActual.imagenes.push(newImg);
+        }
+        // Assign new image_id to target variant
+        if (_fotoTargetVarianteId) {
+          var tv = null;
+          (_productoActual.variantes || []).forEach(function(v) { if (v.id === _fotoTargetVarianteId) tv = v; });
+          if (tv) tv.image_id = d.imagen.id;
+        }
+        // Update thumbnail in list
+        if (_productoActual.imagenes.length > 0) {
+          _productoActual.imagen = _productoActual.imagenes[0].src;
+          var row = document.getElementById('row-' + _productoActual.id);
+          if (row) { var imgEl = row.querySelector('.prod-img'); if (imgEl) imgEl.src = _productoActual.imagen; }
+        }
+      }
       cancelarFoto();
+      renderGaleria(_productoActual);
     } else { setSt('foto', d.error || 'Error', false); }
   })
   .catch(function() { btn.disabled = false; setSt('foto', 'Error de red', false); });

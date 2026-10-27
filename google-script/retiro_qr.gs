@@ -1,4 +1,4 @@
-// v2026-10-27b — toggle_publicado: activar/desactivar producto desde gestion-productos.html
+// v2026-10-27d — galería de fotos: image_id por variante + apiUpdateImagenVariante
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -84,6 +84,10 @@ function doPost(e) {
     }
     if (action === 'update_imagen') {
       var res = apiUpdateImagen(body.email || '', body.producto_id || '', body.base64 || '', body.mime_type || 'image/jpeg');
+      return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'update_imagen_variante') {
+      var res = apiUpdateImagenVariante(body.email || '', body.producto_id || '', body.variante_id || '', body.imagen_id_antiguo || '', body.base64 || '', body.mime_type || 'image/jpeg');
       return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -2689,14 +2693,10 @@ function apiTogglePublicado(email, productoId, publicado) {
   if (!user) return { ok: false, error: 'No autorizado' };
   if (!productoId) return { ok: false, error: 'producto_id requerido' };
   try {
-    var url = 'https://api.tiendanube.com/v1/' + CONFIG_STOCK.STORE_ID + '/products/' + productoId;
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
     var resp = UrlFetchApp.fetch(url, {
-      method: 'patch',
-      headers: {
-        'Authentication': 'bearer ' + CONFIG_STOCK.API_TOKEN,
-        'Content-Type': 'application/json',
-        'User-Agent': 'DandelionGAS/1.0 (robertson.ine@gmail.com)'
-      },
+      method: 'put',
+      headers: _tnHeaders(),
       payload: JSON.stringify({ published: publicado }),
       muteHttpExceptions: true
     });
@@ -2820,6 +2820,7 @@ function apiProductos(email) {
           velMes:         velMes,
           semaforo:       semaforo,
           activo:         v.visible !== false,
+          image_id:       v.image_id ? String(v.image_id) : null,
           alarmaActivada: ov.alarmaActivada !== false,
           _dbg_clave_vel: sku
         };
@@ -3004,6 +3005,43 @@ function apiUpdateImagen(email, productoId, base64Data, mimeType) {
     return { ok: true };
   } catch(err) {
     Logger.log('Error apiUpdateImagen: ' + err);
+    return { ok: false, error: 'Error al procesar imagen.' };
+  }
+}
+
+function apiUpdateImagenVariante(email, productoId, varianteId, imagenIdAntiguo, base64Data, mimeType) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
+  if (!base64Data) return { ok: false, error: 'Imagen requerida.' };
+  try {
+    var prodUrl = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
+    var headers = _tnHeaders();
+    if (imagenIdAntiguo) {
+      UrlFetchApp.fetch(prodUrl + '/images/' + imagenIdAntiguo, { method: 'delete', headers: headers, muteHttpExceptions: true });
+    }
+    var bytes = Utilities.base64Decode(base64Data);
+    var blob  = Utilities.newBlob(bytes, mimeType || 'image/jpeg', 'producto.jpg');
+    var uploadResp = UrlFetchApp.fetch(prodUrl + '/images', {
+      method: 'post', headers: headers,
+      payload: { 'filename': blob }, muteHttpExceptions: true
+    });
+    var code = uploadResp.getResponseCode();
+    if (code !== 200 && code !== 201) return { ok: false, error: 'Error al subir imagen: ' + code };
+    var newImg = JSON.parse(uploadResp.getContentText());
+    if (varianteId) {
+      UrlFetchApp.fetch(prodUrl + '/variants/' + varianteId, {
+        method: 'put', headers: headers,
+        payload: JSON.stringify({ image_id: newImg.id }), muteHttpExceptions: true
+      });
+    }
+    _invalidarCacheProductos(email);
+    return { ok: true, imagen: { id: String(newImg.id), src: newImg.src } };
+  } catch(err) {
+    Logger.log('Error apiUpdateImagenVariante: ' + err);
     return { ok: false, error: 'Error al procesar imagen.' };
   }
 }
