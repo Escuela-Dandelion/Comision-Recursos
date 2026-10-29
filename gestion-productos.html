@@ -957,9 +957,9 @@ function renderEditStock(variantes) {
         '</div>' +
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);margin-top:4px">Umbral/Piso vacío = valor calculado automáticamente.</div>' +
-      '<div style="margin-top:10px">' +
+      '<div style="margin-top:10px;opacity:' + (esInf ? '0.4' : '1') + '">' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">' +
-          '<input type="checkbox" id="alarma-' + v.id + '" ' + (v.alarmaActivada === false ? '' : 'checked') + ' style="width:15px;height:15px;flex-shrink:0">' +
+          '<input type="checkbox" id="alarma-' + v.id + '" ' + (v.alarmaActivada === false || esInf ? '' : 'checked') + (esInf ? ' disabled' : '') + ' style="width:15px;height:15px;flex-shrink:0">' +
           '<span>Alarma de stock activada</span>' +
         '</label>' +
       '</div>' +
@@ -971,6 +971,12 @@ function renderEditStock(variantes) {
 function toggleInfinito(varianteId) {
   var checked = document.getElementById('inf-' + varianteId).checked;
   document.getElementById('stock-num-wrap-' + varianteId).style.display = checked ? 'none' : 'block';
+  var alarmaEl = document.getElementById('alarma-' + varianteId);
+  if (alarmaEl) {
+    alarmaEl.disabled = checked;
+    if (checked) alarmaEl.checked = false;
+    alarmaEl.closest('label').style.opacity = checked ? '0.4' : '1';
+  }
 }
 
 function actualizarTotalStock(varianteId) {
