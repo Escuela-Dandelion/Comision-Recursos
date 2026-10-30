@@ -108,6 +108,12 @@ header .user:hover { color: #fff; }
   display: inline-block; background: #f3f4f6; color: var(--muted);
   font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-left: 6px;
 }
+.badge-oculto {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fef6ec; color: #92400e; border: 1px solid #f0c27f;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px;
+  white-space: nowrap; flex-shrink: 0;
+}
 .pedido-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 100px; font-size: 10px; font-weight: 700; padding: 2px 8px; text-decoration: none; white-space: nowrap; border: 1px solid; margin-left: 6px; cursor: pointer; }
 .pedido-badge.solicitado { background: #fff8e1; color: #b45309; border-color: #fcd34d; }
 .pedido-badge.confirmado { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
@@ -421,6 +427,10 @@ textarea.field { min-height: 90px; resize: vertical; }
     <div class="panel" id="panel">
       <div class="panel-header">
         <h2 id="panel-titulo">Editar producto</h2>
+        <span id="badge-oculto" class="badge-oculto" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          Oculto
+        </span>
         <button class="btn-cerrar" onclick="cerrarPanel()" title="Cerrar">✕</button>
       </div>
 
@@ -851,6 +861,7 @@ function abrirEditor(productoId) {
   togEl.checked  = !!p.publicado;
   togEl.disabled = false;
   document.getElementById('publicado-label').textContent = p.publicado ? 'Publicado' : 'No listado';
+  document.getElementById('badge-oculto').style.display = p.publicado ? 'none' : '';
 
   // Limpiar status
   ['info','foto','precios','stock','publicado'].forEach(function(k) { setSt(k,''); });
@@ -1208,6 +1219,7 @@ function togglePublicado() {
       if (d.ok) {
         _productoActual.publicado = checked;
         document.getElementById('publicado-label').textContent = checked ? 'Publicado' : 'No listado';
+        document.getElementById('badge-oculto').style.display = checked ? 'none' : '';
         setSt('publicado', checked ? '✓ Ahora visible en la tienda' : '✓ Ocultado de la tienda', true);
         var row = document.getElementById('row-' + _productoActual.id);
         if (row) {
