@@ -268,6 +268,12 @@ textarea.field { min-height: 90px; resize: vertical; }
 .galeria-item-label { padding:4px 7px; font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--border); background:#fff; }
 .btn-galeria { width:100%; padding:5px 8px; font-size:11px; border:none; border-top:1px solid var(--border); cursor:pointer; background:#fff; color:var(--green); font-weight:600; transition:background .15s; }
 .btn-galeria:hover { background:var(--green-light); }
+.galeria-item { position:relative; }
+.galeria-img-actions { position:absolute; top:6px; right:6px; display:flex; gap:4px; }
+.btn-img-action { width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 1px 4px rgba(0,0,0,.18); transition:background .15s; }
+.btn-img-action:hover { background:#fff; }
+.btn-img-action.danger { color:#dc2626; }
+.btn-img-action.danger:hover { background:#fef2f2; }
 
 /* botones guardar */
 .btn-guardar {
@@ -1267,8 +1273,15 @@ function renderGaleria(p) {
       var vid   = v ? v.id : '';
       html += '<div class="galeria-item">' +
         '<img src="' + esc(img.src) + '" loading="lazy">' +
+        '<div class="galeria-img-actions">' +
+          '<button class="btn-img-action" title="Reemplazar imagen" onclick="iniciarReemplazoFoto(\'' + esc(img.id) + '\',\'' + esc(vid) + '\',\'' + esc(label) + '\')">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+          '</button>' +
+          '<button class="btn-img-action danger" title="Eliminar imagen" onclick="eliminarImagen(\'' + esc(img.id) + '\',\'' + esc(vid) + '\')">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>' +
+          '</button>' +
+        '</div>' +
         '<div class="galeria-item-label" title="' + esc(label) + '">' + esc(label) + '</div>' +
-        '<button class="btn-galeria" onclick="iniciarReemplazoFoto(\'' + esc(img.id) + '\',\'' + esc(vid) + '\',\'' + esc(label) + '\')">Reemplazar</button>' +
       '</div>';
     });
     if (p.variantes && p.variantes.length > 1) {
@@ -1315,6 +1328,22 @@ function onFotoSeleccionada(event) {
     setSt('foto', '');
   };
   reader.readAsDataURL(file);
+}
+
+function eliminarImagen(imagenId, varianteId) {
+  if (!confirm('¿Eliminar esta imagen?')) return;
+  setSt('foto', 'Eliminando...');
+  var params = new URLSearchParams({ action: 'delete_imagen', email: currentUser.email, producto_id: _productoActual.id, imagen_id: imagenId });
+  fetch(GAS_URL + '?' + params).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      _productoActual.imagenes = (_productoActual.imagenes || []).filter(function(i) { return i.id !== imagenId; });
+      (_productoActual.variantes || []).forEach(function(v) { if (v.image_id === imagenId) v.image_id = null; });
+      renderGaleria(_productoActual);
+      setSt('foto', '✓ Imagen eliminada', true);
+    } else {
+      setSt('foto', 'Error: ' + (d.error || 'no se pudo eliminar'));
+    }
+  });
 }
 
 function cancelarFoto() {

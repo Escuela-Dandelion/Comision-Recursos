@@ -1,4 +1,4 @@
-// v2026-10-27d — galería de fotos: image_id por variante + apiUpdateImagenVariante
+// v2026-10-30d — eliminar imagen: apiDeleteImagen + botón tachito en galería (estilo TiendaNube)
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -316,6 +316,11 @@ function doGetInterno(e) {
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'delete_imagen') {
+    var res = apiDeleteImagen(e.parameter.email || '', e.parameter.producto_id || '', e.parameter.imagen_id || '');
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (action === 'update_stock_ubicaciones') {
     var res = apiUpdateStockUbicaciones(
       e.parameter.email        || '',
@@ -524,13 +529,14 @@ function buscarRegla(configRows, clave, fechaOrden) {
 }
 
 function calcularAporteGrado(order) {
-  var grado = normalizarGradoGAS(order.note || order.notes || '');
-  if (!grado || grado === '(Sin observaciones)') return null;
+  var gradoNorm  = normalizarGradoGAS(order.note || order.notes || '');
+  var gradoValido = (gradoNorm && gradoNorm !== '(Sin observaciones)') ? gradoNorm : '';
 
   var configRows = leerConfigProductos();
   var fechaOrden = order.created_at ? new Date(order.created_at) : new Date();
   var montoGrado   = 0;
   var montoEscuela = 0;
+  var nombresEscuelaFija = []; // productos cuyo 100% siempre va a escuela por config
 
   (order.products || []).forEach(function(p) {
     var precio = parseFloat(p.price || 0);
@@ -539,8 +545,8 @@ function calcularAporteGrado(order) {
     var datos  = fetchDatosDeProducto(p.product_id || '', p.variant_id || '');
     var costo  = datos.costo || 0;
     var marca  = (datos.marca || '').trim().toUpperCase();
+    var nombre = (typeof p.name === 'object') ? (p.name.es || '') : (p.name || '');
 
-    // Prioridad: SKU exacto → MARCA:marca → DEFAULT
     var regla = buscarRegla(configRows, sku, fechaOrden)
              || buscarRegla(configRows, 'MARCA:' + marca, fechaOrden)
              || buscarRegla(configRows, 'DEFAULT', fechaOrden)
@@ -548,19 +554,30 @@ function calcularAporteGrado(order) {
 
     if (!regla) return;
     var subtotal = precio * qty;
-    montoGrado  += subtotal * regla.pctGrado;
 
-    if (regla.pctEscuela !== null) {
-      montoEscuela += subtotal * regla.pctEscuela;
+    if (regla.pctEscuela === 1) {
+      // Producto cuyo 100% va a escuela por definición — no aplica aporte a grado
+      nombresEscuelaFija.push(nombre);
+      montoEscuela += subtotal;
     } else {
-      montoEscuela += subtotal - (costo * qty) - (subtotal * regla.pctGrado);
+      if (gradoValido) {
+        montoGrado += subtotal * regla.pctGrado;
+      }
+      if (regla.pctEscuela !== null) {
+        montoEscuela += subtotal * regla.pctEscuela;
+      } else {
+        montoEscuela += subtotal - (costo * qty) - (gradoValido ? subtotal * regla.pctGrado : 0);
+      }
     }
   });
 
   return {
-    grado:        grado,
-    montoGrado:   Math.round(montoGrado),
-    montoEscuela: Math.max(0, Math.round(montoEscuela))
+    grado:              gradoValido,
+    montoGrado:         Math.round(montoGrado),
+    montoEscuela:       Math.max(0, Math.round(montoEscuela)),
+    escuelaFija:        nombresEscuelaFija,
+    hayEscuelaFija:     nombresEscuelaFija.length > 0,
+    hayProductosNormales: nombresEscuelaFija.length < (order.products || []).length
   };
 }
 
@@ -569,28 +586,63 @@ function enviarEmail(email, nombre, order, qrBlob, productos) {
 
   var bloqueGrado = '';
   var mostrarAporte = new Date() >= new Date('2026-10-01');
-  var aporte = mostrarAporte ? calcularAporteGrado(order) : null;
-  if (aporte && aporte.montoGrado > 0) {
-    var totalCompra = parseFloat(order.total || 0);
-    bloqueGrado =
-      '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
-      '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
-      '<tr style="border-bottom:1px solid #c8e6c9"><td style="padding:4px 0;color:#888">Tu compra</td>' +
-      '<td style="padding:4px 0;text-align:right;color:#888">$' + totalCompra.toLocaleString('es-AR') + '</td></tr>' +
-      '<tr><td style="padding:4px 0;color:#555">Tu aporte al ' + formatearGrado(aporte.grado) + '</td>' +
-      '<td style="padding:4px 0;text-align:right;font-weight:700;color:#1a5c2a">$' + aporte.montoGrado.toLocaleString('es-AR') + '</td></tr>' +
-      '</table>' +
-      '<p style="margin:10px 0 0 0;font-size:12px;color:#6b9e6b">¡Gracias por apoyar a la comunidad Dandelion!</p>' +
-      '<p style="margin:8px 0 0 0;font-size:11px;color:#999">Este aporte fue asignado al ' + formatearGrado(aporte.grado) + ' porque lo indicaste al momento de hacer tu compra. Si elegiste un destino diferente o querés hacer alguna corrección, <a href="https://wa.me/' + CONFIG.INES_TEL + '?text=' + encodeURIComponent('Hola! Quiero consultar sobre el aporte a grado de mi pedido #' + order.number) + '" style="color:#3a7d44">escribinos por WhatsApp</a>.</p>' +
-      '</div>';
-  } else if (mostrarAporte) {
-    bloqueGrado =
-      '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
-      '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
-      '<p style="margin:0 0 10px 0;font-size:14px;color:#555;line-height:1.6">Como no indicaste un grado en especial, tu aporte fue íntegramente para la Escuela Dandelion.</p>' +
-      '<p style="margin:0;font-size:11px;color:#999">Si necesitás cambiar el destino de tu aporte o tenés alguna corrección, <a href="https://wa.me/' + CONFIG.INES_TEL + '?text=' + encodeURIComponent('Hola! Quiero consultar sobre el aporte de mi pedido #' + order.number) + '" style="color:#3a7d44">escribinos por WhatsApp</a>.</p>' +
-      '</div>';
+  if (mostrarAporte) {
+    var aporte = calcularAporteGrado(order);
+    var wa = '<a href="https://wa.me/' + CONFIG.INES_TEL + '?text=' + encodeURIComponent('Hola! Quiero consultar sobre el aporte de mi pedido #' + order.number) + '" style="color:#3a7d44">escribinos por WhatsApp</a>';
+
+    if (!aporte.hayEscuelaFija && !aporte.hayProductosNormales) {
+      // sin config → no mostrar bloque
+    } else if (aporte.hayEscuelaFija && !aporte.hayProductosNormales) {
+      // CASO 1: todos los productos van 100% a escuela por definición
+      bloqueGrado =
+        '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
+        '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
+        '<p style="margin:0 0 10px 0;font-size:14px;color:#555;line-height:1.6">El 100% de la recaudación de esta compra va íntegramente a la Escuela Dandelion.</p>' +
+        '<p style="margin:0;font-size:11px;color:#999">Si tenés alguna consulta, ' + wa + '.</p>' +
+        '</div>';
+    } else if (aporte.hayEscuelaFija && aporte.hayProductosNormales) {
+      // CASO 2: compra mixta — algunos productos fijos a escuela, otros con distribución normal
+      var filasEscuela = aporte.escuelaFija.map(function(n) {
+        return '<tr><td style="padding:4px 0;color:#555">' + n + '</td>' +
+               '<td style="padding:4px 0;text-align:right;color:#555">100% Escuela Dandelion</td></tr>';
+      }).join('');
+      var filaGrado = aporte.montoGrado > 0
+        ? '<tr style="border-top:1px solid #c8e6c9"><td style="padding:6px 0;color:#555">Tu aporte al ' + formatearGrado(aporte.grado) + '</td>' +
+          '<td style="padding:6px 0;text-align:right;font-weight:700;color:#1a5c2a">$' + aporte.montoGrado.toLocaleString('es-AR') + '</td></tr>'
+        : '<tr style="border-top:1px solid #c8e6c9"><td colspan="2" style="padding:6px 0;font-size:12px;color:#888">El resto de los productos también va a la Escuela Dandelion.</td></tr>';
+      bloqueGrado =
+        '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
+        '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+        filasEscuela + filaGrado +
+        '</table>' +
+        '<p style="margin:10px 0 0 0;font-size:12px;color:#6b9e6b">¡Gracias por apoyar a la comunidad Dandelion!</p>' +
+        '<p style="margin:8px 0 0 0;font-size:11px;color:#999">Si tenés alguna consulta, ' + wa + '.</p>' +
+        '</div>';
+    } else if (aporte.montoGrado > 0) {
+      // CASO 3: solo productos normales, el comprador eligió grado
+      var totalCompra = parseFloat(order.total || 0);
+      bloqueGrado =
+        '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
+        '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+        '<tr style="border-bottom:1px solid #c8e6c9"><td style="padding:4px 0;color:#888">Tu compra</td>' +
+        '<td style="padding:4px 0;text-align:right;color:#888">$' + totalCompra.toLocaleString('es-AR') + '</td></tr>' +
+        '<tr><td style="padding:4px 0;color:#555">Tu aporte al ' + formatearGrado(aporte.grado) + '</td>' +
+        '<td style="padding:4px 0;text-align:right;font-weight:700;color:#1a5c2a">$' + aporte.montoGrado.toLocaleString('es-AR') + '</td></tr>' +
+        '</table>' +
+        '<p style="margin:10px 0 0 0;font-size:12px;color:#6b9e6b">¡Gracias por apoyar a la comunidad Dandelion!</p>' +
+        '<p style="margin:8px 0 0 0;font-size:11px;color:#999">Este aporte fue asignado al ' + formatearGrado(aporte.grado) + ' porque lo indicaste al momento de hacer tu compra. Si elegiste un destino diferente o querés hacer alguna corrección, ' + wa + '.</p>' +
+        '</div>';
+    } else {
+      // CASO 4: solo productos normales, sin grado seleccionado
+      bloqueGrado =
+        '<div style="background:#f0f7e6;border-left:4px solid #3a7d44;border-radius:6px;padding:14px 16px;margin:20px 0">' +
+        '<p style="margin:0 0 10px 0;font-size:15px;color:#3a7d44"><strong>Tu aporte a la comunidad</strong></p>' +
+        '<p style="margin:0 0 10px 0;font-size:14px;color:#555;line-height:1.6">Como no indicaste un grado en especial, tu aporte fue íntegramente para la Escuela Dandelion.</p>' +
+        '<p style="margin:0;font-size:11px;color:#999">Si necesitás cambiar el destino de tu aporte o tenés alguna corrección, ' + wa + '.</p>' +
+        '</div>';
+    }
   }
 
   var html =
@@ -2017,7 +2069,7 @@ var AUTH_EMAILS = {
   'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    marcas: ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'] },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
-  'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN'] },
+  'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'] },
   'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
   'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
@@ -2917,7 +2969,15 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
   if (precio      !== undefined && precio      !== null && precio      !== '') body.price             = parseFloat(precio);
   if (precioPromo !== undefined && precioPromo !== null && precioPromo !== '') body.promotional_price = parseFloat(precioPromo) > 0 ? parseFloat(precioPromo) : null;
   if (costo       !== undefined && costo       !== null && costo       !== '') body.cost              = parseFloat(costo);
-  if (stock       !== undefined && stock       !== null) body.stock = (stock === '' || stock === 'null' || stock === null) ? null : parseInt(stock);
+  if (stock !== undefined && stock !== null) {
+    var esInfinito = (stock === '' || stock === 'null' || stock === null);
+    if (esInfinito) {
+      body.stock_management = false;
+    } else {
+      body.stock_management = true;
+      body.stock = parseInt(stock);
+    }
+  }
   if (!Object.keys(body).length) return { ok: false, error: 'Sin datos para actualizar.' };
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
   var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
@@ -2964,12 +3024,33 @@ function apiUpdateStockUbicaciones(email, productoId, varianteId, nombreVariante
   // Solo sincronizar TiendaNube si el total cambió
   if (totalCambio) {
     var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
-    var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify({ stock: nuevoTotal }), muteHttpExceptions: true });
+    var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify({ stock: nuevoTotal, stock_management: true }), muteHttpExceptions: true });
     if (resp.getResponseCode() !== 200) return { ok: false, error: 'Stock guardado localmente pero error al sincronizar TiendaNube.' };
   }
 
   _invalidarCacheProductos(email);
   return { ok: true, totalCambio: totalCambio, nuevoTotal: nuevoTotal, stockP: stockP, stockS: stockS };
+}
+
+function apiDeleteImagen(email, productoId, imagenId) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+  if (user.role !== 'ADMIN') {
+    var marca = fetchMarcaDeProducto(productoId);
+    if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
+  }
+  if (!imagenId) return { ok: false, error: 'imagen_id requerido.' };
+  try {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/images/' + imagenId;
+    var resp = UrlFetchApp.fetch(url, { method: 'delete', headers: _tnHeaders(), muteHttpExceptions: true });
+    var code = resp.getResponseCode();
+    if (code !== 200 && code !== 204) return { ok: false, error: 'Error al eliminar imagen: ' + code };
+    _invalidarCacheProductos(email);
+    return { ok: true };
+  } catch(err) {
+    Logger.log('Error apiDeleteImagen: ' + err);
+    return { ok: false, error: 'Error al eliminar imagen.' };
+  }
 }
 
 function apiUpdateImagen(email, productoId, base64Data, mimeType) {
@@ -2993,12 +3074,12 @@ function apiUpdateImagen(email, productoId, base64Data, mimeType) {
       });
     }
 
-    // Subir nueva imagen como multipart
-    var bytes = Utilities.base64Decode(base64Data);
-    var blob  = Utilities.newBlob(bytes, mimeType || 'image/jpeg', 'producto.jpg');
+    // Subir nueva imagen como JSON con attachment base64
     var uploadResp = UrlFetchApp.fetch(prodUrl + '/images', {
-      method: 'post', headers: headers,
-      payload: { 'filename': blob }, muteHttpExceptions: true
+      method: 'post',
+      headers: Object.assign({}, headers, { 'Content-Type': 'application/json' }),
+      payload: JSON.stringify({ attachment: base64Data, filename: 'producto.jpg' }),
+      muteHttpExceptions: true
     });
     var code = uploadResp.getResponseCode();
     if (code !== 200 && code !== 201) { Logger.log('apiUpdateImagen error: ' + code + ' ' + uploadResp.getContentText()); return { ok: false, error: 'Error al subir imagen.' }; }
@@ -3023,11 +3104,11 @@ function apiUpdateImagenVariante(email, productoId, varianteId, imagenIdAntiguo,
     if (imagenIdAntiguo) {
       UrlFetchApp.fetch(prodUrl + '/images/' + imagenIdAntiguo, { method: 'delete', headers: headers, muteHttpExceptions: true });
     }
-    var bytes = Utilities.base64Decode(base64Data);
-    var blob  = Utilities.newBlob(bytes, mimeType || 'image/jpeg', 'producto.jpg');
     var uploadResp = UrlFetchApp.fetch(prodUrl + '/images', {
-      method: 'post', headers: headers,
-      payload: { 'filename': blob }, muteHttpExceptions: true
+      method: 'post',
+      headers: Object.assign({}, headers, { 'Content-Type': 'application/json' }),
+      payload: JSON.stringify({ attachment: base64Data, filename: 'producto.jpg' }),
+      muteHttpExceptions: true
     });
     var code = uploadResp.getResponseCode();
     if (code !== 200 && code !== 201) return { ok: false, error: 'Error al subir imagen: ' + code };
@@ -3044,4 +3125,28 @@ function apiUpdateImagenVariante(email, productoId, varianteId, imagenIdAntiguo,
     Logger.log('Error apiUpdateImagenVariante: ' + err);
     return { ok: false, error: 'Error al procesar imagen.' };
   }
+}
+
+// ──────────────────────────────────────────────────────────
+// LIMPIEZA DE ENVIADOS
+// ──────────────────────────────────────────────────────────
+
+// Borra de la bandeja de enviados todos los emails QR enviados desde el alias de la tienda.
+// Correr una vez manualmente o activar con activarLimpiezaEnviados().
+function limpiarEnviadosQR() {
+  var alias = 'tiendavirtual.dientedeleon@gmail.com';
+  var asunto = 'Diente de Leon - Tu QR para retirar';
+  var threads = GmailApp.search('in:sent from:' + alias + ' subject:"' + asunto + '"', 0, 500);
+  threads.forEach(function(t) { t.moveToTrash(); });
+  Logger.log('limpiarEnviadosQR: ' + threads.length + ' thread(s) eliminados.');
+}
+
+// Activa un trigger diario para limpiar enviados automáticamente.
+function activarLimpiezaEnviados() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'limpiarEnviadosQR') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('limpiarEnviadosQR')
+    .timeBased().everyDays(1).atHour(3).create();
+  Logger.log('Trigger diario limpiarEnviadosQR activado (3am).');
 }

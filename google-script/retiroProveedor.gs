@@ -1,4 +1,4 @@
-// v2026-10-24 — alarmaActivada en invLeerOverrides, guardarOverrideStock, getStockDashboard + doGet saveStockOverride
+// v2026-10-30c — Monica Chesta: agrega ODDIS, YEMARI, CABALLO NEGRO a sus marcas
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -889,7 +889,7 @@ const MARCAS_POR_EMAIL = {
   'lmdestefano@dandelion.edu.ar':    ['YEMARI','CABALLO NEGRO'],
   'lmdestefano@gmail.com':           ['YEMARI','CABALLO NEGRO'],
   'pialucarno@gmail.com':            ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'],
-  'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN'],
+  'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'],
   'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
   'lourdelcastillo@gmail.com':       ['LA YAYA','ODDIS'],
   'francoalini@gmail.com':           ['NAZARENO'],
