@@ -775,6 +775,7 @@ function renderFiltrosMarca(productos) {
 }
 
 function abrirMarcaDropdown() {
+  document.getElementById('filtro-marca-input').value = '';
   filtrarOpcionesMarca();
   document.getElementById('marca-dropdown').classList.add('open');
 }
