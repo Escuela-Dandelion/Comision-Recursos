@@ -262,14 +262,13 @@ textarea.field { min-height: 90px; resize: vertical; }
 
 /* galería fotos */
 .galeria-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-bottom:10px; }
-.galeria-item { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#f9fafb; }
-.galeria-item img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
-.galeria-item-vacia { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:#f3f4f6; border-bottom:1px dashed var(--border); font-size:28px; color:#d1d5db; }
-.galeria-item-label { padding:4px 7px; font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--border); background:#fff; }
+.galeria-item { position:relative; border:1px solid var(--border); border-radius:8px; background:#f9fafb; }
+.galeria-item img { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:7px 7px 0 0; }
+.galeria-item-vacia { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:#f3f4f6; border-bottom:1px dashed var(--border); font-size:28px; color:#d1d5db; border-radius:7px 7px 0 0; }
+.galeria-item-label { padding:4px 7px; font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--border); background:#fff; border-radius:0 0 7px 7px; }
 .btn-galeria { width:100%; padding:5px 8px; font-size:11px; border:none; border-top:1px solid var(--border); cursor:pointer; background:#fff; color:var(--green); font-weight:600; transition:background .15s; }
 .btn-galeria:hover { background:var(--green-light); }
-.galeria-item { position:relative; }
-.galeria-img-actions { position:absolute; top:6px; right:6px; display:flex; gap:4px; }
+.galeria-img-actions { position:absolute; top:6px; right:6px; display:flex; gap:4px; z-index:10; }
 .btn-img-action { width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 1px 4px rgba(0,0,0,.18); transition:background .15s; }
 .btn-img-action:hover { background:#fff; }
 .btn-img-action.danger { color:#dc2626; }
