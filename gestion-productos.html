@@ -776,9 +776,15 @@ function renderFiltrosMarca(productos) {
 }
 
 function abrirMarcaDropdown() {
+  var dd = document.getElementById('marca-dropdown');
+  var marcas = [];
+  _productos.forEach(function(p) { if (p.brand && marcas.indexOf(p.brand) === -1) marcas.push(p.brand); });
+  marcas.sort();
+  dd.innerHTML = marcas.map(function(m) {
+    return '<div class="marca-opt' + (m === _filtroMarca ? ' seleccionada' : '') + '" data-marca="' + m + '" onmousedown="seleccionarMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</div>';
+  }).join('');
   document.getElementById('filtro-marca-input').value = '';
-  filtrarOpcionesMarca();
-  document.getElementById('marca-dropdown').classList.add('open');
+  dd.classList.add('open');
 }
 
 function cerrarMarcaDropdown() {
