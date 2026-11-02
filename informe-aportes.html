@@ -354,7 +354,7 @@ window.addEventListener('load', function() {
 function poblarSelectorMes() {
   var sel    = document.getElementById('sel-mes');
   var hoy    = new Date();
-  var inicio = new Date(2026, 8, 1); // Septiembre 2026 (mes 8 = septiembre)
+  var inicio = new Date(2026, 7, 1); // Agosto 2026 (mes 7 = agosto)
   var d         = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   var mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
   var valDefault = mesPasado.getFullYear() + '-' + String(mesPasado.getMonth() + 1).padStart(2, '0');

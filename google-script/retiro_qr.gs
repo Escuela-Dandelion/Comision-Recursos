@@ -1,4 +1,4 @@
-// v2026-11-02b — apiAportes: usa col V (GradoDestino) en lugar de col L (Comentarios)
+// v2026-11-02c — esProductoDigital: solo lista explícita, sin fallback por peso=0
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -118,14 +118,9 @@ function doPost(e) {
 }
 
 // Detecta si un producto del line item de la orden es digital.
-// TiendaNube no expone requires_shipping en los line items de órdenes,
-// por lo que usamos la lista explícita de IDs + fallback por peso/dimensiones = 0.
+// Solo usa la lista explícita — ausencia de peso/dimensiones no implica digital.
 function esProductoDigital(p) {
-  if (CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.product_id)) !== -1) return true;
-  return parseFloat(p.weight || 0) === 0
-      && parseFloat(p.depth  || 0) === 0
-      && parseFloat(p.height || 0) === 0
-      && parseFloat(p.width  || 0) === 0;
+  return CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.product_id)) !== -1;
 }
 
 // Separa productos físicos y digitales de una orden.
@@ -1015,6 +1010,26 @@ function registrarEnVentas(order) {
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
   }
+}
+
+// Reprocesa órdenes que cayeron en Digitales por error (weight=0 ya no es criterio de digital).
+// IDs internos de TiendaNube: 770→2106489043, 771→2089714189, 775→2108754123
+function reprocesarOrdenesFaltantes() {
+  var ids = ['2106489043', '2089714189', '2108754123'];
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  ids.forEach(function(id) {
+    var order = fetchOrder(id);
+    if (!order) { Logger.log('No encontré orden ID ' + id); return; }
+    // Borrar filas existentes en Ventas para este pedido
+    var data = sheet.getDataRange().getValues();
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][1]) === String(order.number)) sheet.deleteRow(i + 1);
+    }
+    // Reescribir con todos los productos (sin filtro digital)
+    registrarEnVentas(order);
+    Logger.log('Reprocesado pedido #' + order.number + ' (' + order.products.length + ' líneas)');
+  });
 }
 
 // Agrega los headers de Aporte Grado, Grado Destino y Aporte Escuela a la hoja Ventas existente
