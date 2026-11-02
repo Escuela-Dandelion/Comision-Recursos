@@ -1,4 +1,4 @@
-// v2026-10-30d — eliminar imagen: apiDeleteImagen + botón tachito en galería (estilo TiendaNube)
+// v2026-11-02a — normalizarGradoGAS: agrega onceavo/doceavo/once/doce
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -841,8 +841,8 @@ function normalizarGradoGAS(g) {
     'octavo':8,'8vo':8,
     'noveno':9,'9no':9,
     'decimo':10,'10mo':10,
-    'undecimo':11,'decimoprimero':11,'11vo':11,
-    'duodecimo':12,'decimosegundo':12,'12vo':12
+    'undecimo':11,'decimoprimero':11,'11vo':11,'onceavo':11,'once':11,
+    'duodecimo':12,'decimosegundo':12,'12vo':12,'doceavo':12,'doce':12
   };
   for (var k in PALABRAS) {
     if (l.indexOf(k) !== -1) return String(PALABRAS[k]);
