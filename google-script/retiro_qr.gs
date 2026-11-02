@@ -1,4 +1,4 @@
-// v2026-11-02a — normalizarGradoGAS: agrega onceavo/doceavo/once/doce
+// v2026-11-02b — apiAportes: usa col V (GradoDestino) en lugar de col L (Comentarios)
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -1927,7 +1927,7 @@ function apiAportes() {
       var row   = data[i];
       var fecha = row[0] instanceof Date ? row[0] : null;
       var mes   = fecha ? (fecha.getFullYear() + '-' + ('0' + (fecha.getMonth()+1)).slice(-2)) : '';
-      var grado = normalizarGradoGAS(String(row[11] || '').trim());
+      var grado = normalizarGradoGAS(String(row[21] || row[11] || '').trim());
       if (!mes || !grado || grado === '(Sin observaciones)') continue;
       var aporte = parseFloat(row[20]) || 0;
       if (aporte <= 0) continue;
