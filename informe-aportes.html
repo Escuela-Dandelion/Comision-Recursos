@@ -233,18 +233,28 @@ var allRows        = [];
 
 // Comprobantes disponibles por mes — actualizar cada mes al subir los PDFs
 var COMPROBANTES = {
-  '2026-09': ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo']
+  '2026-09': ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo'],
+  '2026-10': ['Jardín','1ro','2do','3ro','4to','5to','7mo','8vo','11mo']
+};
+// Grados con más de un comprobante: { mes: { grado: cantidad } }
+var COMPROBANTES_EXTRA = {
+  '2026-10': { '11mo': 2 }
 };
 var GRADO_FILE = {
   'Jardín':'jardin','1ro':'1ro','2do':'2do','3ro':'3ro','4to':'4to',
   '5to':'5to','6to':'6to','7mo':'7mo','8vo':'8vo','9no':'9no',
   '10mo':'10mo','11mo':'11mo','12vo':'12vo'
 };
-function getComprobante(grado, mes) {
+function getComprobantes(grado, mes) {
   var disponibles = COMPROBANTES[mes] || [];
-  if (disponibles.indexOf(grado) === -1) return null;
+  if (disponibles.indexOf(grado) === -1) return [];
   var f = GRADO_FILE[grado];
-  return f ? 'comprobantes/' + mes + '/' + f + '.pdf' : null;
+  if (!f) return [];
+  var base = 'comprobantes/' + mes + '/' + f;
+  var extra = (COMPROBANTES_EXTRA[mes] || {})[grado] || 1;
+  var urls = [base + '.pdf'];
+  for (var i = 2; i <= extra; i++) urls.push(base + '-' + i + '.pdf');
+  return urls;
 }
 
 // Datos bancarios por grado para copiar al portapapeles
@@ -474,9 +484,11 @@ function aplicarFiltro() {
         var title = 'Copiar ' + dato.tipo + ': ' + dato.texto;
         copyBtn = '<button class="btn-copiar" data-copy="' + esc(dato.texto) + '" title="' + esc(title) + '">&#9112;</button>';
       }
-      var compUrl = getComprobante(g, mesSel);
-      var compCell = compUrl
-        ? '<a href="' + compUrl + '" target="_blank" title="Ver comprobante de transferencia" style="color:var(--green);font-size:18px;text-decoration:none">&#128196;</a>'
+      var compUrls = getComprobantes(g, mesSel);
+      var compCell = compUrls.length
+        ? compUrls.map(function(u, i) {
+            return '<a href="' + u + '" target="_blank" title="Ver comprobante de transferencia" style="color:var(--green);font-size:18px;text-decoration:none;margin-left:' + (i>0?4:0) + 'px">&#128196;</a>';
+          }).join('')
         : '<span style="color:#ddd">—</span>';
       var tr  = document.createElement('tr');
       tr.innerHTML =
