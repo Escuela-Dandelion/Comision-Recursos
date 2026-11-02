@@ -447,7 +447,7 @@ function aplicarFiltro() {
       if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
       porGrado[grado].aporte   += aporte;
       porGrado[grado].unidades += qty;
-      totalAporte += aporte;
+      if (getRecaudador(grado) !== 'Sin referente') totalAporte += aporte;
     } else {
       totalEscuela += aporte;
     }
