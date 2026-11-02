@@ -1,4 +1,4 @@
-// v2026-11-02c — esProductoDigital: solo lista explícita, sin fallback por peso=0
+// v2026-11-02d — recalcularAportesVentas: rellena col U/W vacías en filas históricas
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
@@ -1010,6 +1010,57 @@ function registrarEnVentas(order) {
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
   }
+}
+
+// Rellena col U (AporteGrado) y col W (AporteEscuela) en filas históricas de Ventas donde
+// quedaron en 0 porque se procesaron antes de que existiera esa columna en el GAS.
+// Solo toca filas donde aporte=0 y hay grado válido + regla de config.
+function recalcularAportesVentas() {
+  var ss     = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet  = ss.getSheetByName('Ventas');
+  var data   = sheet.getDataRange().getValues();
+  var config = leerConfigProductos();
+  var actualizadas = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row  = data[i];
+    var fecha = row[0] instanceof Date ? row[0] : null;
+    if (!fecha) continue;
+
+    var aporteExistente = parseFloat(row[20]) || 0;
+    if (aporteExistente > 0) continue; // ya tiene aporte calculado
+
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    if (totalPagadoLinea <= 0) continue;
+
+    var gradoRaw  = String(row[21] || row[11] || '').trim();
+    var gradoNorm = normalizarGradoGAS(gradoRaw);
+    if (!gradoNorm || gradoNorm === '(Sin observaciones)') continue;
+
+    var skuUp   = String(row[6]  || '').trim().toUpperCase();
+    var marcaUp = String(row[12] || '').trim().toUpperCase();
+    var regla   = buscarRegla(config, skuUp, fecha)
+               || buscarRegla(config, 'MARCA:' + marcaUp, fecha)
+               || buscarRegla(config, 'DEFAULT', fecha);
+    if (!regla) continue;
+
+    var aporteGrado   = Math.round(totalPagadoLinea * regla.pctGrado);
+    var costoUnit     = parseFloat(row[13]) || 0;
+    var qty           = parseInt(row[7]) || 1;
+    var aporteEscuela;
+    if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+      aporteEscuela = Math.round(totalPagadoLinea * regla.pctEscuela);
+    } else {
+      aporteEscuela = Math.max(0, Math.round(totalPagadoLinea - costoUnit * qty - aporteGrado));
+    }
+
+    // col U = índice 21 en A1 notation (col V hoja = índice 22)
+    sheet.getRange(i + 1, 21).setValue(aporteGrado);      // col U
+    sheet.getRange(i + 1, 22).setValue(gradoNorm);        // col V
+    sheet.getRange(i + 1, 23).setValue(aporteEscuela);    // col W
+    actualizadas++;
+  }
+  Logger.log('recalcularAportesVentas: ' + actualizadas + ' filas actualizadas');
 }
 
 // Reprocesa órdenes que cayeron en Digitales por error (weight=0 ya no es criterio de digital).
