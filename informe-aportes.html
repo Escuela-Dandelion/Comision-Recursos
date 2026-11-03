@@ -471,11 +471,29 @@ function aplicarFiltro() {
   tbody.innerHTML = '';
 
   var mesSel = document.getElementById('sel-mes').value;
+  var ordenCompleto = ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo','12vo'];
+
   if (gradoKeys.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:32px">Sin aportes registrados para este período</td></tr>';
   } else {
-    gradoKeys.forEach(function(g) {
-      var d   = porGrado[g];
+    ordenCompleto.forEach(function(g) {
+      var d = porGrado[g];
+      var tr = document.createElement('tr');
+
+      if (!d) {
+        // Grado sin aportes este mes — fila vacía
+        tr.style.opacity = '0.35';
+        tr.innerHTML =
+          '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
+          '<td style="color:#aaa">' + esc(getRecaudador(g)) + '</td>' +
+          '<td class="num" style="color:#bbb">—</td>' +
+          '<td class="num" style="color:#bbb">—</td>' +
+          '<td class="num" style="color:#bbb">—</td>' +
+          '<td class="num"></td>';
+        tbody.appendChild(tr);
+        return;
+      }
+
       var pct = totalAporte > 0 ? ((d.aporte / totalAporte) * 100).toFixed(1) + '%' : '—';
       var rec  = getRecaudador(g);
       var dato = getDatoPago(g);
@@ -490,7 +508,6 @@ function aplicarFiltro() {
             return '<a href="' + u + '" target="_blank" title="Ver comprobante de transferencia" style="color:var(--green);font-size:18px;text-decoration:none;margin-left:' + (i>0?4:0) + 'px">&#128196;</a>';
           }).join('')
         : '<span style="color:#ddd">—</span>';
-      var tr  = document.createElement('tr');
       tr.innerHTML =
         '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
         '<td style="color:#555">' + esc(rec) + copyBtn + '</td>' +
