@@ -1,4 +1,4 @@
-// v2026-11-04f — proveedor en apiProductos y apiDashboard rows; 2 filtros separados
+// v2026-11-04g — MARCA_A_PROVEEDOR expandido con variantes históricas del Sheet
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2134,30 +2134,40 @@ function apiDashboard(email) {
 //  Cubre nombres viejos del Sheet y nombres nuevos de TiendaNube
 // ═══════════════════════════════════════════════════════════
 var MARCA_A_PROVEEDOR = {
-  // nombres viejos (en el Sheet de ventas y retiros)
+  // Tienda Limón — nombre actual y variantes históricas
   'TIENDA LIMÓN':             'Tienda Limón',
   'TIENDA LIMON':             'Tienda Limón',
-  'EL MAITEN':                'El Maiten',
-  'PAJARITO AMARILLO':        'Pajarito Amarillo',
-  'SOL DE PAPEL':             'Sol de Oro',
-  'GUARDIANES COLMENA':       'Guardianes de la Colmena',
-  'MIX Y FRUTOS SECOS':       'BioSalud',
-  'TALLER':                   'Carlos Villegas',
-  // nombres actuales post-migración (TiendaNube)
-  'YEMARI':                   'Yemari',
-  'CABALLO NEGRO':            'Caballo Negro',
-  'LA YAYA':                  'La Yaya',
-  'GUARDIANES DE LA COLMENA': 'Guardianes de la Colmena',
-  'GROEN':                    'Groen',
-  'ODDIS':                    'Oddis',
-  'PARAISA':                  'Paraisa',
-  'NAZARENO':                 'Nazareno',
-  'GRANOLA':                  'El Maiten',
-  'PIZZA':                    'Pajarito Amarillo',
   'EL ARISTEO':               'Tienda Limón',
   'ARISTEO':                  'Tienda Limón',
   'BENDITA LLUVIA':           'Tienda Limón',
   'CALANDRI':                 'Tienda Limón',
+  // El Maiten
+  'EL MAITEN':                'El Maiten',
+  'GRANOLA':                  'El Maiten',
+  // BioSalud — variantes históricas del nombre
+  'MIX Y FRUTOS SECOS':       'BioSalud',
+  'MIX DE FRUTOS SECOS':      'BioSalud',
+  'MIX & FRUTOS SECOS':       'BioSalud',
+  'FRUTOS SECOS':             'BioSalud',
+  'BIOSALUD':                 'BioSalud',
+  // Sol de Oro
+  'SOL DE PAPEL':             'Sol de Oro',
+  // Guardianes
+  'GUARDIANES COLMENA':       'Guardianes de la Colmena',
+  'GUARDIANES DE LA COLMENA': 'Guardianes de la Colmena',
+  // Carlos Villegas
+  'TALLER':                   'Carlos Villegas',
+  // Pajarito Amarillo
+  'PAJARITO AMARILLO':        'Pajarito Amarillo',
+  'PIZZA':                    'Pajarito Amarillo',
+  // Resto
+  'YEMARI':                   'Yemari',
+  'CABALLO NEGRO':            'Caballo Negro',
+  'LA YAYA':                  'La Yaya',
+  'GROEN':                    'Groen',
+  'ODDIS':                    'Oddis',
+  'PARAISA':                  'Paraisa',
+  'NAZARENO':                 'Nazareno',
 };
 
 function marcaToProveedor(marca) {
