@@ -769,6 +769,7 @@ function impersonarAdmin(valor) {
     aplicarPermisos(_adminOriginal.role);
     renderWelcomeCards(_adminOriginal.role.toLowerCase());
     _recargarGestionProductos();
+    _recargarPedidos();
     if (_ventasCargadas) aplicarFiltrosVentas();
     return;
   }
@@ -785,7 +786,18 @@ function impersonarAdmin(valor) {
   aplicarPermisos(impRole.toLowerCase());
   renderWelcomeCards(impRole.toLowerCase());
   _recargarGestionProductos();
+  _recargarPedidos();
   if (_ventasCargadas) aplicarFiltrosVentas();
+}
+
+function _recargarPedidos() {
+  var pIframe = document.getElementById('iframe-pedidos');
+  if (!pIframe) return;
+  var url = 'pedidos.html?auth=1';
+  if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
+    url += '&_vAs_marcas=' + encodeURIComponent(_currentImpersonation.marcas.join(','));
+  }
+  pIframe.src = url;
 }
 
 function _recargarGestionProductos() {
@@ -865,9 +877,20 @@ function showView(viewId, navBtn, opts) {
   }
 
   // Si hay id de orden pendiente, pasárselo al iframe de pedidos
-  if (viewId === 'pedidos' && opts.id) {
+  if (viewId === 'pedidos') {
     var iframe = document.getElementById('iframe-pedidos');
-    if (iframe) iframe.src = 'pedidos.html?auth=1&id=' + opts.id;
+    if (iframe) {
+      var pedUrl = 'pedidos.html?auth=1';
+      if (opts.id) pedUrl += '&id=' + opts.id;
+      var impKey = _currentImpersonation ? _currentImpersonation.email : '';
+      if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
+        pedUrl += '&_vAs_marcas=' + encodeURIComponent(_currentImpersonation.marcas.join(','));
+      }
+      if (opts.id || iframe.getAttribute('data-imp') !== impKey) {
+        iframe.setAttribute('data-imp', impKey);
+        iframe.src = pedUrl;
+      }
+    }
   }
 
   // Retiro: setear iframe con URL específica del pedido

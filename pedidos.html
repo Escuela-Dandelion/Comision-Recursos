@@ -879,6 +879,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   isEmbedded = params.get('auth') === '1';
   if (isEmbedded) document.body.classList.add('embedded');
+  var _impMarcas = (params.get('_vAs_marcas') || '').split(',').map(function(m){ return m.trim().toUpperCase(); }).filter(Boolean);
 
   // Verificar sesión Google del admin
   var adminSession = null;
@@ -1570,6 +1571,11 @@ function _aplicarFiltrosSync() {
   // Filtro producto (texto libre sobre el campo productos)
   const filtProd = (document.getElementById('filtroProducto').value || '').trim().toLowerCase();
   if (filtProd) resultado = resultado.filter(p => p.productos && p.productos.toLowerCase().includes(filtProd));
+
+  // Filtro impersonalización — solo pedidos de las marcas del usuario simulado
+  if (_impMarcas.length > 0) {
+    resultado = resultado.filter(function(p) { return _impMarcas.indexOf((p.proveedor || '').toUpperCase()) !== -1; });
+  }
 
   // Mostrar/ocultar botón limpiar
   const btnLB = document.getElementById('btn-limpiar-busqueda');
