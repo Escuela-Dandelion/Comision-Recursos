@@ -1,4 +1,4 @@
-// v2026-11-04g — MARCA_A_PROVEEDOR expandido con variantes históricas del Sheet
+// v2026-11-04h — migrarMarcasVentas() para normalizar col M al nombre de Proveedor
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3287,4 +3287,52 @@ function activarLimpiezaEnviados() {
   ScriptApp.newTrigger('limpiarEnviadosQR')
     .timeBased().everyDays(1).atHour(3).create();
   Logger.log('Trigger diario limpiarEnviadosQR activado (3am).');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MIGRACIÓN — normalizar col M (Marca) al nombre de Proveedor
+//  Correr desde el editor GAS: primero migrarMarcasDryRun() para
+//  revisar los cambios, luego migrarMarcasVentas() para aplicar.
+// ═══════════════════════════════════════════════════════════
+
+function migrarMarcasDryRun() {
+  var cambios = _calcularCambiosMarcas();
+  if (!cambios.length) { Logger.log('Sin cambios pendientes.'); return; }
+  Logger.log('=== DRY RUN — ' + cambios.length + ' filas a actualizar ===');
+  cambios.forEach(function(c) {
+    Logger.log('Fila ' + c.fila + ' | "' + c.antes + '" → "' + c.despues + '"  (pedido ' + c.pedido + ')');
+  });
+  Logger.log('Total: ' + cambios.length + ' filas. Ejecutá migrarMarcasVentas() para aplicar.');
+}
+
+function migrarMarcasVentas() {
+  var cambios = _calcularCambiosMarcas();
+  if (!cambios.length) { Logger.log('Sin cambios pendientes.'); return; }
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  cambios.forEach(function(c) {
+    sheet.getRange(c.fila, 13).setValue(c.despues); // col 13 = col M (1-indexed)
+  });
+  SpreadsheetApp.flush();
+  Logger.log('Migración completada: ' + cambios.length + ' filas actualizadas.');
+  // Invalidar caché para que el próximo api_dashboard traiga datos frescos
+  try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
+}
+
+function _calcularCambiosMarcas() {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) { Logger.log('No se encontró la hoja Ventas.'); return []; }
+  var data = sheet.getDataRange().getValues();
+  var cambios = [];
+  for (var i = 1; i < data.length; i++) {
+    var row       = data[i];
+    var marcaActual = String(row[12] || '').trim();
+    if (!marcaActual) continue;
+    var proveedor = MARCA_A_PROVEEDOR[marcaActual.toUpperCase()];
+    if (proveedor && proveedor !== marcaActual) {
+      cambios.push({ fila: i + 1, antes: marcaActual, despues: proveedor, pedido: String(row[1] || '') });
+    }
+  }
+  return cambios;
 }
