@@ -20,15 +20,23 @@ var MARCA_A_PROVEEDOR = {
   'ARISTEO':                 'Tienda Limón',
   'BENDITA LLUVIA':          'Tienda Limón',
   'CALANDRI':                'Tienda Limón',
+  'PAJARITO AMARILLO':       'Pajarito Amarillo',
+  'TALLER':                  'Carlos Villegas',
 };
 
 // Marcas que hay que renombrar en el campo brand de TiendaNube
 var RENOMBRAR_MARCA = {
-  'EL MAITEN': 'Granola',
+  'EL MAITEN':        'Granola',
+  'PAJARITO AMARILLO':'Pizza',
 };
 
 // Para productos con brand = TIENDA LIMÓN, detectar la marca real desde el título
 var MARCAS_TIENDA_LIMON = ['Aristeo', 'Bendita Lluvia', 'Calandri'];
+
+// Overrides manuales por ID de producto (casos que no se detectan automáticamente)
+var ID_OVERRIDE = {
+  '377140380': { marca: 'Calandri', proveedor: 'Tienda Limón' },
+};
 
 function migrarProveedoresDryRun() { _migrar(true);  }
 function migrarProveedores()       { _migrar(false); }
@@ -69,11 +77,12 @@ function _migrar(dryRun) {
     var brandUp   = brandRaw.toUpperCase();
     var nombre    = p.name && p.name.es ? p.name.es : String(p.name || '');
 
-    var proveedor  = MARCA_A_PROVEEDOR[brandUp];
-    var nuevaMarca = RENOMBRAR_MARCA[brandUp] || null;
+    var override   = ID_OVERRIDE[String(p.id)];
+    var proveedor  = override ? override.proveedor : MARCA_A_PROVEEDOR[brandUp];
+    var nuevaMarca = override ? override.marca      : (RENOMBRAR_MARCA[brandUp] || null);
 
     // Para TIENDA LIMÓN: intentar detectar marca del título
-    if (brandUp === 'TIENDA LIMÓN') {
+    if (!override && brandUp === 'TIENDA LIMÓN') {
       for (var i = 0; i < MARCAS_TIENDA_LIMON.length; i++) {
         if (nombre.toLowerCase().indexOf(MARCAS_TIENDA_LIMON[i].toLowerCase()) !== -1) {
           nuevaMarca = MARCAS_TIENDA_LIMON[i];
