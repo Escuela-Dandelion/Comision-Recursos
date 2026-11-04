@@ -1,4 +1,4 @@
-// v2026-11-04 — secrets movidos a PropertiesService; código Green API (OTP) eliminado
+// v2026-11-04b — getRetiros filtra por marcas FGP; acceso Dolo Sol de Papel
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)

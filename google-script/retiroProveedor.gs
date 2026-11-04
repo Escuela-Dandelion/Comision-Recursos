@@ -1,4 +1,4 @@
-// v2026-11-04 — secrets movidos a PropertiesService (sin claves en git)
+// v2026-11-04b — getProveedores filtra por marcas FGP; acceso Dolo Sol de Papel
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
