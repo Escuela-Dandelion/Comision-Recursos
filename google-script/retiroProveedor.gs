@@ -1,4 +1,4 @@
-// v2026-11-04b — getProveedores filtra por marcas FGP; acceso Dolo Sol de Papel
+// v2026-11-04c — refactor: getMarcasFGP() consulta retiro_qr.gs como única fuente de verdad
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -92,7 +92,7 @@ function doGet(e) {
         const excluidos = excluir.split(',').map(function(s){ return s.trim(); });
         pedidos = pedidos.filter(function(p){ return excluidos.indexOf(p.estado) === -1; });
       }
-      const marcasFGP = MARCAS_POR_EMAIL[email];
+      const marcasFGP = getMarcasFGP(email);
       if (Array.isArray(marcasFGP)) {
         pedidos = pedidos.filter(function(p) {
           const marca = invDetectarMarca(p.proveedor || '') || (p.proveedor || '').toUpperCase();
@@ -136,7 +136,7 @@ function doGet(e) {
       let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
       // 4. Si el email pertenece a un FGP con marcas, filtrar solo sus marcas
       const emailGP = (e.parameter.email || '').toLowerCase().trim();
-      const marcasGP = MARCAS_POR_EMAIL[emailGP];
+      const marcasGP = getMarcasFGP(emailGP);
       if (Array.isArray(marcasGP)) {
         const marcasUp = marcasGP.map(function(m){ return m.toUpperCase(); });
         lista = lista.filter(function(p){ return marcasUp.indexOf(p.nombre.toUpperCase()) !== -1; });
@@ -892,20 +892,25 @@ const INV_FGP = {
   'ODDIS':                    { nombre: 'Luli del Castillo', email: 'lourdelcastillo@gmail.com' },
 };
 
-// null = ADMIN (ve todo), array = filtro de marcas
-const MARCAS_POR_EMAIL = {
-  'robertson.ine@gmail.com':         null,
-  'longhi.yuliana@gmail.com':        null,
-  'yuliana.longhi@dandelion.edu.ar': null,
-  'lmdestefano@dandelion.edu.ar':    ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'],
-  'lmdestefano@gmail.com':           ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'],
-  'pialucarno@gmail.com':            ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'],
-  'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'],
-  'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
-  'lourdelcastillo@gmail.com':       ['LA YAYA','ODDIS'],
-  'francoalini@gmail.com':           ['NAZARENO'],
-  'dominguez.dolo@gmail.com':        ['SOL DE PAPEL'],
-};
+// Consulta a retiro_qr.gs para obtener las marcas del FGP.
+// Devuelve array de marcas si es FGP con restricción, null si es admin (ve todo),
+// o undefined si el email no existe.
+function getMarcasFGP(email) {
+  if (!email) return undefined;
+  var url = _PR.getProperty('RETIRO_QR_URL');
+  if (!url) return undefined;
+  try {
+    var resp = UrlFetchApp.fetch(url + '?action=verificarEmail&email=' + encodeURIComponent(email),
+      { muteHttpExceptions: true, followRedirects: true });
+    var data = JSON.parse(resp.getContentText());
+    if (!data.ok) return undefined;
+    if (data.role === 'FGP') return Array.isArray(data.marcas) ? data.marcas : [];
+    return null; // admin/staff ve todo
+  } catch(e) {
+    Logger.log('getMarcasFGP error: ' + e.message);
+    return undefined;
+  }
+}
 
 const INV_PISO_MARCA = {
   'GROEN': 5
