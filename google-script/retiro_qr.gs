@@ -1,4 +1,4 @@
-// v2026-11-04h — migrarMarcasVentas() para normalizar col M al nombre de Proveedor
+// v2026-11-04i — col M es Proveedor: getRetirosData devuelve proveedores, apiDashboard devuelve proveedor
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2058,7 +2058,7 @@ function apiDashboard(email) {
     var subtotalBrutoLinea  = parseFloat(row[9])  || 0;
     var totalPedido         = parseFloat(row[10]) || 0;
     var comentario          = String(row[11] || '').trim();
-    var marca               = String(row[12] || '');
+    var proveedor           = String(row[12] || '').trim();
     var totalPagadoLinea    = parseFloat(row[14]) || subtotalBrutoLinea;
     var netoLinea           = parseFloat(row[15]) || totalPagadoLinea;
     var feeProcesamiento    = parseFloat(row[16]) || 0;
@@ -2087,8 +2087,7 @@ function apiDashboard(email) {
       familia:             nombre,
       email:               email,
       producto:            producto,
-      marca:               marca,
-      proveedor:           marcaToProveedor(marca.toUpperCase()) || marca,
+      proveedor:           proveedor,
       cantidad:            cantidad,
       total_linea:         Math.round(subtotalBrutoLinea * 100) / 100,
       total_pagado_linea:  Math.round(totalPagadoLinea * 100) / 100,
@@ -2273,18 +2272,19 @@ function getRetirosData(estadoFiltro, diasFiltro) {
 
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
 
-  // Construir mapa pedido# → set de marcas desde el sheet Ventas
-  var marcasMap = {};
+  // Construir mapa pedido# → set de proveedores desde el sheet Ventas (col M)
+  var proveedoresMap = {};
   try {
     var ventasSheet = ss.getSheetByName('Ventas');
     if (ventasSheet) {
       var vData = ventasSheet.getDataRange().getValues();
       for (var v = 1; v < vData.length; v++) {
-        var pedNum = String(vData[v][1] || '');
-        var marca  = String(vData[v][12] || '').trim();
-        if (!pedNum || !marca) continue;
-        if (!marcasMap[pedNum]) marcasMap[pedNum] = {};
-        marcasMap[pedNum][marca] = true;
+        var pedNum    = String(vData[v][1]  || '');
+        var colM      = String(vData[v][12] || '').trim();
+        var proveedor = marcaToProveedor(colM.toUpperCase()) || colM;
+        if (!pedNum || !proveedor) continue;
+        if (!proveedoresMap[pedNum]) proveedoresMap[pedNum] = {};
+        proveedoresMap[pedNum][proveedor] = true;
       }
     }
   } catch(e) {}
@@ -2334,7 +2334,7 @@ function getRetirosData(estadoFiltro, diasFiltro) {
       notas:         String(row[9] || ''),
       discount:      parseFloat(row[11] || 0),
       discount_type: String(row[12] || ''),
-      marcas:        Object.keys(marcasMap[String(row[1] || '')] || {})
+      proveedores:   Object.keys(proveedoresMap[String(row[1] || '')] || {})
     });
   }
   var result = rows.reverse();

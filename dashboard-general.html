@@ -290,13 +290,8 @@
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
       <div class="filter-label">Proveedor</div>
-      <select class="filter-select" id="filtro-proveedor" onchange="onProveedorChange()">
+      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
         <option value="">Todos los proveedores</option>
-      </select>
-
-      <div class="filter-label">Marca</div>
-      <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
-        <option value="">Todas las marcas</option>
       </select>
 
       <div class="filter-label">Producto</div>
@@ -466,7 +461,6 @@ var currentMes       = '';
 var currentDesde     = '';
 var currentHasta     = '';
 var currentProveedor = '';
-var currentMarca     = '';
 var currentProducto  = '';
 var _lastFilteredRows = [];
 
@@ -561,10 +555,10 @@ function _crearSheet(token) {
   .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error('Crear sheet: ' + (e.error&&e.error.message||JSON.stringify(e))); }); })
   .then(function(ss){
     var id = ss.spreadsheetId, url = ss.spreadsheetUrl;
-    var headers = [['Fecha','Mes','Pedido','Familia','Grado','Producto','Marca','Cantidad','Bruto','Pagado','Neto','Costo']];
+    var headers = [['Fecha','Mes','Pedido','Familia','Grado','Producto','Proveedor','Cantidad','Bruto','Pagado','Neto','Costo']];
     var filas = _lastFilteredRows.map(function(r){
       return [r.fecha||'', r.mes||'', r.pedido||'', r.familia||'', r.grado||'',
-              r.producto||'', r.marca||'', r.cantidad||0,
+              r.producto||'', r.proveedor||'', r.cantidad||0,
               r.total_linea||0, r.total_pagado_linea||0, r.neto_linea||0, r.costo_linea||0];
     });
     return fetch('https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/Ventas!A1?valueInputOption=RAW', {
@@ -675,25 +669,14 @@ function initDashboard(d) {
   // Meses
   poblarMeses(currentAnio);
 
-  // Proveedores (normalizados)
+  // Proveedores
   var provSet = {};
-  ALL_ROWS.forEach(function(r){
-    var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
-    if (prov) provSet[prov] = true;
-  });
+  ALL_ROWS.forEach(function(r){ if (r.proveedor) provSet[r.proveedor] = true; });
   var selProv = document.getElementById('filtro-proveedor');
   selProv.innerHTML = '<option value="">Todos los proveedores</option>';
   Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
     var o = document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
   });
-
-  // Marcas
-  var marcaSet = {};
-  ALL_ROWS.forEach(function(r){ if (r.marca) marcaSet[r.marca] = true; });
-  var marcas = Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
-  var selP = document.getElementById('filtro-marca');
-  selP.innerHTML = '<option value="">Todas las marcas</option>';
-  marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   poblarProductos('');
 
@@ -716,10 +699,10 @@ function poblarMeses(anio) {
   currentMes = '';
 }
 
-function poblarProductos(marca) {
+function poblarProductos(proveedor) {
   var productoSet = {};
   ALL_ROWS.forEach(function(r) {
-    if (r.producto && (!marca || r.marca === marca)) productoSet[r.producto] = true;
+    if (r.producto && (!proveedor || r.proveedor === proveedor)) productoSet[r.producto] = true;
   });
   var productos = Object.keys(productoSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
   var sel = document.getElementById('filtro-producto');
@@ -728,30 +711,11 @@ function poblarProductos(marca) {
   currentProducto = '';
 }
 
-function onProveedorChange() {
-  var proveedor = document.getElementById('filtro-proveedor').value;
-  var selM = document.getElementById('filtro-marca');
-  var curM = selM.value;
-  selM.innerHTML = '<option value="">Todas las marcas</option>';
-  var marcaSet = {};
-  ALL_ROWS.forEach(function(r) {
-    if (!r.marca) return;
-    var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
-    if (!proveedor || prov === proveedor) marcaSet[r.marca] = true;
-  });
-  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m) {
-    var o = document.createElement('option'); o.value = m; o.textContent = m; selM.appendChild(o);
-  });
-  selM.value = (curM && marcaSet[curM]) ? curM : '';
-  aplicarFiltros();
-}
-
 function aplicarFiltros() {
   var nuevoAnio  = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
-  currentProveedor = document.getElementById('filtro-proveedor').value;
-  var nuevaMarca = document.getElementById('filtro-marca').value;
-  if (nuevaMarca !== currentMarca) { currentMarca = nuevaMarca; poblarProductos(currentMarca); }
+  var nuevoProveedor = document.getElementById('filtro-proveedor').value;
+  if (nuevoProveedor !== currentProveedor) { currentProveedor = nuevoProveedor; poblarProductos(currentProveedor); }
   currentMes      = document.getElementById('filtro-mes').value;
   currentDesde    = document.getElementById('filtro-desde').value;
   currentHasta    = document.getElementById('filtro-hasta').value;
@@ -773,8 +737,7 @@ function render() {
       return true;
     });
   }
-  if (currentProveedor) rows = rows.filter(function(r){ return (r.proveedor || marcaAProveedor(r.marca) || r.marca) === currentProveedor; });
-  if (currentMarca)    rows = rows.filter(function(r){ return r.marca === currentMarca; });
+  if (currentProveedor) rows = rows.filter(function(r){ return r.proveedor === currentProveedor; });
   if (currentProducto) rows = rows.filter(function(r){ return r.producto === currentProducto; });
   _lastFilteredRows = rows;
 
@@ -1067,7 +1030,7 @@ function renderTablaRentabilidad(rows) {
   var map = {};
   rows.forEach(function(r){
     var k = r.producto;
-    if (!map[k]) map[k] = { nombre:k, marca: r.marca||'', unidades:0, ingresos:0, costo:0, descuentos:0 };
+    if (!map[k]) map[k] = { nombre:k, proveedor: r.proveedor||'', unidades:0, ingresos:0, costo:0, descuentos:0 };
     map[k].unidades   += (r.cantidad||0);
     map[k].ingresos   += (r.total_pagado_linea||r.total_linea||0);
     map[k].costo      += (r.costo_linea||0);
@@ -1091,7 +1054,7 @@ function renderTablaRentabilidad(rows) {
     var pctCls = p.pct < 0 ? 'margen-pct neg' : 'margen-pct';
     html += '<tr>' +
       '<td><span class="prod-name">' + esc(p.nombre) + '</span>' +
-        (p.marca ? '<span class="marca-chip">' + esc(p.marca) + '</span>' : '') +
+        (p.proveedor ? '<span class="marca-chip">' + esc(p.proveedor) + '</span>' : '') +
       '</td>' +
       '<td class="num">' + Math.round(p.unidades).toLocaleString('es-AR') + '</td>' +
       '<td class="num">' + pesos(p.ingresos) +

@@ -395,13 +395,8 @@
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
       <div class="filter-label">Proveedor</div>
-      <select class="filter-select" id="filtro-proveedor" onchange="onProveedorChange()">
+      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
         <option value="">Todos los proveedores</option>
-      </select>
-
-      <div class="filter-label">Marca</div>
-      <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
-        <option value="">Todas las marcas</option>
       </select>
 
       <div class="filter-label" id="lbl-estado" style="display:none">Estado de entrega</div>
@@ -438,7 +433,6 @@ var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
 var currentProveedor = '';
-var currentMarca    = '';
 var currentEstado   = ''; // '' | 'Entregado' | 'Pendiente'
 var selectedGrados = []; // [] = todos
 var currentVista  = 'familia'; // 'familia' | 'producto'
@@ -521,10 +515,10 @@ function _crearSheet(token){
   .then(function(r){ return r.ok?r.json():r.json().then(function(e){ throw new Error('Crear sheet: '+(e.error&&e.error.message||JSON.stringify(e))); }); })
   .then(function(ss){
     var id=ss.spreadsheetId, url=ss.spreadsheetUrl;
-    var headers=[['Fecha','Mes','Pedido','Familia','Grado','Producto','Marca','Cantidad','Bruto','Pagado','Neto','Costo']];
+    var headers=[['Fecha','Mes','Pedido','Familia','Grado','Producto','Proveedor','Cantidad','Bruto','Pagado','Neto','Costo']];
     var filas=getRows().map(function(r){
       return [r.fecha||'',r.mes||'',r.pedido||'',r.familia||'',r.grado||'',
-              r.producto||'',r.marca||'',r.cantidad||0,
+              r.producto||'',r.proveedor||'',r.cantidad||0,
               r.total_linea||0,r.total_pagado_linea||0,r.neto_linea||0,r.costo_linea||0];
     });
     return fetch('https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/Ventas!A1?valueInputOption=RAW',{
@@ -630,8 +624,7 @@ function initDashboard(d){
   document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha+' · build 3';
   ALL_ROWS        = (d.rows||[])
     .filter(function(r){
-      var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
-      return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(prov) === -1;
+      return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(r.proveedor) === -1;
     })
     .map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
   ALL_MESES       = d.meses_todos||[];
@@ -677,25 +670,14 @@ function initDashboard(d){
   });
   selectedGrados=[];
 
-  // Proveedores (normalizados)
+  // Proveedores
   var provSet={};
-  ALL_ROWS.forEach(function(r){
-    var prov=r.proveedor||marcaAProveedor(r.marca)||r.marca;
-    if(prov) provSet[prov]=true;
-  });
+  ALL_ROWS.forEach(function(r){ if(r.proveedor) provSet[r.proveedor]=true; });
   var selProv=document.getElementById('filtro-proveedor');
   selProv.innerHTML='<option value="">Todos los proveedores</option>';
   Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
     var o=document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
   });
-
-  // Marcas
-  var marcaSet={};
-  ALL_ROWS.forEach(function(r){ if(r.marca) marcaSet[r.marca]=true; });
-  var marcas=Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
-  var selP=document.getElementById('filtro-marca');
-  selP.innerHTML='<option value="">Todas las marcas</option>';
-  marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   document.getElementById('contenido').style.display='block';
   render();
@@ -718,30 +700,11 @@ function toggleGrado(g){
   });
   render();
 }
-function onProveedorChange(){
-  var proveedor=document.getElementById('filtro-proveedor').value;
-  var selM=document.getElementById('filtro-marca');
-  var curM=selM.value;
-  selM.innerHTML='<option value="">Todas las marcas</option>';
-  var marcaSet={};
-  ALL_ROWS.forEach(function(r){
-    if(!r.marca) return;
-    var prov=r.proveedor||marcaAProveedor(r.marca)||r.marca;
-    if(!proveedor||prov===proveedor) marcaSet[r.marca]=true;
-  });
-  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m){
-    var o=document.createElement('option'); o.value=m; o.textContent=m; selM.appendChild(o);
-  });
-  selM.value=(curM&&marcaSet[curM])?curM:'';
-  aplicarFiltros();
-}
-
 function aplicarFiltros(){
   currentMes=document.getElementById('filtro-mes').value;
   currentDesde=document.getElementById('filtro-desde').value;
   currentHasta=document.getElementById('filtro-hasta').value;
   currentProveedor=document.getElementById('filtro-proveedor').value;
-  currentMarca=document.getElementById('filtro-marca').value;
   currentEstado=document.getElementById('filtro-estado').value;
   render();
 }
@@ -758,8 +721,7 @@ function getRows(){
     if(currentHasta && f>currentHasta) return false;
     return true;
   });
-  if(currentProveedor) rows=rows.filter(function(r){ return (r.proveedor||marcaAProveedor(r.marca)||r.marca)===currentProveedor; });
-  if(currentMarca) rows=rows.filter(function(r){ return r.marca===currentMarca; });
+  if(currentProveedor) rows=rows.filter(function(r){ return r.proveedor===currentProveedor; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   if(currentEstado && Object.keys(ALL_RETIROS_MAP).length>0){
     rows=rows.filter(function(r){
@@ -943,7 +905,7 @@ function renderFamilias(rows){
     var prodMap={};
     fam.items.forEach(function(item){
       var key=item.producto+'||'+item.pedido;
-      if(!prodMap[key]) prodMap[key]={nombre:item.producto,marca:item.marca||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedido:item.pedido,fecha:item.fecha,fechaHora:item.fechaHora||item.fecha,order_discount:item.order_discount||0};
+      if(!prodMap[key]) prodMap[key]={nombre:item.producto,proveedor:item.proveedor||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedido:item.pedido,fecha:item.fecha,fechaHora:item.fechaHora||item.fecha,order_discount:item.order_discount||0};
       prodMap[key].cantidad+=(item.cantidad||0);
       prodMap[key].subtotal_bruto+=(item.total_linea||0);
       prodMap[key].total_pagado+=(item.total_pagado_linea||item.total_linea||0);
@@ -975,7 +937,7 @@ function renderFamilias(rows){
       '</tr>';
       grupo.forEach(function(p){
         html+='<tr>'+
-          '<td>'+esc(p.nombre)+(p.marca?' <span class="chip">'+esc(p.marca)+'</span>':'')+' </td>'+
+          '<td>'+esc(p.nombre)+(p.proveedor?' <span class="chip">'+esc(p.proveedor)+'</span>':'')+' </td>'+
           '<td class="num">'+Math.round(p.cantidad)+'</td>'+
           '<td class="num" style="color:#999">'+pesos(p.subtotal_bruto)+'</td>'+
           '<td class="num"><strong>'+pesos(p.total_pagado)+'</strong></td>'+
@@ -1004,7 +966,7 @@ function renderProductos(rows){
   var productos={};
   rows.forEach(function(r){
     var p=r.producto||'Sin nombre';
-    if(!productos[p]) productos[p]={nombre:p,marca:r.marca||'',total:0,unidades:0,u_entr:0,u_pend:0,familias:{}};
+    if(!productos[p]) productos[p]={nombre:p,proveedor:r.proveedor||'',total:0,unidades:0,u_entr:0,u_pend:0,familias:{}};
     productos[p].total+=(r.total_pagado_linea||r.total_linea||0);
     productos[p].unidades+=(r.cantidad||0);
     if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') productos[p].u_entr+=(r.cantidad||0);
@@ -1037,7 +999,7 @@ function renderProductos(rows){
         '<span class="arrow" id="arr-prod-'+pi+'">▶</span>'+
         '<div>'+
           '<div class="prod-name">'+esc(prod.nombre)+'</div>'+
-          (prod.marca?'<div class="prod-marca">'+esc(prod.marca)+'</div>':'')+
+          (prod.proveedor?'<div class="prod-marca">'+esc(prod.proveedor)+'</div>':'')+
           (_hasRet?'<div style="font-size:11px;margin-top:3px">'+
             (prod.u_entr>0?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(prod.u_entr)+' u.</span>':'')+
             (prod.u_entr>0&&prod.u_pend>0?' · ':'')+
@@ -1101,7 +1063,7 @@ function exportarPDF(){
   var productos={};
   rows.forEach(function(r){
     var p=r.producto||'Sin nombre';
-    if(!productos[p]) productos[p]={nombre:p,marca:r.marca||'',unidades:0,total:0,familias:{}};
+    if(!productos[p]) productos[p]={nombre:p,proveedor:r.proveedor||'',unidades:0,total:0,familias:{}};
     productos[p].unidades+=(r.cantidad||0);
     productos[p].total+=(r.total_pagado_linea||r.total_linea||0);
     var f=r.familia||'Sin nombre';
@@ -1154,7 +1116,7 @@ function exportarPDF(){
     html+='<tr>'+
       '<td>'+(i+1)+'</td>'+
       '<td><strong>'+esc(p.nombre)+'</strong></td>'+
-      '<td>'+esc(p.marca)+'</td>'+
+      '<td>'+esc(p.proveedor)+'</td>'+
       '<td class="num"><strong>'+Math.round(p.unidades)+'</strong></td>'+
       '<td class="num">'+pesos(p.total)+'</td>'+
       '<td class="num">'+Object.keys(p.familias).length+'</td>'+
@@ -1170,7 +1132,7 @@ function exportarPDF(){
   prodArr.forEach(function(prod){
     var famKeys=Object.keys(prod.familias).sort(function(a,b){ return prod.familias[b].cantidad-prod.familias[a].cantidad; });
     html+='<div style="margin-bottom:14px">'+
-      '<div style="font-weight:700;font-size:12px;color:#1a1a6e;margin-bottom:4px">'+esc(prod.nombre)+(prod.marca?' <span style="font-weight:400;color:#888">('+esc(prod.marca)+')</span>':'')+' — <span style="color:#2e7d32">'+Math.round(prod.unidades)+' unidades</span></div>'+
+      '<div style="font-weight:700;font-size:12px;color:#1a1a6e;margin-bottom:4px">'+esc(prod.nombre)+(prod.proveedor?' <span style="font-weight:400;color:#888">('+esc(prod.proveedor)+')</span>':'')+' — <span style="color:#2e7d32">'+Math.round(prod.unidades)+' unidades</span></div>'+
       '<table class="print-tbl"><thead><tr>'+
         '<th>Familia</th><th>Email</th><th class="num">Cant.</th><th class="num">Subtotal</th><th>Pedido</th>'+
       '</tr></thead><tbody>';
@@ -1197,7 +1159,7 @@ function exportarPDF(){
     var prodMap={};
     fam.items.forEach(function(item){
       var key=item.producto;
-      if(!prodMap[key]) prodMap[key]={nombre:item.producto,marca:item.marca||'',cantidad:0,subtotal:0};
+      if(!prodMap[key]) prodMap[key]={nombre:item.producto,proveedor:item.proveedor||'',cantidad:0,subtotal:0};
       prodMap[key].cantidad+=(item.cantidad||0);
       prodMap[key].subtotal+=(item.total_linea||0);
     });
@@ -1212,7 +1174,7 @@ function exportarPDF(){
     Object.values(prodMap).forEach(function(p){
       html+='<tr>'+
         '<td>'+esc(p.nombre)+'</td>'+
-        '<td style="color:#888">'+esc(p.marca)+'</td>'+
+        '<td style="color:#888">'+esc(p.proveedor)+'</td>'+
         '<td class="num"><strong>'+Math.round(p.cantidad)+'</strong></td>'+
         '<td class="num">'+pesos(p.subtotal)+'</td>'+
       '</tr>';
