@@ -884,7 +884,37 @@ function renderFiltros(productos) {
 function seleccionarProveedor(proveedor) {
   _filtroProveedor = proveedor || null;
   document.getElementById('filtro-proveedor-sel').classList.toggle('activo', !!proveedor);
+  _actualizarMarcasPorProveedor(proveedor);
   filtrar();
+}
+
+function _actualizarMarcasPorProveedor(proveedor) {
+  var marcas = [];
+  _productos.forEach(function(p) {
+    if (!p.brand) return;
+    var prov = p.proveedor || MARCA_A_PROVEEDOR[String(p.brand).toUpperCase()] || p.brand;
+    if (!proveedor || prov === proveedor) {
+      if (marcas.indexOf(p.brand) === -1) marcas.push(p.brand);
+    }
+  });
+  marcas.sort();
+  var wrapM = document.getElementById('filtros-marca-wrap');
+  var selM  = document.getElementById('filtro-marca-sel');
+  if (marcas.length < 2) {
+    wrapM.style.display = 'none';
+    _filtroMarca = null;
+    selM.classList.remove('activo');
+  } else {
+    wrapM.style.display = 'block';
+    selM.innerHTML = '<option value="">Marca...</option>';
+    marcas.forEach(function(m) { selM.innerHTML += '<option value="' + m + '">' + m + '</option>'; });
+    if (_filtroMarca && marcas.indexOf(_filtroMarca) === -1) {
+      _filtroMarca = null;
+      selM.classList.remove('activo');
+    } else if (_filtroMarca) {
+      selM.value = _filtroMarca;
+    }
+  }
 }
 
 function seleccionarMarca(marca) {

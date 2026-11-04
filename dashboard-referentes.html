@@ -395,7 +395,7 @@
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
       <div class="filter-label">Proveedor</div>
-      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
+      <select class="filter-select" id="filtro-proveedor" onchange="onProveedorChange()">
         <option value="">Todos los proveedores</option>
       </select>
 
@@ -713,6 +713,24 @@ function toggleGrado(g){
   });
   render();
 }
+function onProveedorChange(){
+  var proveedor=document.getElementById('filtro-proveedor').value;
+  var selM=document.getElementById('filtro-marca');
+  var curM=selM.value;
+  selM.innerHTML='<option value="">Todas las marcas</option>';
+  var marcaSet={};
+  ALL_ROWS.forEach(function(r){
+    if(!r.marca) return;
+    var prov=r.proveedor||marcaAProveedor(r.marca)||r.marca;
+    if(!proveedor||prov===proveedor) marcaSet[r.marca]=true;
+  });
+  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m){
+    var o=document.createElement('option'); o.value=m; o.textContent=m; selM.appendChild(o);
+  });
+  selM.value=(curM&&marcaSet[curM])?curM:'';
+  aplicarFiltros();
+}
+
 function aplicarFiltros(){
   currentMes=document.getElementById('filtro-mes').value;
   currentDesde=document.getElementById('filtro-desde').value;

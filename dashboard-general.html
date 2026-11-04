@@ -290,7 +290,7 @@
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
       <div class="filter-label">Proveedor</div>
-      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
+      <select class="filter-select" id="filtro-proveedor" onchange="onProveedorChange()">
         <option value="">Todos los proveedores</option>
       </select>
 
@@ -726,6 +726,24 @@ function poblarProductos(marca) {
   sel.innerHTML = '<option value="">Todos los productos</option>';
   productos.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
   currentProducto = '';
+}
+
+function onProveedorChange() {
+  var proveedor = document.getElementById('filtro-proveedor').value;
+  var selM = document.getElementById('filtro-marca');
+  var curM = selM.value;
+  selM.innerHTML = '<option value="">Todas las marcas</option>';
+  var marcaSet = {};
+  ALL_ROWS.forEach(function(r) {
+    if (!r.marca) return;
+    var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
+    if (!proveedor || prov === proveedor) marcaSet[r.marca] = true;
+  });
+  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m) {
+    var o = document.createElement('option'); o.value = m; o.textContent = m; selM.appendChild(o);
+  });
+  selM.value = (curM && marcaSet[curM]) ? curM : '';
+  aplicarFiltros();
 }
 
 function aplicarFiltros() {

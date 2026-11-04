@@ -524,7 +524,7 @@
             </select>
           </div>
           <div><label>Proveedor</label>
-            <select id="vfilt-proveedor" onchange="aplicarFiltrosVentas()">
+            <select id="vfilt-proveedor" onchange="onProveedorVentasChange()">
               <option value="">Todos</option>
             </select>
           </div>
@@ -1374,6 +1374,27 @@ function setFiltroEstado(estado) {
   document.querySelectorAll('[id^="vfilt-Todos"],[id^="vfilt-Pendiente"],[id^="vfilt-Entregado"]').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('vfilt-' + estado).classList.add('active');
   cargarVentas(); // carga lazy si no estaba cacheado
+}
+
+function onProveedorVentasChange() {
+  var proveedor = document.getElementById('vfilt-proveedor').value;
+  var selM = document.getElementById('vfilt-marca');
+  if (selM) {
+    var curM = selM.value;
+    while (selM.options.length > 1) selM.remove(1);
+    var marcaSet = {};
+    _ventas.forEach(function(v) {
+      (v.marcas || []).forEach(function(m) {
+        if (!m) return;
+        if (!proveedor || (marcaAProveedor(m) || m) === proveedor) marcaSet[m] = true;
+      });
+    });
+    Object.keys(marcaSet).sort().forEach(function(m) {
+      var o = document.createElement('option'); o.value = m; o.textContent = m; selM.appendChild(o);
+    });
+    selM.value = (curM && marcaSet[curM]) ? curM : '';
+  }
+  aplicarFiltrosVentas();
 }
 
 function aplicarFiltrosVentas() {
