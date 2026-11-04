@@ -604,8 +604,16 @@ function auditarCostos() {
     alert('Esperá a que carguen los productos.');
     return;
   }
+  var q = document.getElementById('buscar').value.toLowerCase().trim();
+  var base = _productos.filter(function(p) {
+    if (_filtroSem   && p.semaforo !== _filtroSem)   return false;
+    if (_filtroMarca && p.brand    !== _filtroMarca) return false;
+    if (!q) return true;
+    if (p.nombre.toLowerCase().indexOf(q) !== -1) return true;
+    return (p.variantes || []).some(function(v) { return (v.sku || '').toLowerCase().indexOf(q) !== -1; });
+  });
   var problemas = [];
-  _productos.forEach(function(p) {
+  base.forEach(function(p) {
     (p.variantes || []).forEach(function(v) {
       if (v.activo === false) return;
       var sinCosto  = !v.costo || v.costo <= 0;
@@ -641,8 +649,8 @@ function mostrarAuditModal(problemas) {
     }).join('');
     contenido =
       '<p style="font-size:12px;color:var(--muted);margin-bottom:4px;">' + problemas.length + ' variante' + (problemas.length > 1 ? 's' : '') + ' con problema.</p>' +
-      '<div style="overflow-x:auto"><table class="audit-tabla">' +
-        '<thead><tr><th>Producto</th><th>Variante</th><th>Precio</th><th>Costo</th><th>Estado</th></tr></thead>' +
+      '<div style="overflow-x:auto;max-height:55vh;overflow-y:auto;"><table class="audit-tabla">' +
+        '<thead><tr><th style="position:sticky;top:0;background:#f3f4f6;z-index:1">Producto</th><th style="position:sticky;top:0;background:#f3f4f6;z-index:1">Variante</th><th style="position:sticky;top:0;background:#f3f4f6;z-index:1">Precio</th><th style="position:sticky;top:0;background:#f3f4f6;z-index:1">Costo</th><th style="position:sticky;top:0;background:#f3f4f6;z-index:1">Estado</th></tr></thead>' +
         '<tbody>' + filas + '</tbody>' +
       '</table></div>';
   }
