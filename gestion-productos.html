@@ -312,6 +312,15 @@ textarea.field { min-height: 90px; resize: vertical; }
 .modal-btn.secundario:hover { background: #e5e7eb; }
 .modal-btn.primario { background: var(--green); color: #fff; }
 .modal-btn.primario:hover { background: var(--green-dark); }
+.modal-box.wide { max-width: 680px; }
+.audit-tabla { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.audit-tabla th { background: #f3f4f6; color: #6b7280; font-weight: 700; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.audit-tabla td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.audit-tabla tr:last-child td { border-bottom: none; }
+.audit-tag { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.audit-tag.sin-costo  { background: #fee2e2; color: #b91c1c; }
+.audit-tag.margen-bajo { background: #fef3c7; color: #92400e; }
+.audit-ok { text-align: center; padding: 24px 0; color: var(--green-dark); font-weight: 700; font-size: 14px; }
 
 /* ── TOGGLE PUBLICADO ── */
 .toggle-pub { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
@@ -398,6 +407,7 @@ textarea.field { min-height: 90px; resize: vertical; }
         <div class="lista-titulo">
           <h1>Productos</h1>
           <p style="font-size:11px; color:#6b7280; margin-top:2px; line-height:1.4;">Aquí verás solo los productos que vos podés administrar.</p>
+          <button id="btn-auditoria" onclick="auditarCostos()" style="display:none; margin-top:8px; padding:5px 11px; border:1px solid #d1d5db; border-radius:7px; background:#fff; color:#374151; font-size:11px; font-weight:600; cursor:pointer;">Auditar costos</button>
         </div>
         <div class="lista-header-controles">
           <div style="border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; display:flex; flex-direction:column; gap:5px; flex-shrink:0;">
@@ -583,7 +593,65 @@ function mostrarApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display          = 'block';
   document.getElementById('header-user').textContent    = currentUser.name + ' · Cerrar sesión';
+  if (currentUser.role === 'ADMIN') {
+    document.getElementById('btn-auditoria').style.display = '';
+  }
   cargarProductos();
+}
+
+function auditarCostos() {
+  if (!_productos || !_productos.length) {
+    alert('Esperá a que carguen los productos.');
+    return;
+  }
+  var problemas = [];
+  _productos.forEach(function(p) {
+    (p.variantes || []).forEach(function(v) {
+      if (v.activo === false) return;
+      var sinCosto  = !v.costo || v.costo <= 0;
+      var margen    = v.margen !== null && v.margen !== undefined ? parseFloat(v.margen) : null;
+      var margenBajo = !sinCosto && (margen === null || margen < 25);
+      if (sinCosto || margenBajo) {
+        problemas.push({
+          producto: p.nombre,
+          variante: v.nombre || v.sku || '—',
+          precio:   v.precio,
+          costo:    v.costo,
+          margen:   margen,
+          tipo:     sinCosto ? 'sin-costo' : 'margen-bajo'
+        });
+      }
+    });
+  });
+  mostrarAuditModal(problemas);
+}
+
+function mostrarAuditModal(problemas) {
+  var contenido;
+  if (!problemas.length) {
+    contenido = '<div class="audit-ok">Todos los productos tienen costo cargado y margen mayor al 25%.</div>';
+  } else {
+    var filas = problemas.map(function(item) {
+      var tag   = item.tipo === 'sin-costo'
+        ? '<span class="audit-tag sin-costo">Sin costo</span>'
+        : '<span class="audit-tag margen-bajo">Margen ' + (item.margen !== null ? Math.round(item.margen) + '%' : '?') + '</span>';
+      var costoStr  = item.costo > 0 ? pesos(item.costo) : '—';
+      var precioStr = item.precio > 0 ? pesos(item.precio) : '—';
+      return '<tr><td>' + esc(item.producto) + '</td><td>' + esc(item.variante) + '</td><td class="num">' + precioStr + '</td><td class="num">' + costoStr + '</td><td>' + tag + '</td></tr>';
+    }).join('');
+    contenido =
+      '<p style="font-size:12px;color:var(--muted);margin-bottom:4px;">' + problemas.length + ' variante' + (problemas.length > 1 ? 's' : '') + ' con problema.</p>' +
+      '<div style="overflow-x:auto"><table class="audit-tabla">' +
+        '<thead><tr><th>Producto</th><th>Variante</th><th>Precio</th><th>Costo</th><th>Estado</th></tr></thead>' +
+        '<tbody>' + filas + '</tbody>' +
+      '</table></div>';
+  }
+  document.getElementById('audit-contenido').innerHTML = contenido;
+  document.getElementById('modal-auditoria').classList.add('open');
+}
+
+function cerrarModalAuditoria() {
+  document.getElementById('modal-auditoria').classList.remove('open');
 }
 
 // ── DATOS ──────────────────────────────────────────────────────
@@ -898,8 +966,9 @@ function calcularMargen(precio, costo) {
 }
 
 function actualizarMargen(varianteId) {
-  var precio = document.getElementById('precio-' + varianteId).value;
-  var costo  = document.getElementById('costo-'  + varianteId).value;
+  var precio   = document.getElementById('precio-' + varianteId).value;
+  var costoEl  = document.getElementById('costo-'  + varianteId);
+  var costo    = costoEl ? costoEl.value : '0';
   document.getElementById('margen-' + varianteId).textContent = calcularMargen(precio, costo);
 }
 
@@ -918,8 +987,10 @@ function renderEditPrecios(variantes) {
       '</div>' +
       '<div class="field-row">' +
         '<div><label class="field-label">Costo</label>' +
-          '<div class="input-precio"><span>$</span>' +
-          '<input class="field" id="costo-' + v.id + '" type="number" step="1" value="' + v.costo + '" oninput="actualizarMargen(\'' + v.id + '\')"></div>' +
+          (currentUser.role === 'ADMIN'
+            ? '<div class="input-precio"><span>$</span>' +
+              '<input class="field" id="costo-' + v.id + '" type="number" step="1" value="' + v.costo + '" oninput="actualizarMargen(\'' + v.id + '\')"></div>'
+            : '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</div>') +
           '<div style="font-size:11px;color:var(--muted);margin-top:4px">Tus clientes no ven este valor.</div></div>' +
         '<div><label class="field-label">Margen de ganancia</label>' +
           '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151" id="margen-' + v.id + '">' + margen + '</div></div>' +
@@ -1066,7 +1137,8 @@ function guardarPrecios() {
   var promesas = _productoActual.variantes.map(function(v) {
     var precio = document.getElementById('precio-' + v.id).value;
     var promo  = document.getElementById('promo-'  + v.id).value;
-    var costo  = document.getElementById('costo-'  + v.id).value;
+    var costoEl = document.getElementById('costo-' + v.id);
+    var costo   = costoEl ? costoEl.value : String(v.costo || 0);
     var _pPr = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), precio: precio, precio_promo: promo, costo: costo });
     return fetch(GAS_URL + '?' + _pPr.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
   });
@@ -1179,7 +1251,8 @@ function actualizarVariantesLocales(tipo) {
     if (tipo === 'precios') {
       v.precio      = parseFloat(document.getElementById('precio-' + v.id).value) || 0;
       v.precio_promo = parseFloat(document.getElementById('promo-' + v.id).value) || 0;
-      v.costo       = parseFloat(document.getElementById('costo-'  + v.id).value) || 0;
+      var costoEl = document.getElementById('costo-' + v.id);
+      v.costo     = costoEl ? (parseFloat(costoEl.value) || 0) : v.costo;
     }
     if (tipo === 'stock') {
       var esInf = document.getElementById('inf-' + v.id).checked;
@@ -1432,6 +1505,16 @@ var quill = new Quill('#edit-descripcion-editor', {
 </script>
 
 <!-- Modal confirmación stock -->
+<div class="modal-backdrop" id="modal-auditoria">
+  <div class="modal-box wide">
+    <h3>Auditoría de costos</h3>
+    <div id="audit-contenido"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primario" onclick="cerrarModalAuditoria()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-stock">
   <div class="modal-box">
     <h3>Sincronizar con TiendaNube</h3>
