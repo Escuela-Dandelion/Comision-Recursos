@@ -18,6 +18,7 @@ var MARCA_A_PROVEEDOR = {
   'NAZARENO':                'Nazareno',
   'TIENDA LIMÓN':            'Tienda Limón',
   'ARISTEO':                 'Tienda Limón',
+  'EL ARISTEO':              'Tienda Limón',
   'BENDITA LLUVIA':          'Tienda Limón',
   'CALANDRI':                'Tienda Limón',
   'PAJARITO AMARILLO':       'Pajarito Amarillo',
@@ -31,7 +32,7 @@ var RENOMBRAR_MARCA = {
 };
 
 // Para productos con brand = TIENDA LIMÓN, detectar la marca real desde el título
-var MARCAS_TIENDA_LIMON = ['Aristeo', 'Bendita Lluvia', 'Calandri'];
+var MARCAS_TIENDA_LIMON = ['El Aristeo', 'Bendita Lluvia', 'Calandri'];
 
 // Overrides manuales por ID de producto (casos que no se detectan automáticamente)
 var ID_OVERRIDE = {
