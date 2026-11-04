@@ -275,9 +275,22 @@ function doGetInterno(e) {
   }
 
   if (action === 'getRetiros') {
-    var estadoFiltro = e.parameter.estado || '';  // 'Pendiente', 'Entregado', o '' = todos
+    var estadoFiltro = e.parameter.estado || '';
     var diasFiltro   = parseInt(e.parameter.dias || '0');
+    var emailFiltro  = (e.parameter.email || '').toLowerCase().trim();
     var retiros = getRetirosData(estadoFiltro, diasFiltro);
+    if (emailFiltro) {
+      var userFGP = AUTH_EMAILS[emailFiltro];
+      if (userFGP && userFGP.role === 'FGP' && Array.isArray(userFGP.marcas)) {
+        var marcasFGP = userFGP.marcas.map(function(m){ return m.toUpperCase(); });
+        retiros = retiros.filter(function(r) {
+          var marcasRetiro = (r.marcas || []).map(function(m){ return m.toUpperCase(); });
+          return marcasFGP.some(function(m){
+            return marcasRetiro.some(function(mr){ return mr.indexOf(m) !== -1; });
+          });
+        });
+      }
+    }
     return ContentService.createTextOutput(JSON.stringify({ ok: true, retiros: retiros }))
       .setMimeType(ContentService.MimeType.JSON);
   }

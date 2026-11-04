@@ -1099,6 +1099,7 @@ function cargarVentas(forzar) {
   var url = GAS_URL + '?action=getRetiros&estado=' + encodeURIComponent(estado);
   if (estado === 'Entregado') url += '&dias=60';
   if (estado === 'Todos')     url  = GAS_URL + '?action=getRetiros&dias=30';
+  if (currentUser && currentUser.email) url += '&email=' + encodeURIComponent(currentUser.email);
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(d){
