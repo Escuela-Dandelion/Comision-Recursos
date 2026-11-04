@@ -1,4 +1,4 @@
-// v2026-11-04b — getRetiros filtra por marcas FGP; acceso Dolo Sol de Papel
+// v2026-11-04e — _marcasDeProveedores helper; _authGestion y apiAuthEmail compat proveedores→marcas
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -281,12 +281,12 @@ function doGetInterno(e) {
     var retiros = getRetirosData(estadoFiltro, diasFiltro);
     if (emailFiltro) {
       var userFGP = AUTH_EMAILS[emailFiltro];
-      if (userFGP && userFGP.role === 'FGP' && Array.isArray(userFGP.marcas)) {
-        var marcasFGP = userFGP.marcas.map(function(m){ return m.toUpperCase(); });
+      if (userFGP && userFGP.role === 'FGP' && Array.isArray(userFGP.proveedores) && userFGP.proveedores.length > 0) {
+        var proveedoresFGP = userFGP.proveedores.map(function(p){ return p.toLowerCase(); });
         retiros = retiros.filter(function(r) {
-          var marcasRetiro = (r.marcas || []).map(function(m){ return m.toUpperCase(); });
-          return marcasFGP.some(function(m){
-            return marcasRetiro.some(function(mr){ return mr.indexOf(m) !== -1; });
+          return (r.marcas || []).some(function(m) {
+            var prov = marcaToProveedor(m);
+            return prov && proveedoresFGP.indexOf(prov.toLowerCase()) !== -1;
           });
         });
       }
@@ -1984,7 +1984,8 @@ function apiAuthEmail(email) {
   if (!email) return { ok: false, error: 'Email requerido.' };
   var user = AUTH_EMAILS[email.toLowerCase().trim()];
   if (!user) return { ok: false, error: 'Email no autorizado.' };
-  return { ok: true, role: user.role, name: user.name, marcas: user.marcas || null };
+  var marcas = _marcasDeProveedores(user);
+  return { ok: true, role: user.role, name: user.name, marcas: marcas.length > 0 ? marcas : null };
 }
 
 // ──────────────────────────────────────────────────────────
@@ -2128,26 +2129,75 @@ function apiDashboard(email) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  MARCA → PROVEEDOR
+//  Cubre nombres viejos del Sheet y nombres nuevos de TiendaNube
+// ═══════════════════════════════════════════════════════════
+var MARCA_A_PROVEEDOR = {
+  // nombres viejos (en el Sheet de ventas y retiros)
+  'TIENDA LIMÓN':             'Tienda Limón',
+  'TIENDA LIMON':             'Tienda Limón',
+  'EL MAITEN':                'El Maiten',
+  'PAJARITO AMARILLO':        'Pajarito Amarillo',
+  'SOL DE PAPEL':             'Sol de Oro',
+  'GUARDIANES COLMENA':       'Guardianes de la Colmena',
+  'MIX Y FRUTOS SECOS':       'BioSalud',
+  'TALLER':                   'Carlos Villegas',
+  // nombres actuales post-migración (TiendaNube)
+  'YEMARI':                   'Yemari',
+  'CABALLO NEGRO':            'Caballo Negro',
+  'LA YAYA':                  'La Yaya',
+  'GUARDIANES DE LA COLMENA': 'Guardianes de la Colmena',
+  'GROEN':                    'Groen',
+  'ODDIS':                    'Oddis',
+  'PARAISA':                  'Paraisa',
+  'NAZARENO':                 'Nazareno',
+  'GRANOLA':                  'El Maiten',
+  'PIZZA':                    'Pajarito Amarillo',
+  'EL ARISTEO':               'Tienda Limón',
+  'ARISTEO':                  'Tienda Limón',
+  'BENDITA LLUVIA':           'Tienda Limón',
+  'CALANDRI':                 'Tienda Limón',
+};
+
+function marcaToProveedor(marca) {
+  return MARCA_A_PROVEEDOR[(marca || '').trim().toUpperCase()] || null;
+}
+
+// Dado un usuario con .proveedores (nuevo esquema), devuelve el array de brand names de TiendaNube
+function _marcasDeProveedores(user) {
+  if (user.marcas && user.marcas.length > 0) return user.marcas;
+  if (!user.proveedores || user.proveedores.length === 0) return [];
+  var marcas = [];
+  Object.keys(MARCA_A_PROVEEDOR).forEach(function(brand) {
+    if (user.proveedores.indexOf(MARCA_A_PROVEEDOR[brand]) !== -1) {
+      marcas.push(brand);
+    }
+  });
+  return marcas;
+}
+
+// ═══════════════════════════════════════════════════════════
 //  AUTH — admin.html
 // ═══════════════════════════════════════════════════════════
 
 // Lista blanca de emails con su rol
+// FGP: campo 'proveedores' (array de nombres de proveedor)
 var AUTH_EMAILS = {
   'robertson.ine@gmail.com':    { role: 'ADMIN', name: 'Inés' },
   'longhi.yuliana@gmail.com':        { role: 'ADMIN', name: 'Yuliana' },
   'yuliana.longhi@dandelion.edu.ar': { role: 'ADMIN', name: 'Yuliana' },
-  'martinimaria39@gmail.com':        { role: 'FGP', name: 'Maria',  marcas: ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'] },
-  'amandabenedi@gmail.com':          { role: 'FGP', name: 'Amanda', marcas: [] },
-  'lourdelcastillo@gmail.com':       { role: 'FGP', name: 'Luli',   marcas: ['LA YAYA','ODDIS'] },
-  'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  marcas: [] },
+  'martinimaria39@gmail.com':        { role: 'FGP', name: 'Maria',  proveedores: ['Yemari','Caballo Negro','La Yaya','Guardianes de la Colmena','El Maiten','Oddis','Groen','Paraisa'] },
+  'amandabenedi@gmail.com':          { role: 'FGP', name: 'Amanda', proveedores: [] },
+  'lourdelcastillo@gmail.com':       { role: 'FGP', name: 'Luli',   proveedores: ['La Yaya','Oddis'] },
+  'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  proveedores: [] },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    marcas: ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'] },
+  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    proveedores: ['El Maiten','Oddis','BioSalud'] },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
-  'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'] },
-  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'] },
-  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'] },
+  'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', proveedores: ['La Yaya','Guardianes de la Colmena','Groen','Oddis','Yemari','Caballo Negro'] },
+  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  proveedores: ['Yemari','Caballo Negro','Sol de Oro'] },
+  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  proveedores: ['Yemari','Caballo Negro','Sol de Oro'] },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },
@@ -2155,19 +2205,19 @@ var AUTH_EMAILS = {
   'yaninafuentes33@gmail.com':       { role: 'referente', name: 'Yana' },
   'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
-  'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', marcas: ['NAZARENO'] },
+  'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', proveedores: ['Nazareno'] },
   'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
   'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' },
-  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', marcas: ['TIENDA LIMÓN'] },
-  'dominguez.dolo@gmail.com':               { role: 'FGP',       name: 'Dolo',    marcas: ['SOL DE PAPEL'] }
+  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', proveedores: ['Tienda Limón'] },
+  'dominguez.dolo@gmail.com':               { role: 'FGP',       name: 'Dolo',    proveedores: ['Sol de Oro'] }
 };
 
-// Verificar Google Sign-In — devuelve {ok, role, name, marcas}
+// Verificar Google Sign-In — devuelve {ok, role, name, proveedores}
 function apiVerificarEmail(email) {
   email = email.toLowerCase().trim();
   var user = AUTH_EMAILS[email];
   if (!user) return { ok: false, error: 'Email no autorizado' };
-  return { ok: true, role: user.role, name: user.name, marcas: user.marcas || null };
+  return { ok: true, role: user.role, name: user.name, proveedores: user.proveedores || null };
 }
 
 // Mapeo staff → grado
@@ -2354,6 +2404,76 @@ function testTodosLosCasos() {
   testCaso2_PizzaSoloEscuela();
   testCaso3_Nazareno();
   testCaso4_SinGrado();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  REENVIAR QR — regenera y reenvía a todas las órdenes PENDIENTE
+//  Usar cuando cambió QR_SECRET y los QRs viejos quedaron inválidos.
+//  Corré desde el editor — no requiere redeploy.
+// ─────────────────────────────────────────────────────────────
+function reenviarQRsPendientes() {
+  // Solo reenvía órdenes de los últimos DIAS_MAX días para evitar mandar históricos
+  var DIAS_MAX = 30;
+  var hoy      = new Date();
+  var sheet    = getSheet();
+  var data     = sheet.getDataRange().getValues();
+  var enviados = 0;
+  var errores  = 0;
+  var omitidos = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    var estado = String(row[7] || '').toUpperCase();
+    if (estado.indexOf('PENDIENTE') === -1) continue;
+
+    var fecha = row[6] ? new Date(row[6]) : null;
+    if (!fecha || (hoy - fecha) > DIAS_MAX * 24 * 60 * 60 * 1000) {
+      omitidos++;
+      continue;
+    }
+
+    var orderId = String(row[0] || '');
+    var email   = String(row[3] || '');
+    var nombre  = String(row[2] || '').split(' ')[0] || 'Familia';
+    if (!orderId || !email) continue;
+
+    try {
+      // Buscar la orden en TiendaNube para tener datos completos
+      var resp  = UrlFetchApp.fetch(
+        'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders/' + orderId,
+        { headers: { 'Authentication': 'bearer ' + CONFIG.API_TOKEN,
+                     'User-Agent': 'DienteDeLeon/1.0' },
+          muteHttpExceptions: true }
+      );
+      if (resp.getResponseCode() !== 200) {
+        Logger.log('❌ No se pudo obtener orden ' + orderId + ' — HTTP ' + resp.getResponseCode());
+        errores++;
+        continue;
+      }
+      var order = JSON.parse(resp.getContentText());
+
+      var token     = generarToken(orderId);
+      var verifyUrl = 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id='
+                      + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
+      var qrApiUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=L&margin=1&data='
+                      + encodeURIComponent(verifyUrl);
+      var qrBlob    = UrlFetchApp.fetch(qrApiUrl).getBlob().setName('qr.png').setContentType('image/png');
+
+      var productos = (order.products || []).map(function(p) {
+        var n = p.name; n = (typeof n === 'object') ? (n.es || Object.values(n)[0] || '') : (n || '');
+        return p.quantity + 'x ' + n;
+      }).join('\n');
+
+      enviarEmail(email, nombre, order, qrBlob, productos);
+      Logger.log('✅ QR reenviado — orden ' + orderId + ' → ' + email);
+      enviados++;
+      Utilities.sleep(1000); // respetar límite de envío de mails
+    } catch(e) {
+      Logger.log('❌ Error en orden ' + orderId + ': ' + e.message);
+      errores++;
+    }
+  }
+  Logger.log('=== reenviarQRsPendientes: ' + enviados + ' enviados, ' + errores + ' errores, ' + omitidos + ' omitidos (históricos >'+DIAS_MAX+'d) ===');
 }
 
 // Manda el mail exacto (con QR real) a robertson.ine@gmail.com usando el pedido 630
@@ -2773,6 +2893,10 @@ function _authGestion(email) {
   if (!email) return null;
   var user = AUTH_EMAILS[email.toLowerCase().trim()];
   if (!user) return null;
+  // Sintetizar marcas desde proveedores si es necesario (nuevo esquema)
+  if (!user.marcas && user.proveedores) {
+    user.marcas = _marcasDeProveedores(user);
+  }
   var puedeGestionar = user.role === 'ADMIN' || user.role === 'digital' || (user.marcas && user.marcas.length > 0);
   return puedeGestionar ? user : null;
 }
