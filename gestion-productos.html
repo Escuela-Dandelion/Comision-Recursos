@@ -397,23 +397,7 @@ textarea.field { min-height: 90px; resize: vertical; }
 <div id="app">
   <header>
     <span class="title">📦 Gestión de Productos — Diente de León</span>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div id="ver-como-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;color:#6b7280;">
-        <span>Ver como:</span>
-        <select id="ver-como-select" onchange="impersonar(this.value)" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;cursor:pointer;">
-          <option value="">— yo (ADMIN) —</option>
-          <option value="longhi.yuliana@gmail.com|Yuliana|ADMIN|">Yuliana (ADMIN)</option>
-          <option value="lmdestefano@gmail.com|Lucas|FGP|YEMARI,CABALLO NEGRO">Lucas (Yemari / Caballo Negro)</option>
-          <option value="pialucarno@gmail.com|Pía|FGP|EL MAITEN,ODDIS,MIX Y FRUTOS SECOS">Pía (El Maitén / Oddis)</option>
-          <option value="monicachesta@gmail.com|Monica|FGP|LA YAYA,GUARDIANES COLMENA,GROEN,ODDIS,YEMARI,CABALLO NEGRO">Monica (La Yaya / Guardianes)</option>
-          <option value="martinimaria39@gmail.com|Maria|FGP|YEMARI,CABALLO NEGRO,LA YAYA,GUARDIANES COLMENA,EL MAITEN,ODDIS,GROEN,PARAISA">Maria Martini</option>
-          <option value="lourdelcastillo@gmail.com|Luli|FGP|LA YAYA,ODDIS">Luli (La Yaya / Oddis)</option>
-          <option value="francoalini@gmail.com|Franco|FGP|NAZARENO">Franco (Nazareno)</option>
-          <option value="tiendalimon.natural@gmail.com|Natalia|FGP|TIENDA LIMÓN">Natalia (Tienda Limón)</option>
-        </select>
-      </div>
-      <span class="user" onclick="cerrarSesion()" id="header-user"></span>
-    </div>
+    <span class="user" onclick="cerrarSesion()" id="header-user"></span>
   </header>
 
   <div class="layout">
@@ -557,7 +541,16 @@ window.addEventListener('load', function() {
         if (!d.ok) { mostrarError('Email no autorizado para esta sección.'); return; }
         var puedeGestionar = d.role === 'ADMIN' || (d.marcas && d.marcas.length > 0);
         if (!puedeGestionar) { mostrarError('Tu usuario no tiene productos asignados para gestionar.'); return; }
-        currentUser = { email: emailParam, name: d.name || emailParam.split('@')[0], role: d.role, marcas: d.marcas };
+        var baseUser = { email: emailParam, name: d.name || emailParam.split('@')[0], role: d.role, marcas: d.marcas };
+        var vAsRole   = params.get('_vAs_role');
+        var vAsMarcas = params.get('_vAs_marcas');
+        var vAsName   = params.get('_vAs_name');
+        if (vAsRole) {
+          _adminOriginal = baseUser;
+          currentUser = { email: emailParam, name: vAsName || baseUser.name, role: vAsRole, marcas: vAsMarcas ? vAsMarcas.split(',') : [], _impersonando: true };
+        } else {
+          currentUser = baseUser;
+        }
         localStorage.setItem('ddl_gestion_user', JSON.stringify(currentUser));
         mostrarApp();
       })
@@ -610,36 +603,11 @@ var _adminOriginal = null;
 function mostrarApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display          = 'block';
-  actualizarHeaderUsuario();
+  var label = (_adminOriginal && currentUser._impersonando) ? 'Vista: ' + currentUser.name : currentUser.name;
+  document.getElementById('header-user').textContent = label + ' · Cerrar sesión';
   if (currentUser.role === 'ADMIN') {
     document.getElementById('btn-auditoria').style.display = '';
   }
-  if (currentUser.email === 'robertson.ine@gmail.com') {
-    document.getElementById('ver-como-wrap').style.display = 'flex';
-    if (!_adminOriginal) _adminOriginal = currentUser;
-  }
-  cargarProductos();
-}
-
-function actualizarHeaderUsuario() {
-  var label = currentUser.name;
-  if (_adminOriginal && currentUser.email !== _adminOriginal.email) {
-    label = 'Vista: ' + currentUser.name;
-  }
-  document.getElementById('header-user').textContent = label + ' · Cerrar sesión';
-}
-
-function impersonar(valor) {
-  if (!_adminOriginal) return;
-  if (!valor) {
-    currentUser = _adminOriginal;
-  } else {
-    var partes = valor.split('|');
-    var marcas = partes[3] ? partes[3].split(',') : [];
-    currentUser = { email: _adminOriginal.email, name: partes[1], role: partes[2], marcas: marcas, _impersonando: true };
-  }
-  actualizarHeaderUsuario();
-  cerrarPanel();
   cargarProductos();
 }
 

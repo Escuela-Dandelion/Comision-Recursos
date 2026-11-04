@@ -254,6 +254,13 @@
     .app-main { margin-left: 0; padding: 16px; }
     .header-user { display: none; }
   }
+
+  /* ── IMPERSONACIÓN ── */
+  #ver-como-wrap { display: none; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+  #ver-como-select { font-size: 12px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; max-width: 200px; }
+  #imp-banner { display: none; align-items: center; gap: 10px; background: #fef3c7; border-bottom: 2px solid #f59e0b; padding: 7px 20px; font-size: 12px; color: #92400e; }
+  #imp-banner strong { font-weight: 700; }
+  #imp-banner button { margin-left: auto; padding: 4px 10px; border: 1px solid #f59e0b; border-radius: 6px; background: #fff; color: #92400e; font-size: 11px; font-weight: 600; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -296,12 +303,34 @@
     <span class="header-logo"><img src="Logo_Diente_de_Leon_transparent.png" alt="Diente de León"></span>
     <span style="font-family:'Antropos',sans-serif; font-size:20px; color:var(--green); letter-spacing:1px;">Diente de León</span>
     <div class="header-spacer"></div>
+    <div id="ver-como-wrap">
+      <span>Ver como:</span>
+      <select id="ver-como-select" onchange="impersonarAdmin(this.value)">
+        <option value="">— yo (ADMIN) —</option>
+        <option value="longhi.yuliana@gmail.com|Yuliana|ADMIN|">Yuliana (ADMIN)</option>
+        <option value="lmdestefano@gmail.com|Lucas|FGP|YEMARI,CABALLO NEGRO">Lucas — Yemari / Caballo Negro</option>
+        <option value="pialucarno@gmail.com|Pía|FGP|EL MAITEN,ODDIS,MIX Y FRUTOS SECOS">Pía — El Maitén / Oddis</option>
+        <option value="monicachesta@gmail.com|Monica|FGP|LA YAYA,GUARDIANES COLMENA,GROEN,ODDIS,YEMARI,CABALLO NEGRO">Monica — La Yaya / Guardianes</option>
+        <option value="martinimaria39@gmail.com|Maria|FGP|YEMARI,CABALLO NEGRO,LA YAYA,GUARDIANES COLMENA,EL MAITEN,ODDIS,GROEN,PARAISA">Maria Martini</option>
+        <option value="lourdelcastillo@gmail.com|Luli|FGP|LA YAYA,ODDIS">Luli — La Yaya / Oddis</option>
+        <option value="francoalini@gmail.com|Franco|FGP|NAZARENO">Franco — Nazareno</option>
+        <option value="tiendalimon.natural@gmail.com|Natalia|FGP|TIENDA LIMÓN">Natalia — Tienda Limón</option>
+      </select>
+    </div>
     <div class="header-user">
       <strong id="header-name">—</strong>
       <span id="header-role">—</span>
     </div>
     <button class="btn-logout" onclick="logout()">Salir</button>
   </header>
+
+  <!-- Banner impersonación -->
+  <div id="imp-banner">
+    <span>Viendo como:</span>
+    <strong id="imp-nombre">—</strong>
+    <span id="imp-role-label" style="opacity:.7"></span>
+    <button onclick="impersonarAdmin('')">Volver a mi sesión</button>
+  </div>
 
   <!-- Sidebar -->
   <nav class="app-sidebar" id="sidebar">
@@ -556,6 +585,8 @@ var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staf
 
 var SESSION_KEY = 'dl_admin_session';
 var currentUser = null;
+var _adminOriginal = null;
+var _currentImpersonation = null;
 
 // ══════════════════════════════════════
 // SESSION
@@ -714,13 +745,60 @@ function verificarOTP() {
 // ══════════════════════════════════════
 function iniciarApp(user) {
   currentUser = user;
+  _adminOriginal = user;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('header-name').textContent = user.name;
   document.getElementById('header-role').textContent = ROLE_LABELS[user.role] || user.role;
+  if (user.email === 'robertson.ine@gmail.com') {
+    document.getElementById('ver-como-wrap').style.display = 'flex';
+  }
   aplicarPermisos(user.role);
   renderWelcomeCards(user.role);
   restaurarDesdeUrl();
+}
+
+function impersonarAdmin(valor) {
+  if (!_adminOriginal) return;
+  if (!valor) {
+    currentUser = _adminOriginal;
+    _currentImpersonation = null;
+    document.getElementById('header-name').textContent = _adminOriginal.name;
+    document.getElementById('header-role').textContent = ROLE_LABELS[_adminOriginal.role] || _adminOriginal.role;
+    document.getElementById('imp-banner').style.display = 'none';
+    aplicarPermisos(_adminOriginal.role);
+    renderWelcomeCards(_adminOriginal.role.toLowerCase());
+    _recargarGestionProductos();
+    if (_ventasCargadas) aplicarFiltrosVentas();
+    return;
+  }
+  var partes = valor.split('|');
+  var impEmail = partes[0], impName = partes[1], impRole = partes[2];
+  var impMarcas = partes[3] ? partes[3].split(',') : [];
+  _currentImpersonation = { email: impEmail, name: impName, role: impRole, marcas: impMarcas };
+  currentUser = { email: _adminOriginal.email, name: impName, role: impRole, marcas: impMarcas, _impersonando: true };
+  document.getElementById('header-name').textContent = impName;
+  document.getElementById('header-role').textContent = ROLE_LABELS[impRole] || impRole;
+  document.getElementById('imp-nombre').textContent = impName;
+  document.getElementById('imp-role-label').textContent = impMarcas.length ? '(' + impMarcas.join(', ') + ')' : '';
+  document.getElementById('imp-banner').style.display = 'flex';
+  aplicarPermisos(impRole.toLowerCase());
+  renderWelcomeCards(impRole.toLowerCase());
+  _recargarGestionProductos();
+  if (_ventasCargadas) aplicarFiltrosVentas();
+}
+
+function _recargarGestionProductos() {
+  var gIframe = document.getElementById('iframe-gestion-productos');
+  if (!gIframe) return;
+  var email = _adminOriginal ? _adminOriginal.email : currentUser.email;
+  var url = 'gestion-productos.html?email=' + encodeURIComponent(email) + '&v=20261017';
+  if (_currentImpersonation) {
+    url += '&_vAs_role='   + encodeURIComponent(_currentImpersonation.role);
+    url += '&_vAs_marcas=' + encodeURIComponent((_currentImpersonation.marcas || []).join(','));
+    url += '&_vAs_name='   + encodeURIComponent(_currentImpersonation.name);
+  }
+  gIframe.src = url;
 }
 
 function aplicarPermisos(role) {
@@ -807,8 +885,19 @@ function showView(viewId, navBtn, opts) {
   // Cargar gestión de productos con email del usuario actual
   if (viewId === 'gestion-productos') {
     var gestionIframe = document.getElementById('iframe-gestion-productos');
-    if (gestionIframe && gestionIframe.src.indexOf('gestion-productos.html') === -1 && currentUser && currentUser.email) {
-      gestionIframe.src = 'gestion-productos.html?email=' + encodeURIComponent(currentUser.email) + '&v=20261017';
+    if (gestionIframe && currentUser && currentUser.email) {
+      var email = _adminOriginal ? _adminOriginal.email : currentUser.email;
+      var gUrl = 'gestion-productos.html?email=' + encodeURIComponent(email) + '&v=20261017';
+      if (_currentImpersonation) {
+        gUrl += '&_vAs_role='   + encodeURIComponent(_currentImpersonation.role);
+        gUrl += '&_vAs_marcas=' + encodeURIComponent((_currentImpersonation.marcas || []).join(','));
+        gUrl += '&_vAs_name='   + encodeURIComponent(_currentImpersonation.name);
+      }
+      var impKey = _currentImpersonation ? _currentImpersonation.email : '';
+      if (gestionIframe.src.indexOf('gestion-productos.html') === -1 || gestionIframe.getAttribute('data-imp') !== impKey) {
+        gestionIframe.setAttribute('data-imp', impKey);
+        gestionIframe.src = gUrl;
+      }
     }
   }
 
@@ -1271,6 +1360,10 @@ function aplicarFiltrosVentas() {
     if (referente && v.staff !== referente) return false;
     if (producto && v.productos.toLowerCase().indexOf(producto) === -1) return false;
     if (marca && (!v.marcas || v.marcas.indexOf(marca) === -1)) return false;
+    if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0 && _currentImpersonation.role !== 'ADMIN') {
+      var impMarcasUp = _currentImpersonation.marcas.map(function(m) { return m.toUpperCase(); });
+      if (!v.marcas || !v.marcas.some(function(m) { return impMarcasUp.indexOf(m.toUpperCase()) !== -1; })) return false;
+    }
     if (orden && String(v.numero) !== orden) return false;
     if (comprador && v.nombre.toLowerCase().indexOf(comprador) === -1) return false;
     if (desde || hasta) {
