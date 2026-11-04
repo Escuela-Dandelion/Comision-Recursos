@@ -2145,7 +2145,8 @@ var AUTH_EMAILS = {
   'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', marcas: ['NAZARENO'] },
   'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
   'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' },
-  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', marcas: ['TIENDA LIMÓN'] }
+  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', marcas: ['TIENDA LIMÓN'] },
+  'dominguez.dolo@gmail.com':               { role: 'FGP',       name: 'Dolo',    marcas: ['SOL DE PAPEL'] }
 };
 
 // Verificar Google Sign-In — devuelve {ok, role, name, marcas}

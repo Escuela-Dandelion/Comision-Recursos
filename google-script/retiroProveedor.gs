@@ -897,6 +897,7 @@ const MARCAS_POR_EMAIL = {
   'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
   'lourdelcastillo@gmail.com':       ['LA YAYA','ODDIS'],
   'francoalini@gmail.com':           ['NAZARENO'],
+  'dominguez.dolo@gmail.com':        ['SOL DE PAPEL'],
 };
 
 const INV_PISO_MARCA = {
