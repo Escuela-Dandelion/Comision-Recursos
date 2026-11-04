@@ -1,18 +1,14 @@
-// v2026-11-04 — secrets movidos a PropertiesService (sin claves en git)
+// v2026-11-04 — secrets movidos a PropertiesService; código Green API (OTP) eliminado
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
-//   QR_SECRET        → secret para firma de QRs
+//   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
 //   VENTAS_SHEET_ID  → ID del Google Sheet de Ventas
 //   PEDIDOS_SHEET_ID → ID del Google Sheet de Pedidos/ConfigStock
-//   GREEN_INSTANCE   → instancia Green API (WhatsApp OTP)
-//   GREEN_TOKEN      → token Green API (WhatsApp OTP)
 var _P = PropertiesService.getScriptProperties();
 var CONFIG = {
   STORE_ID:        '7396246',
   API_TOKEN:       _P.getProperty('TN_API_TOKEN'),
   SECRET:          _P.getProperty('QR_SECRET'),
-  GREEN_INSTANCE:  _P.getProperty('GREEN_INSTANCE'),
-  GREEN_TOKEN:     _P.getProperty('GREEN_TOKEN'),
   TIENDA_NOMBRE:   'Diente de León',
   STAFF_TOKEN:     'test',
   VENTAS_SHEET_ID: _P.getProperty('VENTAS_SHEET_ID'),
@@ -387,15 +383,6 @@ function doGetInterno(e) {
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
-  if (action === 'sendOTP') {
-    var res = apiSendOTP(e.parameter.tel || '');
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  if (action === 'verifyOTP') {
-    var res = apiVerifyOTP(e.parameter.tel || '', e.parameter.code || '');
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-  }
 
   if (action === 'api_verificar') {
     var res = apiVerificar(orderId, token);
@@ -2161,87 +2148,12 @@ var AUTH_EMAILS = {
   'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', marcas: ['TIENDA LIMÓN'] }
 };
 
-// Lista blanca de teléfonos de referentes (sin el +, formato internacional)
-var AUTH_REFERENTES = {
-  '5493513645612': { role: 'REFERENTE', name: 'Yuliana' },
-  '5493516865078': { role: 'REFERENTE', name: 'Maria'   },
-  '5493512112050': { role: 'REFERENTE', name: 'Inés'    },
-  '5493543512538': { role: 'REFERENTE', name: 'Delfina' },
-  '5493516523262': { role: 'REFERENTE', name: 'Dolo'    },
-  '5493517076221': { role: 'REFERENTE', name: 'Gaby'    },
-  '5493515514893': { role: 'REFERENTE', name: 'Juan'    },
-  '5493512130302': { role: 'REFERENTE', name: 'Karina'  },
-  '5493516808115': { role: 'ADMIN',     name: 'Monica'  },
-  '5493516166134': { role: 'REFERENTE', name: 'Paola'   },
-  '5493516602546': { role: 'ADMIN',     name: 'Pia'     },
-  '5493517888479': { role: 'REFERENTE', name: 'Sabi'    },
-  '5493512114209': { role: 'REFERENTE', name: 'Yana'    },
-  '5493512032487': { role: 'REFERENTE', name: 'Elina'   },
-  '5493516319266': { role: 'REFERENTE', name: 'Claudio' }
-};
-
 // Verificar Google Sign-In — devuelve {ok, role, name, marcas}
 function apiVerificarEmail(email) {
   email = email.toLowerCase().trim();
   var user = AUTH_EMAILS[email];
   if (!user) return { ok: false, error: 'Email no autorizado' };
   return { ok: true, role: user.role, name: user.name, marcas: user.marcas || null };
-}
-
-// Generar y enviar OTP por WhatsApp
-function apiSendOTP(tel) {
-  tel = tel.replace(/\D/g, ''); // solo dígitos
-  if (!AUTH_REFERENTES[tel]) return { ok: false, error: 'Número no registrado' };
-
-  var code = String(Math.floor(100000 + Math.random() * 900000));
-  var expira = new Date().getTime() + 5 * 60 * 1000; // 5 minutos
-
-  // Guardar en PropertiesService (temporal, expira)
-  PropertiesService.getScriptProperties().setProperty('otp_' + tel, code + '|' + expira);
-
-  // Enviar por WhatsApp
-  try {
-    UrlFetchApp.fetch(
-      'https://api.green-api.com/waInstance' + CONFIG.GREEN_INSTANCE + '/sendMessage/' + CONFIG.GREEN_TOKEN,
-      {
-        method: 'POST',
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          chatId: tel + '@c.us',
-          message: '🌼 *Diente de León*\n\nTu código de acceso es: *' + code + '*\n\nExpira en 5 minutos.'
-        })
-      }
-    );
-  } catch(err) {
-    Logger.log('Error enviando OTP: ' + err);
-    return { ok: false, error: 'Error enviando WhatsApp' };
-  }
-
-  return { ok: true };
-}
-
-// Verificar OTP ingresado
-function apiVerifyOTP(tel, code) {
-  tel = tel.replace(/\D/g, '');
-  var stored = PropertiesService.getScriptProperties().getProperty('otp_' + tel);
-  if (!stored) return { ok: false, error: 'Código no encontrado o expirado' };
-
-  var parts  = stored.split('|');
-  var savedCode  = parts[0];
-  var expira     = Number(parts[1]);
-
-  if (new Date().getTime() > expira) {
-    PropertiesService.getScriptProperties().deleteProperty('otp_' + tel);
-    return { ok: false, error: 'Código expirado' };
-  }
-
-  if (code !== savedCode) return { ok: false, error: 'Código incorrecto' };
-
-  // Limpiar OTP usado
-  PropertiesService.getScriptProperties().deleteProperty('otp_' + tel);
-
-  var user = AUTH_REFERENTES[tel];
-  return { ok: true, role: user.role, name: user.name };
 }
 
 // Mapeo staff → grado
