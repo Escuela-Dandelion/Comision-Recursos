@@ -1,11 +1,14 @@
+// v2026-11-04 — WEBAPP_URL movido a PropertiesService (sin claves en git)
 // ============================================================
 // MONITOR DE SISTEMA — Diente de León
 // Proyecto GAS SEPARADO — pegar en un proyecto nuevo
 // Verifica que el QR/Dashboard esté funcionando cada hora
 // y manda email si detecta un problema.
+// Script Properties requeridas (Proyecto Monitor):
+//   WEBAPP_URL → URL de deployment del proyecto Retiro QR
 // ============================================================
 
-var WEBAPP_URL   = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var WEBAPP_URL   = PropertiesService.getScriptProperties().getProperty('WEBAPP_URL');
 var ALERT_EMAIL  = 'robertson.ine@gmail.com';
 var COOLDOWN_HS  = 4; // horas mínimas entre alertas (evita spam)
 

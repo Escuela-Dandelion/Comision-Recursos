@@ -1,19 +1,23 @@
-// v2026-10-24b — email stock: links a gestion-productos.html con productoId, no a TiendaNube
+// v2026-11-04 — secrets movidos a PropertiesService (sin claves en git)
 // ============================================================
 // DIENTE DE LEÓN — Alerta de Stock Bajo + Orden de Pedido
 // ============================================================
-
+// Script Properties requeridas (compartidas con retiro_qr.gs — mismo proyecto):
+//   TN_API_TOKEN     → token de TiendaNube
+//   VENTAS_SHEET_ID  → ID del Google Sheet de Ventas
+//   PEDIDOS_SHEET_ID → ID del Google Sheet de Pedidos/ConfigStock
+var _PS = PropertiesService.getScriptProperties();
 const CONFIG_STOCK = {
   STORE_ID:        '7396246',
-  API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
-  STOCK_UMBRAL:    10,           // fallback si no hay historial de ventas
-  STOCK_MINIMO:    10,           // piso absoluto: alerta siempre si stock < este valor
+  API_TOKEN:       _PS.getProperty('TN_API_TOKEN'),
+  STOCK_UMBRAL:    10,
+  STOCK_MINIMO:    10,
   VELOCIDAD_DIAS:  60,
   SAFETY_FACTOR:   1.5,
-  VENTAS_SHEET_ID: '1-57n6RmTFQjwNFVYxNPzll8MMuV4NvXXx5v0wTvR_6g',
+  VENTAS_SHEET_ID: _PS.getProperty('VENTAS_SHEET_ID'),
   FORM_URL:        'https://escuela-dandelion.github.io/Comision-Recursos/orden-de-pedido.html',
   RETIRO_URL:      'https://escuela-dandelion.github.io/Comision-Recursos/retiro-proveedor.html',
-  SHEET_ID:        '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
+  SHEET_ID:        _PS.getProperty('PEDIDOS_SHEET_ID'),
   ADMIN_EMAIL:     'martinimaria39@gmail.com',
   TEST_MODE:       false,
   TEST_EMAIL:      'robertson.ine@gmail.com'

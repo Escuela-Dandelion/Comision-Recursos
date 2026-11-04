@@ -1,14 +1,17 @@
-// v2026-10-30c — Monica Chesta: agrega ODDIS, YEMARI, CABALLO NEGRO a sus marcas
+// v2026-11-04 — secrets movidos a PropertiesService (sin claves en git)
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
-// Recibe POST desde retiro-proveedor.html (GitHub Pages),
-// crea evento en Google Calendar y envía WhatsApp al colaborador.
+// Script Properties requeridas (Proyecto 2 — retiroProveedor):
+//   TN_API_TOKEN     → token de TiendaNube
+//   PEDIDOS_SHEET_ID → ID del Google Sheet de Pedidos/ConfigStock
+//   CALENDAR_ID      → ID del Google Calendar de retiros
 // ============================================================
 
+const _PR = PropertiesService.getScriptProperties();
 const CONFIG_RETIRO = {
-  CALENDAR_ID:      'd464a84a472a8802d4b6cd6641f19b2c71d71f257b5409e975d0cc4ee66bf0ad@group.calendar.google.com',
-  PEDIDOS_SHEET_ID: '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
+  CALENDAR_ID:      _PR.getProperty('CALENDAR_ID'),
+  PEDIDOS_SHEET_ID: _PR.getProperty('PEDIDOS_SHEET_ID'),
   PEDIDOS_GID:      '857535467'
 };
 
@@ -322,7 +325,7 @@ function formatearFecha(fechaStr) {
 
 // ── TIENDANUBE ───────────────────────────────────────────────
 const TN_STORE_ID   = '7396246';
-const TN_API_TOKEN  = 'e3d744d94ddbf13317bef0082c53e2c46fb50631';
+const TN_API_TOKEN  = _PR.getProperty('TN_API_TOKEN');
 
 function obtenerMarcasTN() {
   const resp = UrlFetchApp.fetch(
@@ -874,6 +877,7 @@ const INV_FGP = {
   'GROEN':                    { nombre: 'Monica Chesta',     email: 'monicachesta@gmail.com'    },
   'CABALLO NEGRO':            { nombre: 'Lucas De Stefano',  email: 'lmdestefano@gmail.com'     },
   'YEMARI':                   { nombre: 'Lucas De Stefano',  email: 'lmdestefano@gmail.com'     },
+  'SOL DE PAPEL':             { nombre: 'Lucas De Stefano',  email: 'lmdestefano@gmail.com'     },
   'EL MAITEN':                { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
   'ODDIS':                    { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
   'MIX Y FRUTOS SECOS':       { nombre: 'Pia Lucarno',       email: 'pialucarno@gmail.com'      },
@@ -886,8 +890,8 @@ const MARCAS_POR_EMAIL = {
   'robertson.ine@gmail.com':         null,
   'longhi.yuliana@gmail.com':        null,
   'yuliana.longhi@dandelion.edu.ar': null,
-  'lmdestefano@dandelion.edu.ar':    ['YEMARI','CABALLO NEGRO'],
-  'lmdestefano@gmail.com':           ['YEMARI','CABALLO NEGRO'],
+  'lmdestefano@dandelion.edu.ar':    ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'],
+  'lmdestefano@gmail.com':           ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'],
   'pialucarno@gmail.com':            ['EL MAITEN','ODDIS','MIX Y FRUTOS SECOS'],
   'monicachesta@gmail.com':          ['LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'],
   'martinimaria39@gmail.com':        ['YEMARI','CABALLO NEGRO','LA YAYA','GUARDIANES COLMENA','GUARDIANES DE LA COLMENA','EL MAITEN','ODDIS','GROEN','PARAISA'],
@@ -1186,7 +1190,9 @@ function getStockValorizacion() {
     (prod.variants || []).forEach(function(v) {
       var stock = parseInt(v.stock || 0);
       var costo = parseFloat(v.cost || 0);
+      var peso  = parseFloat(v.weight || 0);
       if (stock <= 0) return;
+      if (peso === 0) return; // excluye digitales (sin envío)
       var valor = stock * costo;
       total += valor;
       var varNombre = '';

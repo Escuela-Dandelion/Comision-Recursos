@@ -1,11 +1,21 @@
-// v2026-11-02d — recalcularAportesVentas: rellena col U/W vacías en filas históricas
+// v2026-11-04 — secrets movidos a PropertiesService (sin claves en git)
+// Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
+//   TN_API_TOKEN     → token de TiendaNube
+//   QR_SECRET        → secret para firma de QRs
+//   VENTAS_SHEET_ID  → ID del Google Sheet de Ventas
+//   PEDIDOS_SHEET_ID → ID del Google Sheet de Pedidos/ConfigStock
+//   GREEN_INSTANCE   → instancia Green API (WhatsApp OTP)
+//   GREEN_TOKEN      → token Green API (WhatsApp OTP)
+var _P = PropertiesService.getScriptProperties();
 var CONFIG = {
   STORE_ID:        '7396246',
-  API_TOKEN:       'e3d744d94ddbf13317bef0082c53e2c46fb50631',
-  SECRET:          'retiro2026',
+  API_TOKEN:       _P.getProperty('TN_API_TOKEN'),
+  SECRET:          _P.getProperty('QR_SECRET'),
+  GREEN_INSTANCE:  _P.getProperty('GREEN_INSTANCE'),
+  GREEN_TOKEN:     _P.getProperty('GREEN_TOKEN'),
   TIENDA_NOMBRE:   'Diente de León',
   STAFF_TOKEN:     'test',
-  VENTAS_SHEET_ID: '1-57n6RmTFQjwNFVYxNPzll8MMuV4NvXXx5v0wTvR_6g',
+  VENTAS_SHEET_ID: _P.getProperty('VENTAS_SHEET_ID'),
 
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
@@ -1002,7 +1012,7 @@ function registrarEnVentas(order) {
         getOrderDiscount(order),             // col S (índice 18): descuento total del pedido
         getDiscountType(order),              // col T (índice 19): tipo de descuento
         aporteLinea,                         // col U (índice 20): aporte al grado de esta línea
-        gradoValido,                         // col V (índice 21): grado destino normalizado
+        aporteLinea > 0 ? gradoValido : '',  // col V (índice 21): grado destino — vacío si no hay aporte
         aporteEscuelaLinea                   // col W (índice 22): aporte a la escuela de esta línea
       ]);
     });
@@ -1055,8 +1065,8 @@ function recalcularAportesVentas() {
     }
 
     // col U = índice 21 en A1 notation (col V hoja = índice 22)
-    sheet.getRange(i + 1, 21).setValue(aporteGrado);      // col U
-    sheet.getRange(i + 1, 22).setValue(gradoNorm);        // col V
+    sheet.getRange(i + 1, 21).setValue(aporteGrado);                      // col U
+    sheet.getRange(i + 1, 22).setValue(aporteGrado > 0 ? gradoNorm : ''); // col V — vacío si no hay aporte
     sheet.getRange(i + 1, 23).setValue(aporteEscuela);    // col W
     actualizadas++;
   }
@@ -1951,7 +1961,7 @@ function registrarWebhook() {
   var url = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/webhooks';
   var payload = JSON.stringify({
     event: 'order/paid',
-    url: 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec'
+    url: ScriptApp.getService().getUrl()
   });
   var resp = UrlFetchApp.fetch(url, {
     method: 'post',
@@ -2136,8 +2146,8 @@ var AUTH_EMAILS = {
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
   'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', marcas: ['LA YAYA','GUARDIANES COLMENA','GROEN','ODDIS','YEMARI','CABALLO NEGRO'] },
-  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
-  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE ORO'] },
+  'lmdestefano@dandelion.edu.ar':    { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'] },
+  'lmdestefano@gmail.com':           { role: 'FGP',   name: 'Lucas',  marcas: ['YEMARI','CABALLO NEGRO','SOL DE PAPEL'] },
   'delfinasalvettilarrea@gmail.com': { role: 'referente', name: 'Delfina' },
   'jdiaz.elencuentro@gmail.com':     { role: 'referente', name: 'Juan' },
   'karytramitesescolares@gmail.com': { role: 'referente', name: 'Karina' },
@@ -2973,7 +2983,7 @@ function apiProductos(email) {
     var pedidosActivos = {};
     try {
       var ACTIVOS_EST = ['solicitado', 'confirmado', 'en camino', 'entregado en escuela', 'recibido', 'en proceso'];
-      var ss2 = SpreadsheetApp.openById('1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I');
+      var ss2 = SpreadsheetApp.openById(CONFIG.PEDIDOS_SHEET_ID);
       var pedSheet = null;
       var allSheets = ss2.getSheets();
       for (var si = 0; si < allSheets.length; si++) {
