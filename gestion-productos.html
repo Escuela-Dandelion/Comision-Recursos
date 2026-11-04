@@ -671,8 +671,16 @@ function cargarProductos() {
       if (!d.ok) { document.getElementById('loading-overlay').textContent = 'Error: ' + (d.error || 'desconocido'); return; }
       var todos = d.productos || [];
       if (currentUser._impersonando && currentUser.marcas && currentUser.marcas.length > 0) {
-        var marcasUp = currentUser.marcas.map(function(m) { return m.toUpperCase(); });
-        _productos = todos.filter(function(p) { return marcasUp.indexOf(String(p.brand || '').toUpperCase()) !== -1; });
+        // Convertir marcas a proveedores para cubrir todas las sub-marcas del proveedor
+        var proveedoresImp = [];
+        currentUser.marcas.forEach(function(m) {
+          var prov = MARCA_A_PROVEEDOR[m.toUpperCase()] || m;
+          if (proveedoresImp.indexOf(prov) === -1) proveedoresImp.push(prov);
+        });
+        _productos = todos.filter(function(p) {
+          var prov = p.proveedor || MARCA_A_PROVEEDOR[String(p.brand || '').toUpperCase()] || p.brand || '';
+          return proveedoresImp.indexOf(prov) !== -1;
+        });
       } else {
         _productos = todos;
       }

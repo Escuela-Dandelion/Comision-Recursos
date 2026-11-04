@@ -28,3 +28,6 @@ var MARCA_A_PROVEEDOR = {
 function marcaAProveedor(marca) {
   return MARCA_A_PROVEEDOR[(marca || '').trim().toUpperCase()] || null;
 }
+
+// Proveedores que NO deben aparecer en Dashboard Referentes (talleres, digitales, servicios)
+var PROVEEDORES_EXCLUIR_REFERENTES = ['Carlos Villegas'];

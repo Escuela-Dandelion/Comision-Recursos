@@ -1428,8 +1428,8 @@ function aplicarFiltrosVentas() {
     if (proveedor && (!v.marcas || !v.marcas.some(function(m){ return (marcaAProveedor(m) || m) === proveedor; }))) return false;
     if (marca && (!v.marcas || v.marcas.indexOf(marca) === -1)) return false;
     if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0 && _currentImpersonation.role !== 'ADMIN') {
-      var impMarcasUp = _currentImpersonation.marcas.map(function(m) { return m.toUpperCase(); });
-      if (!v.marcas || !v.marcas.some(function(m) { return impMarcasUp.indexOf(m.toUpperCase()) !== -1; })) return false;
+      var proveedoresImp = _currentImpersonation.marcas.map(function(m) { return marcaAProveedor(m) || m; });
+      if (!v.marcas || !v.marcas.some(function(m) { return proveedoresImp.indexOf(marcaAProveedor(m) || m) !== -1; })) return false;
     }
     if (orden && String(v.numero) !== orden) return false;
     if (comprador && v.nombre.toLowerCase().indexOf(comprador) === -1) return false;

@@ -628,7 +628,12 @@ function initDashboard(d){
   document.getElementById('loading-dash').style.display='none';
   var _ahora=new Date(); var _fmtFecha=_ahora.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+_ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha+' · build 3';
-  ALL_ROWS        = (d.rows||[]).map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
+  ALL_ROWS        = (d.rows||[])
+    .filter(function(r){
+      var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
+      return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(prov) === -1;
+    })
+    .map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
   ALL_MESES       = d.meses_todos||[];
   ALL_RETIROS_MAP = d.retiros_map||{};
 
