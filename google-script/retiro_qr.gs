@@ -1,4 +1,4 @@
-// v2026-11-04e — _marcasDeProveedores helper; _authGestion y apiAuthEmail compat proveedores→marcas
+// v2026-11-04f — proveedor en apiProductos y apiDashboard rows; 2 filtros separados
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2088,6 +2088,7 @@ function apiDashboard(email) {
       email:               email,
       producto:            producto,
       marca:               marca,
+      proveedor:           marcaToProveedor(marca.toUpperCase()) || marca,
       cantidad:            cantidad,
       total_linea:         Math.round(subtotalBrutoLinea * 100) / 100,
       total_pagado_linea:  Math.round(totalPagadoLinea * 100) / 100,
@@ -3017,6 +3018,7 @@ function apiProductos(email) {
         imagen:    p.images && p.images.length > 0 ? p.images[0].src : '',
         imagenes:  (p.images || []).map(function(img) { return { id: String(img.id), src: img.src }; }),
         brand:     String(p.brand || ''),
+        proveedor: marcaToProveedor(String(p.brand || '').toUpperCase()) || String(p.brand || ''),
         publicado: p.published !== false,
         esDigital: CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.id)) !== -1,
         semaforo:  semProd,

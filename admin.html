@@ -11,6 +11,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="config.js"></script>
 <style>
   @font-face {
     font-family: 'Antropos';
@@ -522,7 +523,12 @@
               <option value="">Todos</option>
             </select>
           </div>
-          <div><label>Proveedor / Marca</label>
+          <div><label>Proveedor</label>
+            <select id="vfilt-proveedor" onchange="aplicarFiltrosVentas()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div><label>Marca</label>
             <select id="vfilt-marca" onchange="aplicarFiltrosVentas()">
               <option value="">Todos</option>
             </select>
@@ -1265,14 +1271,20 @@ function ordenarGrados(arr) {
 }
 
 function poblarFiltrosVentas() {
-  var staffSet = {}, prodSet = {}, mesSet = {}, marcaSet = {};
+  var staffSet = {}, prodSet = {}, mesSet = {}, marcaSet = {}, proveedorSet = {};
   _ventas.forEach(function(v){
     if (v.staff) staffSet[v.staff] = true;
     v.productos.split(' | ').forEach(function(p){
       var nom = p.replace(/^\d+x /, '').trim();
       if (nom) prodSet[nom] = true;
     });
-    (v.marcas || []).forEach(function(m){ if (m) marcaSet[m] = true; });
+    (v.marcas || []).forEach(function(m){
+      if (m) {
+        marcaSet[m] = true;
+        var prov = marcaAProveedor(m) || m;
+        proveedorSet[prov] = true;
+      }
+    });
     if (v.fecha) {
       var parts = v.fecha.split('/');
       if (parts.length === 3) { var key = parts[2] + '-' + parts[1]; mesSet[key] = true; }
@@ -1313,7 +1325,16 @@ function poblarFiltrosVentas() {
   Object.keys(prodSet).sort().forEach(function(p){ var o = document.createElement('option'); o.value=p; o.textContent=p; selP.appendChild(o); });
   selP.value = curP;
 
-  // Marcas / Proveedores
+  // Proveedores (normalizados via MARCA_A_PROVEEDOR)
+  var selProv = document.getElementById('vfilt-proveedor');
+  if (selProv) {
+    var curProv = selProv.value;
+    while (selProv.options.length > 1) selProv.remove(1);
+    Object.keys(proveedorSet).sort().forEach(function(p){ var o = document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o); });
+    selProv.value = curProv;
+  }
+
+  // Marcas (brand names de TiendaNube)
   var selM = document.getElementById('vfilt-marca');
   if (selM) {
     var curM = selM.value;
@@ -1368,6 +1389,7 @@ function aplicarFiltrosVentas() {
   var esReferente = currentUser && currentUser.role === 'referente';
   if (esReferente && currentUser.name && !referente) referente = currentUser.name;
   var producto   = (document.getElementById('vfilt-producto') ? document.getElementById('vfilt-producto').value : '').toLowerCase();
+  var proveedor  = document.getElementById('vfilt-proveedor') ? document.getElementById('vfilt-proveedor').value : '';
   var marca      = document.getElementById('vfilt-marca') ? document.getElementById('vfilt-marca').value : '';
   var comprador  = (document.getElementById('vfilt-comprador') ? document.getElementById('vfilt-comprador').value : '').toLowerCase();
   var orden      = (document.getElementById('vfilt-orden') ? document.getElementById('vfilt-orden').value : '').trim();
@@ -1382,6 +1404,7 @@ function aplicarFiltrosVentas() {
     if (grado && v.grado !== grado) return false;
     if (referente && v.staff !== referente) return false;
     if (producto && v.productos.toLowerCase().indexOf(producto) === -1) return false;
+    if (proveedor && (!v.marcas || !v.marcas.some(function(m){ return (marcaAProveedor(m) || m) === proveedor; }))) return false;
     if (marca && (!v.marcas || v.marcas.indexOf(marca) === -1)) return false;
     if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0 && _currentImpersonation.role !== 'ADMIN') {
       var impMarcasUp = _currentImpersonation.marcas.map(function(m) { return m.toUpperCase(); });

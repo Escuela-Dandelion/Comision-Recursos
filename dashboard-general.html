@@ -8,6 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard General — Diente de León</title>
+  <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
@@ -288,6 +289,11 @@
       <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
+      <div class="filter-label">Proveedor</div>
+      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
+        <option value="">Todos los proveedores</option>
+      </select>
+
       <div class="filter-label">Marca</div>
       <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
         <option value="">Todas las marcas</option>
@@ -448,7 +454,8 @@
 </div>
 
 <script>
-var APPS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var APPS_URL      = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var PROVEEDOR_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 var PALETTE  = ['#a8c4e0','#b5d5c5','#c9b8d8','#f0c9a0','#aad4e8','#d4b8c7','#b8d4b8','#d4c9a8','#c4b8d8','#a8d4c4'];
 var ALL_ROWS  = [];
 var ALL_MESES = [];
@@ -458,6 +465,7 @@ var currentAnio      = '';
 var currentMes       = '';
 var currentDesde     = '';
 var currentHasta     = '';
+var currentProveedor = '';
 var currentMarca     = '';
 var currentProducto  = '';
 var _lastFilteredRows = [];
@@ -667,6 +675,18 @@ function initDashboard(d) {
   // Meses
   poblarMeses(currentAnio);
 
+  // Proveedores (normalizados)
+  var provSet = {};
+  ALL_ROWS.forEach(function(r){
+    var prov = r.proveedor || marcaAProveedor(r.marca) || r.marca;
+    if (prov) provSet[prov] = true;
+  });
+  var selProv = document.getElementById('filtro-proveedor');
+  selProv.innerHTML = '<option value="">Todos los proveedores</option>';
+  Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
+    var o = document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
+  });
+
   // Marcas
   var marcaSet = {};
   ALL_ROWS.forEach(function(r){ if (r.marca) marcaSet[r.marca] = true; });
@@ -711,6 +731,7 @@ function poblarProductos(marca) {
 function aplicarFiltros() {
   var nuevoAnio  = document.getElementById('filtro-anio').value;
   if (nuevoAnio !== currentAnio) { currentAnio = nuevoAnio; poblarMeses(currentAnio); }
+  currentProveedor = document.getElementById('filtro-proveedor').value;
   var nuevaMarca = document.getElementById('filtro-marca').value;
   if (nuevaMarca !== currentMarca) { currentMarca = nuevaMarca; poblarProductos(currentMarca); }
   currentMes      = document.getElementById('filtro-mes').value;
@@ -734,6 +755,7 @@ function render() {
       return true;
     });
   }
+  if (currentProveedor) rows = rows.filter(function(r){ return (r.proveedor || marcaAProveedor(r.marca) || r.marca) === currentProveedor; });
   if (currentMarca)    rows = rows.filter(function(r){ return r.marca === currentMarca; });
   if (currentProducto) rows = rows.filter(function(r){ return r.producto === currentProducto; });
   _lastFilteredRows = rows;
@@ -1107,7 +1129,7 @@ function updateJardinCard() {
 
 function fetchStockValorizacion() {
   document.getElementById('activo-stock').textContent = 'cargando…';
-  fetch(APPS_URL + '?action=getStockValorizacion', { redirect: 'follow' })
+  fetch(PROVEEDOR_URL + '?action=getStockValorizacion', { redirect: 'follow' })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!d.ok) { document.getElementById('activo-stock').textContent = 'Error'; return; }

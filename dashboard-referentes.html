@@ -8,6 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Referentes — Diente de León</title>
+  <script src="config.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f6f9; color: #1a1a1a; }
@@ -393,9 +394,14 @@
       <input type="date" class="filter-date" id="filtro-hasta" onchange="aplicarFiltros()">
       <button class="filter-clear-dates" onclick="limpiarFechas()">✕ Limpiar fechas</button>
 
-      <div class="filter-label">Marca / Proveedor</div>
-      <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
+      <div class="filter-label">Proveedor</div>
+      <select class="filter-select" id="filtro-proveedor" onchange="aplicarFiltros()">
         <option value="">Todos los proveedores</option>
+      </select>
+
+      <div class="filter-label">Marca</div>
+      <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
+        <option value="">Todas las marcas</option>
       </select>
 
       <div class="filter-label" id="lbl-estado" style="display:none">Estado de entrega</div>
@@ -431,6 +437,7 @@ var DASH_CACHE_KEY  = 'dandelion_dash_v2';
 var currentMes      = '';
 var currentDesde    = '';
 var currentHasta    = '';
+var currentProveedor = '';
 var currentMarca    = '';
 var currentEstado   = ''; // '' | 'Entregado' | 'Pendiente'
 var selectedGrados = []; // [] = todos
@@ -461,6 +468,7 @@ function gradoIdx(g){
   if(s.indexOf('jard')!==-1) return 0; if(g==='Escuela') return 100;
   var m=s.match(/^(\d+)/); return m?parseInt(m[1]):100;
 }
+function nivelGrado(g){ var idx=gradoIdx(g); return (idx>=8&&idx<100)?'sec':'pri'; }
 function sortGrados(arr){
   return arr.slice().sort(function(a,b){ var ai=gradoIdx(a),bi=gradoIdx(b); return ai!==bi?ai-bi:String(a).localeCompare(String(b),'es'); });
 }
@@ -664,12 +672,24 @@ function initDashboard(d){
   });
   selectedGrados=[];
 
+  // Proveedores (normalizados)
+  var provSet={};
+  ALL_ROWS.forEach(function(r){
+    var prov=r.proveedor||marcaAProveedor(r.marca)||r.marca;
+    if(prov) provSet[prov]=true;
+  });
+  var selProv=document.getElementById('filtro-proveedor');
+  selProv.innerHTML='<option value="">Todos los proveedores</option>';
+  Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
+    var o=document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
+  });
+
   // Marcas
   var marcaSet={};
   ALL_ROWS.forEach(function(r){ if(r.marca) marcaSet[r.marca]=true; });
   var marcas=Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); });
   var selP=document.getElementById('filtro-marca');
-  selP.innerHTML='<option value="">Todos los proveedores</option>';
+  selP.innerHTML='<option value="">Todas las marcas</option>';
   marcas.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; selP.appendChild(o); });
 
   document.getElementById('contenido').style.display='block';
@@ -697,6 +717,7 @@ function aplicarFiltros(){
   currentMes=document.getElementById('filtro-mes').value;
   currentDesde=document.getElementById('filtro-desde').value;
   currentHasta=document.getElementById('filtro-hasta').value;
+  currentProveedor=document.getElementById('filtro-proveedor').value;
   currentMarca=document.getElementById('filtro-marca').value;
   currentEstado=document.getElementById('filtro-estado').value;
   render();
@@ -714,6 +735,7 @@ function getRows(){
     if(currentHasta && f>currentHasta) return false;
     return true;
   });
+  if(currentProveedor) rows=rows.filter(function(r){ return (r.proveedor||marcaAProveedor(r.marca)||r.marca)===currentProveedor; });
   if(currentMarca) rows=rows.filter(function(r){ return r.marca===currentMarca; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   if(currentEstado && Object.keys(ALL_RETIROS_MAP).length>0){

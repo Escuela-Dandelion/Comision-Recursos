@@ -9,6 +9,7 @@
 <title>Gestión de Productos — Diente de León</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="config.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <style>
@@ -166,30 +167,12 @@ header .user:hover { color: #fff; }
 .pill-filtro.activa-rojo    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
 .pill-filtro.activa-naranja { background: #ffedd5; color: #9a3412; border-color: #f97316; }
 .pill-filtro.activa-verde   { background: #dcfce7; color: #166534; border-color: #22c55e; }
-.marca-select-wrap { position:relative; min-width:160px; }
-.marca-select-wrap input {
+.gp-filtro-sel {
   width:100%; border:1px solid var(--border); border-radius:8px;
-  padding:7px 28px 7px 10px; font-size:12px; background:#f9fafb;
-  outline:none; cursor:pointer; color:var(--green-dark); font-weight:600;
+  padding:7px 10px; font-size:12px; background:#f9fafb;
+  color:var(--muted); font-weight:600; cursor:pointer; outline:none;
 }
-.marca-select-wrap input::placeholder { color:var(--muted); font-weight:400; }
-.marca-select-wrap input.activa { border-color:var(--green); background:var(--green-light); }
-.marca-select-wrap .chevron {
-  position:absolute; right:8px; top:50%; transform:translateY(-50%);
-  pointer-events:none; color:var(--muted); font-size:10px;
-}
-.marca-dropdown {
-  display:none; position:absolute; top:calc(100% + 4px); left:0; right:0;
-  background:#fff; border:1px solid var(--border); border-radius:8px;
-  box-shadow:0 4px 12px rgba(0,0,0,.1); z-index:200; max-height:220px; overflow-y:auto;
-}
-.marca-dropdown.open { display:block; }
-.marca-opt {
-  padding:8px 12px; font-size:12px; cursor:pointer; color:#1a1a2e;
-}
-.marca-opt:hover { background:var(--green-light); color:var(--green-dark); }
-.marca-opt.seleccionada { background:var(--green-light); color:var(--green-dark); font-weight:700; }
-.marca-opt.oculta { display:none; }
+.gp-filtro-sel.activo { border-color:var(--green); background:var(--green-light); color:var(--green-dark); }
 .stock-badge {
   display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
@@ -350,7 +333,7 @@ textarea.field { min-height: 90px; resize: vertical; }
   .lista-header h1 { font-size: 15px; }
   .lista-header-controles { flex-wrap: wrap; gap: 6px; }
   .lista-header-controles > div:first-child { flex: 0 0 auto; }
-  #filtros-marca-wrap { flex: 1 1 140px !important; min-width: 120px; }
+  #filtros-proveedor-wrap, #filtros-marca-wrap { flex: 1 1 120px !important; min-width: 100px; }
   .search-box { flex: 1 1 140px; min-width: 120px; }
   #contador { font-size: 11px; }
 
@@ -418,15 +401,15 @@ textarea.field { min-height: 90px; resize: vertical; }
               <span class="pill-filtro" id="pill-verde"   onclick="toggleFiltroSem('verde')"><span class="sem-dot verde"></span>Verde</span>
             </div>
           </div>
-          <div class="marca-select-wrap" id="filtros-marca-wrap" style="display:none; flex:1;">
-            <input id="filtro-marca-input" type="text" placeholder="Proveedor / Marca..."
-              autocomplete="off"
-              onfocus="abrirMarcaDropdown()"
-              onclick="abrirMarcaDropdown()"
-              oninput="filtrarOpcionesMarca()"
-              onkeydown="marcaKeydown(event)">
-            <span class="chevron">▼</span>
-            <div class="marca-dropdown" id="marca-dropdown"></div>
+          <div id="filtros-proveedor-wrap" style="display:none; flex:1 1 120px; min-width:100px;">
+            <select id="filtro-proveedor-sel" class="gp-filtro-sel" onchange="seleccionarProveedor(this.value)">
+              <option value="">Proveedor...</option>
+            </select>
+          </div>
+          <div id="filtros-marca-wrap" style="display:none; flex:1 1 120px; min-width:100px;">
+            <select id="filtro-marca-sel" class="gp-filtro-sel" onchange="seleccionarMarca(this.value)">
+              <option value="">Marca...</option>
+            </select>
           </div>
           <div class="search-box">
             <span style="color:#9ca3af">🔍</span>
@@ -618,8 +601,12 @@ function auditarCostos() {
   }
   var q = document.getElementById('buscar').value.toLowerCase().trim();
   var base = _productos.filter(function(p) {
-    if (_filtroSem   && p.semaforo !== _filtroSem)   return false;
-    if (_filtroMarca && p.brand    !== _filtroMarca) return false;
+    if (_filtroSem) { if (p.semaforo !== _filtroSem) return false; }
+    if (_filtroProveedor) {
+      var prov = p.proveedor || MARCA_A_PROVEEDOR[String(p.brand || '').toUpperCase()] || p.brand || '';
+      if (prov !== _filtroProveedor) return false;
+    }
+    if (_filtroMarca && p.brand !== _filtroMarca) return false;
     if (!q) return true;
     if (p.nombre.toLowerCase().indexOf(q) !== -1) return true;
     return (p.variantes || []).some(function(v) { return (v.sku || '').toLowerCase().indexOf(q) !== -1; });
@@ -690,7 +677,7 @@ function cargarProductos() {
         _productos = todos;
       }
       document.getElementById('loading-overlay').style.display = 'none';
-      renderFiltrosMarca(_productos);
+      renderFiltros(_productos);
       renderLista(_productos);
       var autoId = new URLSearchParams(window.location.search).get('productoId');
       if (autoId) {
@@ -845,8 +832,10 @@ function renderLista(productos) {
   }).join('');
 }
 
-var _filtroSem   = null;
-var _filtroMarca = null;
+var _filtroSem       = null;
+var _filtroProveedor = null;
+var _filtroMarca     = null;
+
 
 function toggleFiltroSem(color) {
   _filtroSem = _filtroSem === color ? null : color;
@@ -857,80 +846,62 @@ function toggleFiltroSem(color) {
   filtrar();
 }
 
-function renderFiltrosMarca(productos) {
+function renderFiltros(productos) {
+  // Proveedor
+  var proveedores = [];
+  productos.forEach(function(p) {
+    var prov = p.proveedor || MARCA_A_PROVEEDOR[String(p.brand || '').toUpperCase()] || p.brand || '';
+    if (prov && proveedores.indexOf(prov) === -1) proveedores.push(prov);
+  });
+  proveedores.sort();
+  var wrapP = document.getElementById('filtros-proveedor-wrap');
+  var selP  = document.getElementById('filtro-proveedor-sel');
+  if (proveedores.length < 2) {
+    wrapP.style.display = 'none';
+  } else {
+    wrapP.style.display = 'block';
+    selP.innerHTML = '<option value="">Proveedor...</option>';
+    proveedores.forEach(function(pr) { selP.innerHTML += '<option value="' + pr + '">' + pr + '</option>'; });
+    if (_filtroProveedor) selP.value = _filtroProveedor;
+  }
+
+  // Marca
   var marcas = [];
   productos.forEach(function(p) { if (p.brand && marcas.indexOf(p.brand) === -1) marcas.push(p.brand); });
   marcas.sort();
-  var wrap = document.getElementById('filtros-marca-wrap');
-  if (marcas.length < 2) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'block';
-  var dd = document.getElementById('marca-dropdown');
-  dd.innerHTML = marcas.map(function(m) {
-    return '<div class="marca-opt" data-marca="' + m + '" onmousedown="seleccionarMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</div>';
-  }).join('');
-}
-
-function abrirMarcaDropdown() {
-  var dd = document.getElementById('marca-dropdown');
-  var marcas = [];
-  _productos.forEach(function(p) { if (p.brand && marcas.indexOf(p.brand) === -1) marcas.push(p.brand); });
-  marcas.sort();
-  dd.innerHTML = marcas.map(function(m) {
-    return '<div class="marca-opt' + (m === _filtroMarca ? ' seleccionada' : '') + '" data-marca="' + m + '" onmousedown="seleccionarMarca(\'' + m.replace(/'/g,"\\'") + '\')">' + m + '</div>';
-  }).join('');
-  document.getElementById('filtro-marca-input').value = '';
-  dd.classList.add('open');
-}
-
-function cerrarMarcaDropdown() {
-  document.getElementById('marca-dropdown').classList.remove('open');
-  // Si el texto no coincide con la selección actual, restaurar
-  var input = document.getElementById('filtro-marca-input');
-  input.value = _filtroMarca || '';
-  if (!_filtroMarca) input.classList.remove('activa');
-}
-
-function filtrarOpcionesMarca() {
-  var q = document.getElementById('filtro-marca-input').value.toLowerCase();
-  document.querySelectorAll('#marca-dropdown .marca-opt').forEach(function(el) {
-    var match = el.dataset.marca.toLowerCase().indexOf(q) !== -1;
-    el.classList.toggle('oculta', !match);
-    el.classList.toggle('seleccionada', el.dataset.marca === _filtroMarca);
-  });
-  document.getElementById('marca-dropdown').classList.add('open');
-}
-
-function seleccionarMarca(marca) {
-  if (_filtroMarca === marca) {
-    _filtroMarca = null;
-    document.getElementById('filtro-marca-input').value = '';
-    document.getElementById('filtro-marca-input').classList.remove('activa');
+  var wrapM = document.getElementById('filtros-marca-wrap');
+  var selM  = document.getElementById('filtro-marca-sel');
+  if (marcas.length < 2) {
+    wrapM.style.display = 'none';
   } else {
-    _filtroMarca = marca;
-    document.getElementById('filtro-marca-input').value = marca;
-    document.getElementById('filtro-marca-input').classList.add('activa');
+    wrapM.style.display = 'block';
+    selM.innerHTML = '<option value="">Marca...</option>';
+    marcas.forEach(function(m) { selM.innerHTML += '<option value="' + m + '">' + m + '</option>'; });
+    if (_filtroMarca) selM.value = _filtroMarca;
   }
-  document.getElementById('marca-dropdown').classList.remove('open');
+}
+
+function seleccionarProveedor(proveedor) {
+  _filtroProveedor = proveedor || null;
+  document.getElementById('filtro-proveedor-sel').classList.toggle('activo', !!proveedor);
   filtrar();
 }
 
-function marcaKeydown(e) {
-  if (e.key === 'Escape') { _filtroMarca = null; cerrarMarcaDropdown(); filtrar(); }
-  if (e.key === 'Enter') {
-    var visible = document.querySelectorAll('#marca-dropdown .marca-opt:not(.oculta)');
-    if (visible.length === 1) seleccionarMarca(visible[0].dataset.marca);
-  }
+function seleccionarMarca(marca) {
+  _filtroMarca = marca || null;
+  document.getElementById('filtro-marca-sel').classList.toggle('activo', !!marca);
+  filtrar();
 }
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.marca-select-wrap')) cerrarMarcaDropdown();
-});
 
 function filtrar() {
   var q = document.getElementById('buscar').value.toLowerCase().trim();
   var filtrados = _productos.filter(function(p) {
-    if (_filtroSem   && p.semaforo !== _filtroSem)   return false;
-    if (_filtroMarca && p.brand    !== _filtroMarca) return false;
+    if (_filtroSem) { if (p.semaforo !== _filtroSem) return false; }
+    if (_filtroProveedor) {
+      var prov = p.proveedor || MARCA_A_PROVEEDOR[String(p.brand || '').toUpperCase()] || p.brand || '';
+      if (prov !== _filtroProveedor) return false;
+    }
+    if (_filtroMarca && p.brand !== _filtroMarca) return false;
     if (!q) return true;
     if (p.nombre.toLowerCase().indexOf(q) !== -1) return true;
     return (p.variantes || []).some(function(v) { return (v.sku || '').toLowerCase().indexOf(q) !== -1; });
