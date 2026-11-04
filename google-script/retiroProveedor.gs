@@ -134,6 +134,13 @@ function doGet(e) {
         if (!listaMap[key]) listaMap[key] = { nombre: key, tel: telMap[key] };
       });
       let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      // 4. Si el email pertenece a un FGP con marcas, filtrar solo sus marcas
+      const emailGP = (e.parameter.email || '').toLowerCase().trim();
+      const marcasGP = MARCAS_POR_EMAIL[emailGP];
+      if (Array.isArray(marcasGP)) {
+        const marcasUp = marcasGP.map(function(m){ return m.toUpperCase(); });
+        lista = lista.filter(function(p){ return marcasUp.indexOf(p.nombre.toUpperCase()) !== -1; });
+      }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, proveedores: lista }))
         .setMimeType(ContentService.MimeType.JSON);
