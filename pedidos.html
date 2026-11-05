@@ -996,14 +996,14 @@ async function cargarLista(incluyeCerrados) {
       fetch(SCRIPT_URL + '?action=getTelProveedores').then(r => r.json()).catch(() => ({ ok: false }))
     ]);
 
-    if (!respPedidos.ok || respPedidos._usarCSV || !respPedidos.pedidos) {
-      // Fallback al CSV
+    if (!respPedidos.ok || respPedidos._usarCSV || !Array.isArray(respPedidos.pedidos) || respPedidos.pedidos.length === 0) {
+      // Fallback al CSV (también cuando GAS devuelve array vacío — puede ser bug del GAS no deployado)
       const csvResp = await fetch(SHEET_CSV + '&t=' + Date.now());
       const text = await csvResp.text();
       todosLosPedidos = csvAObjetos(text);
       if (!_incluyeCerrados) todosLosPedidos = todosLosPedidos.filter(p => p.estado !== 'Cerrado');
     } else {
-      todosLosPedidos = respPedidos.pedidos || [];
+      todosLosPedidos = respPedidos.pedidos;
     }
     var btnC = document.getElementById('btn-toggle-cerrados');
     if (btnC) btnC.textContent = _incluyeCerrados ? '🔒 Ocultar Cerrados' : '🔒 Ver Cerrados';
