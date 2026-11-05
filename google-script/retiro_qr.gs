@@ -1,4 +1,4 @@
-// v2026-11-05a — registrarEnVentas escribe Proveedor en col M y Marca (brand TN) en col X; getRetirosData devuelve marca
+// v2026-11-05b — agrega completarMarcasEnVentas() para backfill col X por SKU desde TiendaNube
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3338,4 +3338,67 @@ function _calcularCambiosMarcas() {
     }
   }
   return cambios;
+}
+
+// Completa col X (Marca) en filas de Ventas donde esté vacía.
+// Estrategia: 1) lookup SKU → brand desde TiendaNube, 2) fallback para proveedores con marca única.
+// Correr UNA VEZ desde el editor de GAS.
+function completarMarcasEnVentas() {
+  // 1. Construir mapa SKU → brand desde TiendaNube (paginado)
+  var skuABrand = {};
+  for (var page = 1; page <= 20; page++) {
+    var resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page,
+      { headers: { 'Authentication': 'bearer ' + CONFIG.API_TOKEN, 'User-Agent': CONFIG.TIENDA_NOMBRE }, muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) break;
+    var prods = JSON.parse(resp.getContentText());
+    if (!prods || !prods.length) break;
+    prods.forEach(function(p) {
+      var brand = String(p.brand || '').trim().toUpperCase();
+      if (!brand) return;
+      (p.variants || []).forEach(function(v) {
+        var sku = String(v.sku || '').trim();
+        if (sku) skuABrand[sku] = brand;
+      });
+    });
+    if (prods.length < 200) break;
+  }
+  Logger.log('SKUs mapeados desde TiendaNube: ' + Object.keys(skuABrand).length);
+
+  var sheet = getVentasSheet();
+  var data  = sheet.getDataRange().getValues();
+
+  // Asegurar header en col X (columna 24, índice 23)
+  if (!String(data[0][23] || '').trim()) {
+    sheet.getRange(1, 24).setValue('Marca');
+  }
+
+  // 2. Preparar valores para col X de todas las filas (batch write)
+  var colX = data.slice(1).map(function(row) {
+    var existing = String(row[23] || '').trim();
+    if (existing) return [existing]; // ya tiene marca, mantener
+
+    var sku  = String(row[6]  || '').trim(); // col G
+    var prov = String(row[12] || '').trim(); // col M
+    var brand = skuABrand[sku] || '';
+
+    // Fallback: proveedor con exactamente 1 marca en el mapeo
+    if (!brand) {
+      var marcasDeProv = Object.keys(MARCA_A_PROVEEDOR).filter(function(m) {
+        return MARCA_A_PROVEEDOR[m] === prov;
+      });
+      if (marcasDeProv.length === 1) brand = marcasDeProv[0];
+    }
+    return [brand];
+  });
+
+  if (colX.length > 0) {
+    sheet.getRange(2, 24, colX.length, 1).setValues(colX);
+  }
+
+  var completadas = colX.filter(function(v) { return v[0]; }).length;
+  var vacias      = colX.length - completadas;
+  Logger.log('Completadas: ' + completadas + ' | Sin match: ' + vacias + ' de ' + colX.length + ' filas.');
+  try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
 }
