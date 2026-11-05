@@ -1,4 +1,4 @@
-// v2026-11-04c — refactor: getMarcasFGP() consulta retiro_qr.gs como única fuente de verdad
+// v2026-11-05a — agrega getVentasSinStock + obtenerSkusStockInfinito para ventas-sin-stock.html
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -14,6 +14,25 @@ const CONFIG_RETIRO = {
   PEDIDOS_SHEET_ID: _PR.getProperty('PEDIDOS_SHEET_ID'),
   PEDIDOS_GID:      '857535467'
 };
+
+// Copia del mapping de retiro_qr.gs — cubre nombres viejos y nuevos post-migración
+const MARCA_A_PROVEEDOR_RP = {
+  'TIENDA LIMÓN': 'Tienda Limón', 'TIENDA LIMON': 'Tienda Limón',
+  'EL MAITEN': 'El Maiten',       'PAJARITO AMARILLO': 'Pajarito Amarillo',
+  'SOL DE PAPEL': 'Sol de Oro',   'GUARDIANES COLMENA': 'Guardianes de la Colmena',
+  'MIX Y FRUTOS SECOS': 'BioSalud', 'TALLER': 'Carlos Villegas',
+  'YEMARI': 'Yemari',             'CABALLO NEGRO': 'Caballo Negro',
+  'LA YAYA': 'La Yaya',           'GUARDIANES DE LA COLMENA': 'Guardianes de la Colmena',
+  'GROEN': 'Groen',               'ODDIS': 'Oddis',
+  'PARAISA': 'Paraisa',           'NAZARENO': 'Nazareno',
+  'GRANOLA': 'El Maiten',         'PIZZA': 'Pajarito Amarillo',
+  'EL ARISTEO': 'Tienda Limón',   'ARISTEO': 'Tienda Limón',
+  'BENDITA LLUVIA': 'Tienda Limón', 'CALANDRI': 'Tienda Limón',
+};
+
+function marcaToProveedorRP(marca) {
+  return MARCA_A_PROVEEDOR_RP[(marca || '').trim().toUpperCase()] || null;
+}
 
 const PHONE_MAP = {
   'Ines Robertson':          '5493512112050',
@@ -92,11 +111,11 @@ function doGet(e) {
         const excluidos = excluir.split(',').map(function(s){ return s.trim(); });
         pedidos = pedidos.filter(function(p){ return excluidos.indexOf(p.estado) === -1; });
       }
-      const marcasFGP = getMarcasFGP(email);
-      if (Array.isArray(marcasFGP)) {
+      const proveedoresFGP = getMarcasFGP(email);
+      if (Array.isArray(proveedoresFGP)) {
+        const provsLower = proveedoresFGP.map(function(p){ return p.toLowerCase(); });
         pedidos = pedidos.filter(function(p) {
-          const marca = invDetectarMarca(p.proveedor || '') || (p.proveedor || '').toUpperCase();
-          return marcasFGP.indexOf(marca) !== -1;
+          return provsLower.indexOf((p.proveedor || '').toLowerCase()) !== -1;
         });
       }
       return ContentService
@@ -134,12 +153,17 @@ function doGet(e) {
         if (!listaMap[key]) listaMap[key] = { nombre: key, tel: telMap[key] };
       });
       let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
-      // 4. Si el email pertenece a un FGP con marcas, filtrar solo sus marcas
+      // 4. Si el email pertenece a un FGP, filtrar solo sus proveedores
       const emailGP = (e.parameter.email || '').toLowerCase().trim();
-      const marcasGP = getMarcasFGP(emailGP);
-      if (Array.isArray(marcasGP)) {
-        const marcasUp = marcasGP.map(function(m){ return m.toUpperCase(); });
-        lista = lista.filter(function(p){ return marcasUp.indexOf(p.nombre.toUpperCase()) !== -1; });
+      const proveedoresGP = getMarcasFGP(emailGP);
+      if (Array.isArray(proveedoresGP)) {
+        const provsLower = proveedoresGP.map(function(p){ return p.toLowerCase(); });
+        lista = lista.filter(function(p) {
+          // Acepta si el nombre ES el proveedor, o si la marca mapea a ese proveedor
+          var provDeMarca = marcaToProveedorRP(p.nombre);
+          return provsLower.indexOf(p.nombre.toLowerCase()) !== -1
+              || (provDeMarca && provsLower.indexOf(provDeMarca.toLowerCase()) !== -1);
+        });
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, proveedores: lista }))
@@ -221,6 +245,66 @@ function doGet(e) {
       const val = getStockValorizacion();
       return ContentService
         .createTextOutput(JSON.stringify(val))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'getVentasSinStock') {
+      const skusInf  = obtenerSkusStockInfinito();
+      const ss       = SpreadsheetApp.openById(INV_VENTAS_ID);
+      const sheet    = ss.getSheetByName('Ventas');
+      const data     = sheet.getDataRange().getValues();
+      const desdeStr = e.parameter.desde || '';
+      const hastaStr = e.parameter.hasta || '';
+      const desde    = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
+      const hasta    = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
+
+      const lineas = [];
+      for (let i = 1; i < data.length; i++) {
+        const fila     = data[i];
+        const rawFecha = fila[0];
+        if (!rawFecha) continue;
+        let fecha;
+        if (rawFecha instanceof Date) {
+          fecha = rawFecha;
+        } else {
+          const parts = String(rawFecha).match(/^(\d+)\/(\d+)\/(\d+)/);
+          fecha = parts
+            ? new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]))
+            : new Date(rawFecha);
+        }
+        if (isNaN(fecha.getTime())) continue;
+        if (desde && fecha < desde) continue;
+        if (hasta && fecha > hasta) continue;
+
+        const sku      = String(fila[6] || '').trim();
+        const cantidad = parseInt(fila[7]) || 0;
+        if (!sku || cantidad <= 0 || !skusInf[sku]) continue;
+
+        const costoStr = String(fila[13] || '');
+        const costo    = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+
+        lineas.push({
+          fecha:     Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+          pedido:    String(fila[1] || ''),
+          comprador: String(fila[3] || ''),
+          producto:  String(fila[5] || ''),
+          sku:       sku,
+          cantidad:  cantidad,
+          precio:    String(fila[8] || ''),
+          proveedor: String(fila[12] || ''),
+          costo:     costo,
+        });
+      }
+
+      const grupos = {};
+      lineas.forEach(function(l) {
+        const prov = l.proveedor || 'Sin proveedor';
+        if (!grupos[prov]) grupos[prov] = [];
+        grupos[prov].push(l);
+      });
+
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, grupos: grupos }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -377,6 +461,26 @@ function obtenerProductosTN() {
     });
   });
   return lista;
+}
+
+function obtenerSkusStockInfinito() {
+  const resp = UrlFetchApp.fetch(
+    'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200&fields=id,brand,variants', {
+    headers: {
+      'Authentication': 'bearer ' + TN_API_TOKEN,
+      'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
+    }
+  });
+  const data = JSON.parse(resp.getContentText());
+  const skus = {};
+  data.forEach(function(p) {
+    (p.variants || []).forEach(function(v) {
+      if (v.stock === null && v.sku) {
+        skus[v.sku.trim()] = true;
+      }
+    });
+  });
+  return skus;
 }
 
 const COL = {
@@ -892,9 +996,9 @@ const INV_FGP = {
   'ODDIS':                    { nombre: 'Luli del Castillo', email: 'lourdelcastillo@gmail.com' },
 };
 
-// Consulta a retiro_qr.gs para obtener las marcas del FGP.
-// Devuelve array de marcas si es FGP con restricción, null si es admin (ve todo),
-// o undefined si el email no existe.
+// Consulta a retiro_qr.gs para obtener los proveedores del FGP.
+// Devuelve array de proveedores si es FGP con restricción, null si es admin (ve todo),
+// o undefined si el email no existe o hay error.
 function getMarcasFGP(email) {
   if (!email) return undefined;
   var url = _PR.getProperty('RETIRO_QR_URL');
@@ -904,7 +1008,7 @@ function getMarcasFGP(email) {
       { muteHttpExceptions: true, followRedirects: true });
     var data = JSON.parse(resp.getContentText());
     if (!data.ok) return undefined;
-    if (data.role === 'FGP') return Array.isArray(data.marcas) ? data.marcas : [];
+    if (data.role === 'FGP') return Array.isArray(data.proveedores) ? data.proveedores : [];
     return null; // admin/staff ve todo
   } catch(e) {
     Logger.log('getMarcasFGP error: ' + e.message);

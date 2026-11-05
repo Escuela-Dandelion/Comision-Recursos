@@ -365,6 +365,41 @@
     recalcularTotal();
   })();
 
+  // ── PRE-LLENADO DESDE DRAFT (ventas-sin-stock) ────────────────────────────
+  (function() {
+    var draftStr = localStorage.getItem('ddl_pedido_draft');
+    if (!draftStr) return;
+    try {
+      var draft = JSON.parse(draftStr);
+      localStorage.removeItem('ddl_pedido_draft');
+      if (!draft.productos || !draft.productos.length) return;
+
+      var tbody  = document.getElementById('tbody-productos');
+      var filas  = tbody.querySelectorAll('tr');
+
+      draft.productos.forEach(function(prod, i) {
+        var fila;
+        if (i < filas.length) {
+          fila = filas[i];
+        } else {
+          fila = filas[filas.length - 1].cloneNode(true);
+          fila.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+          tbody.appendChild(fila);
+          fila.querySelectorAll('.p-cant, .p-precio').forEach(function(inp) {
+            inp.addEventListener('input', recalcularTotal);
+          });
+        }
+        fila.dataset.sku  = prod.sku || '';
+        fila.querySelector('.p-nombre').value = prod.nombre || '';
+        fila.querySelector('.p-unid').value   = 'Unidades';
+        fila.querySelector('.p-cant').value   = prod.cantidad || '';
+        fila.querySelector('.p-precio').value = prod.costo ? String(prod.costo) : '';
+      });
+
+      recalcularTotal();
+    } catch(e) { console.error('Error leyendo ddl_pedido_draft:', e); }
+  })();
+
   // ── HELPERS ────────────────────────────────────────────────────────────────
   function leerFormulario() {
     recalcularTotal();
@@ -378,7 +413,8 @@
         nombre:   n,
         cantidad: fila.querySelector('.p-cant').value.trim(),
         unidad:   fila.querySelector('.p-unid').value.trim(),
-        precio:   String(parsePrecio(fila.querySelector('.p-precio').value))
+        precio:   String(parsePrecio(fila.querySelector('.p-precio').value)),
+        _sku:     fila.dataset.sku || ''
       };
     }).filter(Boolean);
 
@@ -425,7 +461,7 @@
 
     var productosStr = f.filasValidas.map(function(r) {
       var s = r.nombre + (r.cantidad ? ' x' + r.cantidad : '') + (r.unidad ? ' ' + r.unidad : '') + (r.precio !== '0' ? ' ($' + r.precio + ')' : '');
-      var sku = _skuMap[r.nombre.toUpperCase().trim()];
+      var sku = r._sku || _skuMap[r.nombre.toUpperCase().trim()];
       if (sku) s += ' [' + sku + ']';
       return s;
     }).join('\n');

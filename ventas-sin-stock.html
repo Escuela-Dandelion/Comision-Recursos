@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas sin Stock — Diente de León</title>
+  <style>
+    :root {
+      --green:       #3a7d44;
+      --green-light: #e8f5e9;
+      --green-mid:   #c8e6c9;
+      --amber:       #f59e0b;
+      --amber-light: #fef3c7;
+      --blue:        #1976d2;
+      --blue-light:  #e3f2fd;
+      --red:         #c62828;
+      --text:        #1a1a2e;
+      --muted:       #6b7280;
+      --border:      #e0e0e0;
+      --bg:          #f7f8fa;
+      --card:        #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--text); background: var(--bg); padding-bottom: 80px; }
+
+    /* ── Filtros ── */
+    .filter-bar {
+      position: sticky; top: 0; z-index: 20;
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .filter-bar label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .filter-bar input[type="date"] {
+      border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+      font-size: 13px; color: var(--text); background: #fff;
+    }
+    .btn-buscar {
+      background: var(--green); color: #fff; border: none; border-radius: 6px;
+      padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-buscar:hover { background: #2e6636; }
+    .loading-msg { font-size: 12px; color: var(--muted); }
+
+    /* ── Contenido ── */
+    .content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .empty-msg { text-align: center; color: var(--muted); padding: 48px 16px; font-size: 13px; }
+
+    /* ── Grupo proveedor ── */
+    .grupo { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .grupo-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; cursor: pointer; user-select: none;
+      border-bottom: 1px solid var(--border); background: #fafafa;
+      transition: background 0.15s;
+    }
+    .grupo-header:hover { background: var(--green-light); }
+    .grupo-header-left { display: flex; align-items: center; gap: 10px; }
+    .grupo-nombre { font-weight: 700; font-size: 14px; }
+    .grupo-meta { font-size: 11px; color: var(--muted); }
+    .grupo-arrow { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+    .grupo.collapsed .grupo-arrow { transform: rotate(-90deg); }
+    .grupo.collapsed .grupo-body { display: none; }
+    .check-all-wrap { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+
+    /* ── Tabla ── */
+    .grupo-body { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      background: #f8f9fa; color: var(--muted); font-size: 11px; font-weight: 600;
+      padding: 7px 10px; text-align: left; white-space: nowrap;
+      border-bottom: 1px solid var(--border); letter-spacing: 0.2px;
+    }
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f0f7ff; }
+    tbody tr.selected { background: #e8f5e9; }
+    td { padding: 8px 10px; vertical-align: middle; }
+    .col-check { width: 36px; text-align: center; }
+    .col-fecha { white-space: nowrap; color: var(--muted); font-size: 12px; }
+    .col-pedido { font-size: 12px; font-weight: 600; color: var(--green); white-space: nowrap; }
+    .col-producto { max-width: 220px; }
+    .col-sku { font-size: 11px; color: var(--muted); font-family: monospace; white-space: nowrap; }
+    .col-num { text-align: right; white-space: nowrap; }
+    .col-num.cant { font-weight: 600; }
+    input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--green); }
+
+    /* ── Barra flotante ── */
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+      background: var(--text); color: #fff;
+      padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      transform: translateY(100%); transition: transform 0.25s ease;
+    }
+    .bottom-bar.visible { transform: translateY(0); }
+    .bottom-bar-info { font-size: 13px; }
+    .bottom-bar-info strong { font-size: 15px; }
+    .btn-generar {
+      background: var(--green); color: #fff; border: none; border-radius: 7px;
+      padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-generar:hover { background: #2e6636; }
+    .btn-generar:disabled { background: #555; cursor: not-allowed; }
+    .warn-multi { color: #fca5a5; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="filter-bar">
+    <label>Desde <input type="date" id="f-desde"></label>
+    <label>Hasta <input type="date" id="f-hasta"></label>
+    <button class="btn-buscar" onclick="cargar()">Buscar</button>
+    <span class="loading-msg" id="loading-msg" style="display:none">Cargando…</span>
+  </div>
+
+  <div class="content" id="content">
+    <div class="empty-msg">Seleccioná un rango de fechas y hacé clic en Buscar.</div>
+  </div>
+
+  <div class="bottom-bar" id="bottom-bar">
+    <div class="bottom-bar-info">
+      <div id="bar-info">0 ítems seleccionados</div>
+      <div id="bar-warn" class="warn-multi" style="display:none"></div>
+    </div>
+    <button class="btn-generar" id="btn-generar" onclick="generarPedido()">📋 Generar Pedido a Proveedor</button>
+  </div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
+
+  // Fechas default: primer día del mes hasta hoy
+  (function() {
+    var hoy      = new Date();
+    var primero  = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    document.getElementById('f-desde').value = primero.toISOString().split('T')[0];
+    document.getElementById('f-hasta').value = hoy.toISOString().split('T')[0];
+  })();
+
+  function fmt(n) {
+    return '$' + Math.round(n).toLocaleString('es-AR');
+  }
+
+  // ── Cargar datos ───────────────────────────────────────────────────────────
+  function cargar() {
+    var desde = document.getElementById('f-desde').value;
+    var hasta = document.getElementById('f-hasta').value;
+    var msg   = document.getElementById('loading-msg');
+    var cont  = document.getElementById('content');
+    msg.style.display = 'inline';
+    cont.innerHTML = '';
+
+    fetch(GAS_URL + '?action=getVentasSinStock&desde=' + encodeURIComponent(desde) + '&hasta=' + encodeURIComponent(hasta), { redirect: 'follow' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        msg.style.display = 'none';
+        if (!data.ok) { cont.innerHTML = '<div class="empty-msg">Error: ' + (data.error || 'respuesta inesperada') + '</div>'; return; }
+        var grupos = data.grupos || {};
+        if (!Object.keys(grupos).length) {
+          cont.innerHTML = '<div class="empty-msg">No hay ventas de productos sin stock en ese período.</div>';
+          return;
+        }
+        renderGrupos(grupos);
+      })
+      .catch(function(err) {
+        msg.style.display = 'none';
+        cont.innerHTML = '<div class="empty-msg">Error al cargar: ' + err.message + '</div>';
+      });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderGrupos(grupos) {
+    var cont = document.getElementById('content');
+    cont.innerHTML = '';
+    Object.keys(grupos).sort().forEach(function(prov) {
+      var lineas    = grupos[prov];
+      var totalCosto = lineas.reduce(function(s, l) { return s + (l.costo * l.cantidad); }, 0);
+      var totalUnid  = lineas.reduce(function(s, l) { return s + l.cantidad; }, 0);
+
+      var div = document.createElement('div');
+      div.className = 'grupo';
+      div.dataset.prov = prov;
+
+      div.innerHTML =
+        '<div class="grupo-header" onclick="toggleGrupo(\'' + esc(prov) + '\')">' +
+          '<div class="grupo-header-left">' +
+            '<div class="check-all-wrap">' +
+              '<input type="checkbox" class="prov-check-all" data-prov="' + esc(prov) + '" onclick="event.stopPropagation();toggleTodos(\'' + esc(prov) + '\',this.checked)">' +
+            '</div>' +
+            '<div>' +
+              '<div class="grupo-nombre">' + esc(prov) + '</div>' +
+              '<div class="grupo-meta">' + totalUnid + ' unidades · ' + fmt(totalCosto) + ' en costos</div>' +
+            '</div>' +
+          '</div>' +
+          '<span class="grupo-arrow">▼</span>' +
+        '</div>' +
+        '<div class="grupo-body">' +
+          '<table>' +
+            '<thead><tr>' +
+              '<th class="col-check"></th>' +
+              '<th>Fecha</th><th>Pedido</th><th>Comprador</th>' +
+              '<th>Producto</th><th>SKU</th>' +
+              '<th class="col-num">Cant.</th>' +
+              '<th class="col-num">Costo unit.</th>' +
+              '<th class="col-num">Subtotal</th>' +
+            '</tr></thead>' +
+            '<tbody>' + lineas.map(function(l, idx) {
+              return '<tr data-prov="' + esc(prov) + '">' +
+                '<td class="col-check">' +
+                  '<input type="checkbox" class="item-check"' +
+                  ' data-prov="' + esc(prov) + '"' +
+                  ' data-sku="' + esc(l.sku) + '"' +
+                  ' data-nombre="' + esc(l.producto) + '"' +
+                  ' data-cantidad="' + l.cantidad + '"' +
+                  ' data-costo="' + l.costo + '"' +
+                  ' onchange="onSeleccionCambio()">' +
+                '</td>' +
+                '<td class="col-fecha">' + l.fecha + '</td>' +
+                '<td class="col-pedido">#' + l.pedido + '</td>' +
+                '<td>' + esc(l.comprador) + '</td>' +
+                '<td class="col-producto">' + esc(l.producto) + '</td>' +
+                '<td class="col-sku">' + esc(l.sku) + '</td>' +
+                '<td class="col-num cant">' + l.cantidad + '</td>' +
+                '<td class="col-num">' + (l.costo ? fmt(l.costo) : '—') + '</td>' +
+                '<td class="col-num">' + (l.costo ? fmt(l.costo * l.cantidad) : '—') + '</td>' +
+              '</tr>';
+            }).join('') +
+            '</tbody>' +
+          '</table>' +
+        '</div>';
+
+      cont.appendChild(div);
+    });
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Expandir / colapsar ────────────────────────────────────────────────────
+  function toggleGrupo(prov) {
+    var div = document.querySelector('.grupo[data-prov="' + prov + '"]');
+    if (div) div.classList.toggle('collapsed');
+  }
+
+  function toggleTodos(prov, checked) {
+    document.querySelectorAll('.item-check[data-prov="' + prov + '"]').forEach(function(cb) {
+      cb.checked = checked;
+      cb.closest('tr').classList.toggle('selected', checked);
+    });
+    onSeleccionCambio();
+  }
+
+  // ── Selección ──────────────────────────────────────────────────────────────
+  function onSeleccionCambio() {
+    var seleccionados = Array.from(document.querySelectorAll('.item-check:checked'));
+    var bar  = document.getElementById('bottom-bar');
+    var info = document.getElementById('bar-info');
+    var warn = document.getElementById('bar-warn');
+    var btn  = document.getElementById('btn-generar');
+
+    // actualizar color de fila
+    document.querySelectorAll('.item-check').forEach(function(cb) {
+      cb.closest('tr').classList.toggle('selected', cb.checked);
+    });
+
+    // sincronizar checkbox "todos" por proveedor
+    document.querySelectorAll('.prov-check-all').forEach(function(allCb) {
+      var prov   = allCb.dataset.prov;
+      var todos  = document.querySelectorAll('.item-check[data-prov="' + prov + '"]');
+      var marcados = document.querySelectorAll('.item-check[data-prov="' + prov + '"]:checked');
+      allCb.indeterminate = marcados.length > 0 && marcados.length < todos.length;
+      allCb.checked = marcados.length === todos.length && todos.length > 0;
+    });
+
+    if (!seleccionados.length) {
+      bar.classList.remove('visible');
+      return;
+    }
+
+    var provs   = new Set(seleccionados.map(function(cb) { return cb.dataset.prov; }));
+    var unidades = seleccionados.reduce(function(s, cb) { return s + parseInt(cb.dataset.cantidad); }, 0);
+    var totalCosto = seleccionados.reduce(function(s, cb) { return s + parseFloat(cb.dataset.costo) * parseInt(cb.dataset.cantidad); }, 0);
+
+    info.textContent = seleccionados.length + ' líneas · ' + unidades + ' unidades · ' + fmt(totalCosto) + ' en costos';
+
+    if (provs.size > 1) {
+      warn.textContent = '⚠ Seleccionaste productos de ' + provs.size + ' proveedores. Solo podés generar un pedido por proveedor.';
+      warn.style.display = 'block';
+      btn.disabled = true;
+    } else {
+      warn.style.display = 'none';
+      btn.disabled = false;
+    }
+
+    bar.classList.add('visible');
+  }
+
+  // ── Generar pedido ─────────────────────────────────────────────────────────
+  function generarPedido() {
+    var seleccionados = Array.from(document.querySelectorAll('.item-check:checked'));
+    if (!seleccionados.length) return;
+
+    var provs = new Set(seleccionados.map(function(cb) { return cb.dataset.prov; }));
+    if (provs.size > 1) return;
+
+    var proveedor = Array.from(provs)[0];
+
+    // Agregar por SKU (suma cantidades del mismo SKU)
+    var agregado = {};
+    seleccionados.forEach(function(cb) {
+      var sku = cb.dataset.sku;
+      if (!agregado[sku]) {
+        agregado[sku] = {
+          nombre:   cb.dataset.nombre,
+          sku:      sku,
+          cantidad: 0,
+          costo:    parseFloat(cb.dataset.costo) || 0
+        };
+      }
+      agregado[sku].cantidad += parseInt(cb.dataset.cantidad);
+    });
+
+    var draft = {
+      proveedor: proveedor,
+      productos: Object.values(agregado)
+    };
+
+    localStorage.setItem('ddl_pedido_draft', JSON.stringify(draft));
+    window.location.href = 'orden-de-pedido.html?proveedor=' + encodeURIComponent(proveedor);
+  }
+</script>
+
+</body>
+</html>
