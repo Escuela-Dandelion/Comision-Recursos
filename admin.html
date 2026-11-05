@@ -801,7 +801,8 @@ function _recargarPedidos() {
   if (!pIframe) return;
   var url = 'pedidos.html?auth=1';
   if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
-    url += '&_vAs_marcas=' + encodeURIComponent(_currentImpersonation.marcas.join(','));
+    var provsPedidos = _currentImpersonation.marcas.map(function(m){ return marcaAProveedor(m) || m; });
+    url += '&_vAs_marcas=' + encodeURIComponent(provsPedidos.join(','));
   }
   pIframe.src = url;
 }
@@ -890,7 +891,8 @@ function showView(viewId, navBtn, opts) {
       if (opts.id) pedUrl += '&id=' + opts.id;
       var impKey = _currentImpersonation ? _currentImpersonation.email : '';
       if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
-        pedUrl += '&_vAs_marcas=' + encodeURIComponent(_currentImpersonation.marcas.join(','));
+        var provsPedidos = _currentImpersonation.marcas.map(function(m){ return marcaAProveedor(m) || m; });
+        pedUrl += '&_vAs_marcas=' + encodeURIComponent(provsPedidos.join(','));
       }
       if (opts.id || iframe.getAttribute('data-imp') !== impKey) {
         iframe.setAttribute('data-imp', impKey);
