@@ -1,4 +1,4 @@
-// v2026-11-05c — revierte escritura en col X de registrarEnVentas hasta confirmar columna libre
+// v2026-11-05d — completarMarcasEnVentas apunta a col Y (25); agrega dry-run; fix colX→colY
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -1014,8 +1014,10 @@ function registrarEnVentas(order) {
         aporteLinea,                         // col U (índice 20): aporte al grado de esta línea
         aporteLinea > 0 ? gradoValido : '',  // col V (índice 21): grado destino — vacío si no hay aporte
         aporteEscuelaLinea                   // col W (índice 22): aporte a la escuela de esta línea
-        // col X reservada — Marca se agrega cuando se confirme columna libre en el sheet
+        // col X (índice 23): share de aportes — manejado manualmente, no tocar
       ]);
+      // Escribir Marca en col Y (25) sin pisar col X
+      sheet.getRange(sheet.getLastRow(), 25).setValue(datos.marca);
     });
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
   } catch(err) {
@@ -2060,7 +2062,7 @@ function apiDashboard(email) {
     var totalPedido         = parseFloat(row[10]) || 0;
     var comentario          = String(row[11] || '').trim();
     var proveedor           = String(row[12] || '').trim();
-    var marcaRaw            = String(row[23] || '').trim();
+    var marcaRaw            = String(row[24] || '').trim(); // col Y (índice 24)
     var totalPagadoLinea    = parseFloat(row[14]) || subtotalBrutoLinea;
     var netoLinea           = parseFloat(row[15]) || totalPagadoLinea;
     var feeProcesamiento    = parseFloat(row[16]) || 0;
@@ -3340,11 +3342,38 @@ function _calcularCambiosMarcas() {
   return cambios;
 }
 
-// Completa col X (Marca) en filas de Ventas donde esté vacía.
+// Completa col Y (Marca) en filas de Ventas donde esté vacía.
 // Estrategia: 1) lookup SKU → brand desde TiendaNube, 2) fallback para proveedores con marca única.
-// Correr UNA VEZ desde el editor de GAS.
-function completarMarcasEnVentas() {
-  // 1. Construir mapa SKU → brand desde TiendaNube (paginado)
+// Correr PRIMERO completarMarcasDryRun() para revisar, luego completarMarcasEnVentas() para aplicar.
+
+function completarMarcasDryRun() {
+  var skuABrand = _buildSkuABrand();
+  var sheet = getVentasSheet();
+  var data  = sheet.getDataRange().getValues();
+  var cambios = 0, sinMatch = 0;
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var existing = String(row[24] || '').trim();
+    if (existing) continue;
+    var sku   = String(row[6]  || '').trim();
+    var prov  = String(row[12] || '').trim();
+    var brand = skuABrand[sku] || '';
+    if (!brand) {
+      var mp = Object.keys(MARCA_A_PROVEEDOR).filter(function(m) { return MARCA_A_PROVEEDOR[m] === prov; });
+      if (mp.length === 1) brand = mp[0];
+    }
+    if (brand) {
+      Logger.log('Fila ' + (i+1) + ' | SKU:' + sku + ' → "' + brand + '"  (prov: ' + prov + ')');
+      cambios++;
+    } else {
+      Logger.log('Fila ' + (i+1) + ' | SKU:' + sku + ' → SIN MATCH  (prov: ' + prov + ')');
+      sinMatch++;
+    }
+  }
+  Logger.log('=== DRY RUN: ' + cambios + ' marcas a completar, ' + sinMatch + ' sin match. Ejecutá completarMarcasEnVentas() para aplicar. ===');
+}
+
+function _buildSkuABrand() {
   var skuABrand = {};
   for (var page = 1; page <= 20; page++) {
     var resp = UrlFetchApp.fetch(
@@ -3365,18 +3394,22 @@ function completarMarcasEnVentas() {
     if (prods.length < 200) break;
   }
   Logger.log('SKUs mapeados desde TiendaNube: ' + Object.keys(skuABrand).length);
+  return skuABrand;
+}
 
+function completarMarcasEnVentas() {
+  var skuABrand = _buildSkuABrand();
   var sheet = getVentasSheet();
   var data  = sheet.getDataRange().getValues();
 
-  // Asegurar header en col X (columna 24, índice 23)
-  if (!String(data[0][23] || '').trim()) {
-    sheet.getRange(1, 24).setValue('Marca');
+  // Asegurar header en col Y (columna 25, índice 24)
+  if (!String(data[0][24] || '').trim()) {
+    sheet.getRange(1, 25).setValue('Marca');
   }
 
-  // 2. Preparar valores para col X de todas las filas (batch write)
-  var colX = data.slice(1).map(function(row) {
-    var existing = String(row[23] || '').trim();
+  // 2. Preparar valores para col Y de todas las filas (batch write)
+  var colY = data.slice(1).map(function(row) {
+    var existing = String(row[24] || '').trim();
     if (existing) return [existing]; // ya tiene marca, mantener
 
     var sku  = String(row[6]  || '').trim(); // col G
@@ -3393,12 +3426,12 @@ function completarMarcasEnVentas() {
     return [brand];
   });
 
-  if (colX.length > 0) {
-    sheet.getRange(2, 24, colX.length, 1).setValues(colX);
+  if (colY.length > 0) {
+    sheet.getRange(2, 25, colY.length, 1).setValues(colY);
   }
 
-  var completadas = colX.filter(function(v) { return v[0]; }).length;
-  var vacias      = colX.length - completadas;
-  Logger.log('Completadas: ' + completadas + ' | Sin match: ' + vacias + ' de ' + colX.length + ' filas.');
+  var completadas = colY.filter(function(v) { return v[0]; }).length;
+  var vacias      = colY.length - completadas;
+  Logger.log('Completadas: ' + completadas + ' | Sin match: ' + vacias + ' de ' + colY.length + ' filas.');
   try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
 }
