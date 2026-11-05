@@ -1,4 +1,4 @@
-// v2026-11-05b — agrega completarMarcasEnVentas() para backfill col X por SKU desde TiendaNube
+// v2026-11-05c — revierte escritura en col X de registrarEnVentas hasta confirmar columna libre
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -1013,8 +1013,8 @@ function registrarEnVentas(order) {
         getDiscountType(order),              // col T (índice 19): tipo de descuento
         aporteLinea,                         // col U (índice 20): aporte al grado de esta línea
         aporteLinea > 0 ? gradoValido : '',  // col V (índice 21): grado destino — vacío si no hay aporte
-        aporteEscuelaLinea,                  // col W (índice 22): aporte a la escuela de esta línea
-        datos.marca                          // col X (índice 23): Marca (brand TiendaNube, uppercase)
+        aporteEscuelaLinea                   // col W (índice 22): aporte a la escuela de esta línea
+        // col X reservada — Marca se agrega cuando se confirme columna libre en el sheet
       ]);
     });
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
