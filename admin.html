@@ -528,6 +528,11 @@
               <option value="">Todos</option>
             </select>
           </div>
+          <div><label>Marca</label>
+            <select id="vfilt-marca" onchange="aplicarFiltrosVentas()">
+              <option value="">Todas</option>
+            </select>
+          </div>
           <div style="grid-column:1/-1;display:flex;gap:8px">
             <div style="flex:1"><label>Comprador</label>
               <input id="vfilt-comprador" oninput="aplicarFiltrosVentas()" placeholder="Buscar por nombre…" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
@@ -771,7 +776,7 @@ function impersonarAdmin(valor) {
     renderWelcomeCards(_adminOriginal.role.toLowerCase());
     _recargarGestionProductos();
     _recargarPedidos();
-    if (_ventasCargadas) aplicarFiltrosVentas();
+    if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
     return;
   }
   var partes = valor.split('|');
@@ -788,7 +793,7 @@ function impersonarAdmin(valor) {
   renderWelcomeCards(impRole.toLowerCase());
   _recargarGestionProductos();
   _recargarPedidos();
-  if (_ventasCargadas) aplicarFiltrosVentas();
+  if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
 }
 
 function _recargarPedidos() {
@@ -1274,7 +1279,7 @@ function poblarFiltrosVentas() {
   if (_currentImpersonation && _currentImpersonation.role !== 'ADMIN' && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
     proveedoresImp = _currentImpersonation.marcas.map(function(m) { return marcaAProveedor(m) || m; });
   }
-  var staffSet = {}, prodSet = {}, mesSet = {}, proveedorSet = {};
+  var staffSet = {}, prodSet = {}, mesSet = {}, proveedorSet = {}, marcaSet = {};
   _ventas.forEach(function(v){
     if (v.staff) staffSet[v.staff] = true;
     v.productos.split(' | ').forEach(function(p){
@@ -1283,6 +1288,11 @@ function poblarFiltrosVentas() {
     });
     (v.proveedores || []).forEach(function(p){
       if (p && (!proveedoresImp || proveedoresImp.indexOf(p) !== -1)) proveedorSet[p] = true;
+    });
+    (v.marcas || []).forEach(function(m){
+      if (!m) return;
+      var prov = marcaAProveedor(m) || m;
+      if (!proveedoresImp || proveedoresImp.indexOf(prov) !== -1) marcaSet[m] = true;
     });
     if (v.fecha) {
       var parts = v.fecha.split('/');
@@ -1333,6 +1343,13 @@ function poblarFiltrosVentas() {
     selProv.value = curProv;
   }
 
+  var selMarca = document.getElementById('vfilt-marca');
+  if (selMarca) {
+    var curMarca = selMarca.value;
+    while (selMarca.options.length > 1) selMarca.remove(1);
+    Object.keys(marcaSet).sort().forEach(function(m){ var o = document.createElement('option'); o.value=m; o.textContent=m; selMarca.appendChild(o); });
+    selMarca.value = (curMarca && marcaSet[curMarca]) ? curMarca : '';
+  }
 
   // Meses rápidos
   var cont = document.getElementById('v-meses');
@@ -1368,6 +1385,24 @@ function setFiltroEstado(estado) {
 }
 
 function onProveedorVentasChange() {
+  var proveedor = document.getElementById('vfilt-proveedor').value;
+  var selM = document.getElementById('vfilt-marca');
+  if (selM) {
+    var curM = selM.value;
+    var marcaSet = {};
+    _ventas.forEach(function(v) {
+      (v.marcas || []).forEach(function(m) {
+        if (!m) return;
+        var prov = marcaAProveedor(m) || m;
+        if (!proveedor || prov === proveedor) marcaSet[m] = true;
+      });
+    });
+    selM.innerHTML = '<option value="">Todas</option>';
+    Object.keys(marcaSet).sort().forEach(function(m) {
+      var o = document.createElement('option'); o.value = m; o.textContent = m; selM.appendChild(o);
+    });
+    selM.value = (curM && marcaSet[curM]) ? curM : '';
+  }
   aplicarFiltrosVentas();
 }
 
@@ -1385,6 +1420,7 @@ function aplicarFiltrosVentas() {
   if (esReferente && currentUser.name && !referente) referente = currentUser.name;
   var producto   = (document.getElementById('vfilt-producto') ? document.getElementById('vfilt-producto').value : '').toLowerCase();
   var proveedor  = document.getElementById('vfilt-proveedor') ? document.getElementById('vfilt-proveedor').value : '';
+  var marca      = document.getElementById('vfilt-marca') ? document.getElementById('vfilt-marca').value : '';
   var comprador  = (document.getElementById('vfilt-comprador') ? document.getElementById('vfilt-comprador').value : '').toLowerCase();
   var orden      = (document.getElementById('vfilt-orden') ? document.getElementById('vfilt-orden').value : '').trim();
   var desde     = parseFechaVentas(document.getElementById('vfilt-desde') ? document.getElementById('vfilt-desde').value : '');
@@ -1399,6 +1435,7 @@ function aplicarFiltrosVentas() {
     if (referente && v.staff !== referente) return false;
     if (producto && v.productos.toLowerCase().indexOf(producto) === -1) return false;
     if (proveedor && (!v.proveedores || v.proveedores.indexOf(proveedor) === -1)) return false;
+    if (marca && (!v.marcas || v.marcas.indexOf(marca) === -1)) return false;
     if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0 && _currentImpersonation.role !== 'ADMIN') {
       var proveedoresImp = _currentImpersonation.marcas.map(function(m) { return marcaAProveedor(m) || m; });
       if (!v.proveedores || !v.proveedores.some(function(p) { return proveedoresImp.indexOf(p) !== -1; })) return false;
