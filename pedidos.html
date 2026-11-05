@@ -932,6 +932,7 @@ document.addEventListener('DOMContentLoaded', function() {
   } else if (sessionStorage.getItem('ddl_auth') === '1' || isEmbedded) {
     sessionStorage.setItem('ddl_auth', '1');
     mostrar('listaView');
+    cargarProveedoresMap();
     cargarLista();
   } else {
     mostrar('pinView');
@@ -1001,10 +1002,14 @@ async function cargarLista(incluyeCerrados) {
     var usarCSV = !respPedidos.ok || respPedidos._usarCSV || gasPedidos.length === 0
       || (gasPedidos.length > 0 && !gasPedidos[0].proveedor);
     if (usarCSV) {
-      const csvResp = await fetch(SHEET_CSV + '&t=' + Date.now());
-      const text = await csvResp.text();
-      todosLosPedidos = csvAObjetos(text);
-      if (!_incluyeCerrados) todosLosPedidos = todosLosPedidos.filter(p => p.estado !== 'Cerrado');
+      try {
+        const csvResp = await fetch(SHEET_CSV + '&t=' + Date.now());
+        const text = await csvResp.text();
+        todosLosPedidos = csvAObjetos(text);
+        if (!_incluyeCerrados) todosLosPedidos = todosLosPedidos.filter(p => p.estado !== 'Cerrado');
+      } catch(csvErr) {
+        todosLosPedidos = [];
+      }
     } else {
       todosLosPedidos = gasPedidos;
     }
