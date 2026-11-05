@@ -1226,6 +1226,10 @@ function cargarVentas(forzar) {
           v.grado = SGMAP[k+' '] || SGMAP[k] || Object.keys(SGMAP).reduce(function(g,key){ return (!g && key.trim().toLowerCase()===k.toLowerCase()) ? SGMAP[key] : g; }, '');
         }
         v.grado = normalizarGrado(v.grado);
+        // Compatibilidad: GAS pre-redeploy devuelve v.marcas; normalizar a v.proveedores
+        if (!v.proveedores && v.marcas) {
+          v.proveedores = v.marcas.map(function(m){ return marcaAProveedor(m) || m; });
+        }
         return v;
       });
       _ventas = _ventas.filter(function(v){ return v.estado !== estado && estado !== 'Todos'; });
@@ -1266,6 +1270,10 @@ function ordenarGrados(arr) {
 }
 
 function poblarFiltrosVentas() {
+  var proveedoresImp = null;
+  if (_currentImpersonation && _currentImpersonation.role !== 'ADMIN' && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0) {
+    proveedoresImp = _currentImpersonation.marcas.map(function(m) { return marcaAProveedor(m) || m; });
+  }
   var staffSet = {}, prodSet = {}, mesSet = {}, proveedorSet = {};
   _ventas.forEach(function(v){
     if (v.staff) staffSet[v.staff] = true;
@@ -1274,7 +1282,7 @@ function poblarFiltrosVentas() {
       if (nom) prodSet[nom] = true;
     });
     (v.proveedores || []).forEach(function(p){
-      if (p) proveedorSet[p] = true;
+      if (p && (!proveedoresImp || proveedoresImp.indexOf(p) !== -1)) proveedorSet[p] = true;
     });
     if (v.fecha) {
       var parts = v.fecha.split('/');

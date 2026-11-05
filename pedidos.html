@@ -1595,7 +1595,10 @@ function _aplicarFiltrosSync() {
 function poblarFiltroProveedor() {
   const sel = document.getElementById('filtroProveedor');
   if (!sel) return;
-  const proveedores = [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))].sort();
+  var proveedores = [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))].sort();
+  if (_impMarcas.length > 0) {
+    proveedores = proveedores.filter(function(p) { return _impMarcas.indexOf(p.toUpperCase()) !== -1; });
+  }
   const actual = sel.value;
   sel.innerHTML = '<option value="">Todos los proveedores</option>';
   proveedores.forEach(function(p) {
