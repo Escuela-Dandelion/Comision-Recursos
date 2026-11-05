@@ -1599,11 +1599,16 @@ function _aplicarFiltrosSync() {
 function poblarFiltroProveedor() {
   const sel = document.getElementById('filtroProveedor');
   if (!sel) return;
+  console.log('[DdL] poblarFiltroProveedor — pedidos:', todosLosPedidos.length,
+    '| primer proveedor:', todosLosPedidos[0] && todosLosPedidos[0].proveedor,
+    '| _proveedoresMap keys:', Object.keys(_proveedoresMap).length,
+    '| _impMarcas:', _impMarcas);
   // Preferir _proveedoresMap (todos los proveedores del sistema) sobre los pedidos cargados
   var fuente = Object.keys(_proveedoresMap).length > 0
     ? Object.keys(_proveedoresMap)
     : [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))];
   var proveedores = [...new Set(fuente)].sort();
+  console.log('[DdL] proveedores finales:', proveedores);
   if (_impMarcas.length > 0) {
     proveedores = proveedores.filter(function(p) { return _impMarcas.indexOf(p.toUpperCase()) !== -1; });
   }
