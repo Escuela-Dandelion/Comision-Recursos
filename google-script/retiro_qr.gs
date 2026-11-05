@@ -1,4 +1,4 @@
-// v2026-11-05d — completarMarcasEnVentas apunta a col Y (25); agrega dry-run; fix colX→colY
+// v2026-11-05e — restaurarShareAportes() recalcula col X (share % aporte del mes); dry-run
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3338,6 +3338,62 @@ function _calcularCambiosMarcas() {
     if (proveedor && proveedor !== marcaActual) {
       cambios.push({ fila: i + 1, antes: marcaActual, despues: proveedor, pedido: String(row[1] || '') });
     }
+  }
+  return cambios;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RESTAURAR col X — share de aportes (% del aporte del mes)
+//  Correr restaurarShareAportesDryRun() primero, luego restaurarShareAportes().
+// ═══════════════════════════════════════════════════════════
+
+function restaurarShareAportesDryRun() {
+  var cambios = _calcularShareAportes();
+  if (!cambios.length) { Logger.log('Sin filas para actualizar.'); return; }
+  Logger.log('=== DRY RUN — ' + cambios.length + ' filas ===');
+  cambios.slice(0, 30).forEach(function(c) {
+    Logger.log('Fila ' + c.fila + ' | mes:' + c.mes + ' aporte:' + c.aporte + ' total_mes:' + c.totalMes + ' → ' + c.share + '%');
+  });
+  if (cambios.length > 30) Logger.log('... y ' + (cambios.length - 30) + ' filas más');
+  Logger.log('Ejecutá restaurarShareAportes() para aplicar.');
+}
+
+function restaurarShareAportes() {
+  var cambios = _calcularShareAportes();
+  if (!cambios.length) { Logger.log('Sin filas para actualizar.'); return; }
+  var sheet = getVentasSheet();
+  cambios.forEach(function(c) {
+    sheet.getRange(c.fila, 24).setValue(c.share); // col X = columna 24 (1-indexed)
+  });
+  SpreadsheetApp.flush();
+  Logger.log('restaurarShareAportes: ' + cambios.length + ' filas actualizadas en col X.');
+  try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
+}
+
+function _calcularShareAportes() {
+  var sheet = getVentasSheet();
+  var data  = sheet.getDataRange().getValues();
+  // Paso 1: sumar aporteGrado por mes
+  var totalPorMes = {};
+  for (var i = 1; i < data.length; i++) {
+    var fecha = data[i][0];
+    if (!fecha) continue;
+    var d = new Date(fecha);
+    var mes = d.getFullYear() + '-' + ('0' + (d.getMonth()+1)).slice(-2);
+    var aporte = parseFloat(data[i][20]) || 0; // col U (índice 20)
+    totalPorMes[mes] = (totalPorMes[mes] || 0) + aporte;
+  }
+  // Paso 2: calcular share por fila
+  var cambios = [];
+  for (var j = 1; j < data.length; j++) {
+    var fecha2 = data[j][0];
+    if (!fecha2) continue;
+    var d2 = new Date(fecha2);
+    var mes2 = d2.getFullYear() + '-' + ('0' + (d2.getMonth()+1)).slice(-2);
+    var aporte2 = parseFloat(data[j][20]) || 0;
+    var total = totalPorMes[mes2] || 0;
+    var share = (total > 0 && aporte2 > 0) ? parseFloat((aporte2 / total * 100).toFixed(2)) : 0;
+    cambios.push({ fila: j + 1, mes: mes2, aporte: aporte2, totalMes: total, share: share });
   }
   return cambios;
 }
