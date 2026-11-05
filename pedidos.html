@@ -822,6 +822,7 @@ function cargarProveedoresMap() {
       todosLosPedidos.forEach(function(p) {
         if (!p.tel && _proveedoresMap[p.proveedor]) p.tel = _proveedoresMap[p.proveedor];
       });
+      poblarFiltroProveedor(); // reconstruir con todos los proveedores conocidos
     }).catch(function(){});
 }
 
@@ -1595,7 +1596,11 @@ function _aplicarFiltrosSync() {
 function poblarFiltroProveedor() {
   const sel = document.getElementById('filtroProveedor');
   if (!sel) return;
-  var proveedores = [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))].sort();
+  // Preferir _proveedoresMap (todos los proveedores del sistema) sobre los pedidos cargados
+  var fuente = Object.keys(_proveedoresMap).length > 0
+    ? Object.keys(_proveedoresMap)
+    : [...new Set(todosLosPedidos.map(p => p.proveedor).filter(Boolean))];
+  var proveedores = [...new Set(fuente)].sort();
   if (_impMarcas.length > 0) {
     proveedores = proveedores.filter(function(p) { return _impMarcas.indexOf(p.toUpperCase()) !== -1; });
   }
