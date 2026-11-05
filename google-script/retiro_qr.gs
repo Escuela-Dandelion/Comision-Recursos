@@ -1,4 +1,4 @@
-// v2026-11-04i — col M es Proveedor: getRetirosData devuelve proveedores, apiDashboard devuelve proveedor
+// v2026-11-05a — registrarEnVentas escribe Proveedor en col M y Marca (brand TN) en col X; getRetirosData devuelve marca
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -1003,7 +1003,7 @@ function registrarEnVentas(order) {
         totalLinea,            // col J (índice 9):  subtotal bruto (precio × qty)
         parseFloat(order.total || 0),  // col K (índice 10): total del pedido
         nota,
-        datos.marca,
+        marcaToProveedor(datos.marca) || datos.marca,  // col M (índice 12): Proveedor
         datos.costo,
         totalPagadoLinea,                    // col O (índice 14): monto pagado proporcional (con descuento)
         netoLinea,                           // col P (índice 15): monto neto proporcional
@@ -1013,7 +1013,8 @@ function registrarEnVentas(order) {
         getDiscountType(order),              // col T (índice 19): tipo de descuento
         aporteLinea,                         // col U (índice 20): aporte al grado de esta línea
         aporteLinea > 0 ? gradoValido : '',  // col V (índice 21): grado destino — vacío si no hay aporte
-        aporteEscuelaLinea                   // col W (índice 22): aporte a la escuela de esta línea
+        aporteEscuelaLinea,                  // col W (índice 22): aporte a la escuela de esta línea
+        datos.marca                          // col X (índice 23): Marca (brand TiendaNube, uppercase)
       ]);
     });
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
@@ -2059,6 +2060,7 @@ function apiDashboard(email) {
     var totalPedido         = parseFloat(row[10]) || 0;
     var comentario          = String(row[11] || '').trim();
     var proveedor           = String(row[12] || '').trim();
+    var marcaRaw            = String(row[23] || '').trim();
     var totalPagadoLinea    = parseFloat(row[14]) || subtotalBrutoLinea;
     var netoLinea           = parseFloat(row[15]) || totalPagadoLinea;
     var feeProcesamiento    = parseFloat(row[16]) || 0;
@@ -2088,6 +2090,7 @@ function apiDashboard(email) {
       email:               email,
       producto:            producto,
       proveedor:           proveedor,
+      marca:               marcaRaw,
       cantidad:            cantidad,
       total_linea:         Math.round(subtotalBrutoLinea * 100) / 100,
       total_pagado_linea:  Math.round(totalPagadoLinea * 100) / 100,
