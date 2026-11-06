@@ -813,9 +813,11 @@ var _proveedoresMap = {}; // nombre → tel (cargado desde GAS)
 
 function cargarProveedoresMap() {
   var _aeP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
-  fetch(SCRIPT_URL + '?action=getProveedores' + (_aeP ? '&email=' + encodeURIComponent(_aeP) : ''))
-    .then(function(r){ return r.json(); })
+  console.log('[DdL] cargarProveedoresMap — email:', _aeP || '(sin email)');
+  fetch(SCRIPT_URL + '?action=getProveedores' + (_aeP ? '&email=' + encodeURIComponent(_aeP) : ''), { redirect: 'follow' })
+    .then(function(r){ console.log('[DdL] getProveedores HTTP status:', r.status); return r.json(); })
     .then(function(data) {
+      console.log('[DdL] getProveedores data.ok:', data.ok, '| proveedores:', Array.isArray(data.proveedores) ? data.proveedores.length : data.proveedores);
       if (!data.ok || !data.proveedores) return;
       data.proveedores.forEach(function(p) { _proveedoresMap[p.nombre] = p.tel || ''; });
       // Actualizar tel en memoria si algún pedido no lo tenía
@@ -823,7 +825,7 @@ function cargarProveedoresMap() {
         if (!p.tel && _proveedoresMap[p.proveedor]) p.tel = _proveedoresMap[p.proveedor];
       });
       poblarFiltroProveedor(); // reconstruir con todos los proveedores conocidos
-    }).catch(function(){});
+    }).catch(function(err){ console.error('[DdL] cargarProveedoresMap ERROR:', err); });
 }
 
 function poblarSelectorProveedor() {
@@ -1602,6 +1604,7 @@ function _aplicarFiltrosSync() {
 
 function poblarFiltroProveedor() {
   const sel = document.getElementById('filtroProveedor');
+  console.log('[DdL] poblarFiltroProveedor — sel existe:', !!sel);
   if (!sel) return;
   console.log('[DdL] poblarFiltroProveedor — pedidos:', todosLosPedidos.length,
     '| primer proveedor:', todosLosPedidos[0] && todosLosPedidos[0].proveedor,
