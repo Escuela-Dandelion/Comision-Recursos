@@ -1,4 +1,4 @@
-// v2026-11-06b — getProveedores devuelve nombres de Proveedor (no brands TN); FGP filter simplificado
+// v2026-11-06c — cobertura por SKU en getVentasSinStock (no temporal); getProveedores usa nombres proveedor
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -267,22 +267,26 @@ function doGet(e) {
       const desde    = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
       const hasta    = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
 
-      // Leer pedidos para determinar cobertura
+      // Leer pedidos para determinar cobertura por SKU
+      // Los productos se almacenan como texto: "Granola x2 ($1200) [SKU123]\nLentejas x5 ($800) [SKU456]"
       const ESTADOS_OCULTAR = ['Entregado en Escuela', 'Cerrado'];
-      const pedidosPorProv  = {};
+      const pedidosPorProv  = {}; // prov → [{skus: Set, estado}]
       try {
         const sPed  = getPedidosSheet();
         const dPed  = sPed.getDataRange().getValues();
         for (let i = 1; i < dPed.length; i++) {
           const fila  = dPed[i];
           const prov  = String(fila[COL.PROVEEDOR] || '').trim();
-          const rawFP = fila[COL.FECHA];
-          if (!prov || !rawFP) continue;
-          const fp = rawFP instanceof Date ? rawFP : new Date(rawFP);
-          if (isNaN(fp.getTime())) continue;
-          const est = String(fila[COL.ESTADO] || '').trim();
+          const est   = String(fila[COL.ESTADO]    || '').trim();
+          const prods = String(fila[COL.PRODUCTOS]  || '');
+          if (!prov || est === 'Cancelado') continue;
+          // Extraer SKUs del campo productos: todo lo que esté entre [ ]
+          const skus = new Set();
+          var rx = /\[([^\]]+)\]/g, m;
+          while ((m = rx.exec(prods)) !== null) skus.add(m[1].trim());
+          if (skus.size === 0) continue;
           if (!pedidosPorProv[prov]) pedidosPorProv[prov] = [];
-          pedidosPorProv[prov].push({ fecha: fp, estado: est });
+          pedidosPorProv[prov].push({ skus: skus, estado: est });
         }
       } catch(pe) { Logger.log('Error leyendo pedidos: ' + pe.message); }
 
@@ -312,22 +316,17 @@ function doGet(e) {
         const costo     = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
         const proveedor = String(fila[12] || '').trim();
 
-        // Pedido cubridor: el más temprano creado en o después de la fecha de esta venta
-        let pedidoCubridor = null;
-        (pedidosPorProv[proveedor] || []).forEach(function(p) {
-          // Comparar sólo por fecha (sin hora)
-          const fpd = new Date(p.fecha.getFullYear(), p.fecha.getMonth(), p.fecha.getDate());
-          const fvd = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
-          if (fpd >= fvd) {
-            if (!pedidoCubridor || fpd < new Date(pedidoCubridor.fecha.getFullYear(), pedidoCubridor.fecha.getMonth(), pedidoCubridor.fecha.getDate())) {
-              pedidoCubridor = p;
-            }
-          }
-        });
-
+        // Determinar cobertura por SKU: buscar cualquier pedido activo al mismo proveedor que incluya este SKU
         let estadoPedido = null;
-        if (pedidoCubridor) {
-          estadoPedido = ESTADOS_OCULTAR.indexOf(pedidoCubridor.estado) !== -1 ? 'entregado' : 'vigente';
+        const pedsProv = pedidosPorProv[proveedor] || [];
+        for (let pi = 0; pi < pedsProv.length; pi++) {
+          const ped = pedsProv[pi];
+          if (!ped.skus.has(sku)) continue;
+          if (ESTADOS_OCULTAR.indexOf(ped.estado) !== -1) {
+            if (estadoPedido === null) estadoPedido = 'entregado'; // 'vigente' gana si hay otro pedido activo
+          } else {
+            estadoPedido = 'vigente'; // pedido activo con este SKU
+          }
         }
         if (estadoPedido === 'entregado') continue; // ocultar
 
