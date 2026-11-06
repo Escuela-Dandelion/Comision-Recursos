@@ -1,4 +1,4 @@
-// v2026-11-06f — refactor: se eliminaron funciones de migración ya ejecutadas y tests
+// v2026-11-06g — restauradas testEnviarEmailAporte y testEnviarInformeMensual
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2163,6 +2163,34 @@ function previewInformeMensual(mesParam) {
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// Test: envía el mail de QR + bloque de aportes a robertson.ine@gmail.com usando el pedido 630
+// Corré desde el editor para verificar el formato antes de deployar cambios
+function testEnviarEmailAporte() {
+  var ORDER_ID = '2070879050';
+  var resp  = UrlFetchApp.fetch(
+    'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders/' + ORDER_ID,
+    { headers: { 'Authentication': 'bearer ' + CONFIG.API_TOKEN, 'User-Agent': CONFIG.TIENDA_NOMBRE + ' (retiro-automatico)' }, muteHttpExceptions: true }
+  );
+  var order = JSON.parse(resp.getContentText());
+
+  var orderId   = String(order.id);
+  var nombre    = (order.contact_name || 'Familia').split(' ')[0];
+  var productos = (order.products || []).map(function(p) {
+    var n = p.name; n = (typeof n === 'object') ? (n.es || n.pt || Object.values(n)[0] || '') : (n || '');
+    return p.quantity + 'x ' + n;
+  }).join('\n');
+
+  var token     = generarToken(orderId);
+  var verifyUrl = 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id='
+                  + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
+  var qrApiUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=L&margin=1&data='
+                  + encodeURIComponent(verifyUrl);
+  var qrBlob    = UrlFetchApp.fetch(qrApiUrl).getBlob().setName('qr.png').setContentType('image/png');
+
+  enviarEmail('robertson.ine@gmail.com', nombre, order, qrBlob, productos);
+  Logger.log('[TEST] Mail enviado a robertson.ine@gmail.com — pedido #' + order.number);
+}
+
 // ── VENTAS DIGITALES ────────────────────────────────────────────────────────
 
 function apiDigitales(email) {
@@ -2324,6 +2352,83 @@ function enviarInformeMensual() {
   });
 
   Logger.log('Informe ' + mesLabel + ' enviado a ' + enviados + '/' + emails.length + ' destinatarios. Aporte total: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
+}
+
+// Test: envía el informe mensual solo a robertson.ine@gmail.com para verificar el formato
+// Corré desde el editor antes de deployar cambios en el diseño del informe
+function testEnviarInformeMensual() {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Ventas');
+  if (!sheet) { Logger.log('Sheet Ventas no encontrada.'); return; }
+
+  var data = sheet.getDataRange().getValues();
+
+  var hoy = new Date();
+  var mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  var mesNum    = mesPasado.getMonth();
+  var anioNum   = mesPasado.getFullYear();
+  var mesNombre = mesPasado.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  var mesLabel  = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+
+  var porGrado = {}, totalAporte = 0, totalUnidades = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row   = data[i];
+    var fecha = new Date(row[0]);
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha.getMonth() !== mesNum || fecha.getFullYear() !== anioNum) continue;
+    var qty         = parseInt(row[7])    || 0;
+    var aporteGrado = parseFloat(row[20]) || 0;
+    var grado       = normalizarGradoGAS(String(row[21] || ''));
+    totalUnidades += qty;
+    totalAporte   += aporteGrado;
+    if (grado && grado !== '(Sin observaciones)') {
+      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
+      porGrado[grado].aporte   += aporteGrado;
+      porGrado[grado].unidades += qty;
+    }
+  }
+
+  var grados = Object.keys(porGrado).sort(function(a, b) {
+    if (a === 'J') return -1; if (b === 'J') return 1;
+    return parseInt(a) - parseInt(b);
+  });
+  if (grados.length === 0) { Logger.log('[TEST] Sin aportes para ' + mesLabel); return; }
+
+  var filasGrado = grados.map(function(g) {
+    var d = porGrado[g];
+    return '<tr>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + formatearGrado(g) + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
+      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var html =
+    '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;max-width:560px;margin:auto;padding:24px;color:#1a1a2e">' +
+    '<p style="font-size:11px;color:#c00;background:#fff3cd;padding:8px 12px;border-radius:6px;margin-bottom:20px">⚠️ TEST — no fue enviado a las familias</p>' +
+    '<div style="text-align:center;padding:0 0 24px 0"><img src="' + LOGO_B64 + '" style="max-width:200px;width:55%" alt="Diente de León"></div>' +
+    '<h2 style="color:#3a7d44;margin:0 0 8px 0;font-size:20px">Resumen de aportes · ' + mesLabel + '</h2>' +
+    '<p style="color:#555;margin:0 0 20px 0;font-size:14px;line-height:1.6">Gracias a las compras de toda la comunidad Dandelion, este mes se generaron aportes para cada grado. Acá compartimos el resumen:</p>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #c8e6c9">' +
+    '<thead><tr style="background:#3a7d44">' +
+    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:13px;font-weight:600">Grado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Aporte recaudado</th>' +
+    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Unidades vendidas</th>' +
+    '</tr></thead><tbody>' + filasGrado + '</tbody>' +
+    '<tfoot><tr style="background:#e8f5e9">' +
+    '<td style="padding:11px 14px;font-weight:700;font-size:14px">Total</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#1a5c2a">$' + Math.round(totalAporte).toLocaleString('es-AR') + '</td>' +
+    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#555">' + totalUnidades + '</td>' +
+    '</tr></tfoot></table>' +
+    '<p style="font-size:13px;color:#555;line-height:1.6">Los aportes se transfieren a cada grado durante los primeros días del mes.</p>' +
+    '<p style="font-size:11px;color:#aaa;margin-top:24px;padding-top:14px;border-top:1px solid #eee;text-align:center">Tienda Diente de León · Escuela Dandelion Pedagogía Waldorf · Córdoba</p>' +
+    '</div>';
+
+  GmailApp.sendEmail('robertson.ine@gmail.com', '[TEST] Tienda Diente de León — Aportes de ' + mesLabel, '', {
+    htmlBody: html, from: 'tiendavirtual.dientedeleon@gmail.com', name: 'Tienda Diente de León'
+  });
+  Logger.log('[TEST] Mail enviado a robertson.ine@gmail.com — ' + mesLabel + ' | Aportes: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
 }
 
 // ══════════════════════════════════════════════════════════════
