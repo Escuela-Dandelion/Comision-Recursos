@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ventas sin Stock — Diente de León</title>
+  <title>Ventas a Pedido — Diente de León</title>
   <style>
     :root {
       --green:       #3a7d44;
@@ -84,6 +84,16 @@
     .col-num.cant { font-weight: 600; }
     input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--green); }
 
+    /* ── Pill pedido vigente ── */
+    .pill-vigente {
+      display: inline-block;
+      background: var(--amber-light); color: #92400e;
+      border: 1px solid #fcd34d;
+      border-radius: 20px; padding: 2px 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+      white-space: nowrap; vertical-align: middle;
+    }
+
     /* ── Barra flotante ── */
     .bottom-bar {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
@@ -156,7 +166,7 @@
         if (!data.ok) { cont.innerHTML = '<div class="empty-msg">Error: ' + (data.error || 'respuesta inesperada') + '</div>'; return; }
         var grupos = data.grupos || {};
         if (!Object.keys(grupos).length) {
-          cont.innerHTML = '<div class="empty-msg">No hay ventas de productos sin stock en ese período.</div>';
+          cont.innerHTML = '<div class="empty-msg">No hay ventas a pedido pendientes en ese período.</div>';
           return;
         }
         renderGrupos(grupos);
@@ -217,7 +227,9 @@
                 '<td class="col-fecha">' + l.fecha + '</td>' +
                 '<td class="col-pedido">#' + l.pedido + '</td>' +
                 '<td>' + esc(l.comprador) + '</td>' +
-                '<td class="col-producto">' + esc(l.producto) + '</td>' +
+                '<td class="col-producto">' + esc(l.producto) +
+                  (l.estadoPedido === 'vigente' ? ' <span class="pill-vigente">Pedido Vigente</span>' : '') +
+                '</td>' +
                 '<td class="col-sku">' + esc(l.sku) + '</td>' +
                 '<td class="col-num cant">' + l.cantidad + '</td>' +
                 '<td class="col-num">' + (l.costo ? fmt(l.costo) : '—') + '</td>' +

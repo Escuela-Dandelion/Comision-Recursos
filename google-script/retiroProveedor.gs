@@ -1,4 +1,4 @@
-// v2026-11-05a — agrega getVentasSinStock + obtenerSkusStockInfinito para ventas-sin-stock.html
+// v2026-11-06a — getVentasSinStock: cruza con Pedidos para pill "Pedido Vigente" y oculta Entregados
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -258,6 +258,25 @@ function doGet(e) {
       const desde    = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
       const hasta    = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
 
+      // Leer pedidos para determinar cobertura
+      const ESTADOS_OCULTAR = ['Entregado en Escuela', 'Cerrado'];
+      const pedidosPorProv  = {};
+      try {
+        const sPed  = getPedidosSheet();
+        const dPed  = sPed.getDataRange().getValues();
+        for (let i = 1; i < dPed.length; i++) {
+          const fila  = dPed[i];
+          const prov  = String(fila[COL.PROVEEDOR] || '').trim();
+          const rawFP = fila[COL.FECHA];
+          if (!prov || !rawFP) continue;
+          const fp = rawFP instanceof Date ? rawFP : new Date(rawFP);
+          if (isNaN(fp.getTime())) continue;
+          const est = String(fila[COL.ESTADO] || '').trim();
+          if (!pedidosPorProv[prov]) pedidosPorProv[prov] = [];
+          pedidosPorProv[prov].push({ fecha: fp, estado: est });
+        }
+      } catch(pe) { Logger.log('Error leyendo pedidos: ' + pe.message); }
+
       const lineas = [];
       for (let i = 1; i < data.length; i++) {
         const fila     = data[i];
@@ -280,19 +299,40 @@ function doGet(e) {
         const cantidad = parseInt(fila[7]) || 0;
         if (!sku || cantidad <= 0 || !skusInf[sku]) continue;
 
-        const costoStr = String(fila[13] || '');
-        const costo    = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+        const costoStr  = String(fila[13] || '');
+        const costo     = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+        const proveedor = String(fila[12] || '').trim();
+
+        // Pedido cubridor: el más temprano creado en o después de la fecha de esta venta
+        let pedidoCubridor = null;
+        (pedidosPorProv[proveedor] || []).forEach(function(p) {
+          // Comparar sólo por fecha (sin hora)
+          const fpd = new Date(p.fecha.getFullYear(), p.fecha.getMonth(), p.fecha.getDate());
+          const fvd = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+          if (fpd >= fvd) {
+            if (!pedidoCubridor || fpd < new Date(pedidoCubridor.fecha.getFullYear(), pedidoCubridor.fecha.getMonth(), pedidoCubridor.fecha.getDate())) {
+              pedidoCubridor = p;
+            }
+          }
+        });
+
+        let estadoPedido = null;
+        if (pedidoCubridor) {
+          estadoPedido = ESTADOS_OCULTAR.indexOf(pedidoCubridor.estado) !== -1 ? 'entregado' : 'vigente';
+        }
+        if (estadoPedido === 'entregado') continue; // ocultar
 
         lineas.push({
-          fecha:     Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
-          pedido:    String(fila[1] || ''),
-          comprador: String(fila[3] || ''),
-          producto:  String(fila[5] || ''),
-          sku:       sku,
-          cantidad:  cantidad,
-          precio:    String(fila[8] || ''),
-          proveedor: String(fila[12] || ''),
-          costo:     costo,
+          fecha:        Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+          pedido:       String(fila[1] || ''),
+          comprador:    String(fila[3] || ''),
+          producto:     String(fila[5] || ''),
+          sku:          sku,
+          cantidad:     cantidad,
+          precio:       String(fila[8] || ''),
+          proveedor:    proveedor,
+          costo:        costo,
+          estadoPedido: estadoPedido, // null | 'vigente'
         });
       }
 
