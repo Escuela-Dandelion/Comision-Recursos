@@ -810,6 +810,7 @@ const SUBTITULO_ESTADO = {
 // ── ESTADO GLOBAL ─────────────────────────────────────────────
 let todosLosPedidos = [];
 var _proveedoresMap = {}; // nombre → tel (cargado desde GAS)
+var _impMarcas = [];      // filtro de marcas por URL param _vAs_marcas (FGP)
 
 function cargarProveedoresMap() {
   var _aeP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
@@ -882,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   isEmbedded = params.get('auth') === '1';
   if (isEmbedded) document.body.classList.add('embedded');
-  var _impMarcas = (params.get('_vAs_marcas') || '').split(',').map(function(m){ return m.trim().toUpperCase(); }).filter(Boolean);
+  _impMarcas = (params.get('_vAs_marcas') || '').split(',').map(function(m){ return m.trim().toUpperCase(); }).filter(Boolean);
 
   // Verificar sesión Google del admin
   var adminSession = null;
