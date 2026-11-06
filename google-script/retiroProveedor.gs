@@ -1,4 +1,4 @@
-// v2026-11-06c — cobertura por SKU en getVentasSinStock (no temporal); getProveedores usa nombres proveedor
+// v2026-11-06d — registrarPedido guarda proveedor tal cual; getPedidos normaliza legacy brand→proveedor
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -115,7 +115,11 @@ function doGet(e) {
       if (Array.isArray(proveedoresFGP)) {
         const provsLower = proveedoresFGP.map(function(p){ return p.toLowerCase(); });
         pedidos = pedidos.filter(function(p) {
-          return provsLower.indexOf((p.proveedor || '').toLowerCase()) !== -1;
+          const prov = (p.proveedor || '').toLowerCase();
+          if (provsLower.indexOf(prov) !== -1) return true;
+          // Normalizar datos legacy donde se guardó brand name en vez de proveedor
+          const provNorm = (marcaToProveedorRP(p.proveedor) || '').toLowerCase();
+          return provNorm && provsLower.indexOf(provNorm) !== -1;
         });
       }
       return ContentService
@@ -662,7 +666,7 @@ function registrarPedidoEnSheet(data) {
   const fila = new Array(13).fill('');
   fila[COL.NORDEN]    = norden;
   fila[COL.FECHA]     = fecha || hoy;
-  fila[COL.PROVEEDOR] = invDetectarMarca(proveedor || '') || (proveedor || '');
+  fila[COL.PROVEEDOR] = proveedor || ''; // guardar nombre de proveedor tal cual, sin mapear a marca
   fila[COL.FGP]       = fgp || '';
   fila[COL.PRODUCTOS] = productos || '';
   fila[COL.ESTADO]    = 'Solicitado';
