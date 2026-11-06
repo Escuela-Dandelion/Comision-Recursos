@@ -7,6 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="ddl-utils.js"></script>
 <title>Orden de Pedido — Escuela Dandelion / Diente de León</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -242,35 +243,31 @@
 
   // ── CARGAR PROVEEDORES ──────────────────────────────────────
   (function cargarProveedores() {
-    var _emailOP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
-    fetch(GAS_URL_RQ + '?action=getProveedores' + (_emailOP ? '&email=' + encodeURIComponent(_emailOP) : ''), { redirect: 'follow' })
-      .then(function(r){ return r.json(); })
-      .then(function(data) {
-        var sel = document.getElementById('f-proveedor-sel');
-        var loading = document.getElementById('f-proveedor-loading');
-        loading.style.display = 'none';
-        if (data.ok && data.proveedores && data.proveedores.length) {
-          data.proveedores.forEach(function(p) {
-            _proveedoresMap[p.nombre] = p.tel || '';
-            var opt = document.createElement('option');
-            opt.value = p.nombre; opt.textContent = p.nombre;
-            sel.appendChild(opt);
-          });
-        }
-        sel.style.display = '';
-        // Pre-seleccionar si viene por URL
-        var urlProveedor = new URLSearchParams(window.location.search).get('proveedor');
-        if (urlProveedor) {
-          for (var i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value.toUpperCase() === urlProveedor.toUpperCase()) {
-              sel.selectedIndex = i; onProveedorChange(); return;
-            }
+    ddlFetchProveedores(function(data) {
+      var sel = document.getElementById('f-proveedor-sel');
+      var loading = document.getElementById('f-proveedor-loading');
+      loading.style.display = 'none';
+      if (!data.ok || !data.proveedores || !data.proveedores.length) {
+        loading.textContent = 'Error al cargar proveedores. Recargá la página.';
+        loading.style.display = '';
+        return;
+      }
+      data.proveedores.forEach(function(p) {
+        _proveedoresMap[p.nombre] = p.tel || '';
+        var opt = document.createElement('option');
+        opt.value = p.nombre; opt.textContent = p.nombre;
+        sel.appendChild(opt);
+      });
+      sel.style.display = '';
+      var urlProveedor = new URLSearchParams(window.location.search).get('proveedor');
+      if (urlProveedor) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value.toUpperCase() === urlProveedor.toUpperCase()) {
+            sel.selectedIndex = i; onProveedorChange(); return;
           }
         }
-      })
-      .catch(function() {
-        document.getElementById('f-proveedor-loading').textContent = 'Error al cargar proveedores. Recargá la página.';
-      });
+      }
+    });
   })();
 
   function onProveedorChange() {

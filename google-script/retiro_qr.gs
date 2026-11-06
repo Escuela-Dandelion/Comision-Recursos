@@ -1,4 +1,4 @@
-// v2026-11-05e — restaurarShareAportes() recalcula col X (share % aporte del mes); dry-run
+// v2026-11-06f — refactor: se eliminaron funciones de migración ya ejecutadas y tests
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -718,87 +718,6 @@ function registrarEnSheet(order, token) {
   _invalidarCacheRetiros();
 }
 
-// Normaliza col 11 (Grado) en todas las filas del sheet Retiros
-function migrarGradosRetiros() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Retiros');
-  if (!sheet) { Logger.log('No existe hoja Retiros'); return; }
-  var data = sheet.getDataRange().getValues();
-  var actualizados = 0;
-  for (var i = 1; i < data.length; i++) {
-    var raw  = String(data[i][10] || '');
-    var norm = normalizarGradoGAS(raw);
-    if (norm !== raw) {
-      sheet.getRange(i + 1, 11).setValue(norm);
-      actualizados++;
-      Logger.log('Fila ' + (i+1) + ': "' + raw + '" → "' + norm + '"');
-    }
-  }
-  Logger.log('Grados normalizados: ' + actualizados + ' filas.');
-}
-
-// Corrige cols S (índice 18) y T (índice 19) del sheet Ventas con getOrderDiscount() correcto
-function migrarDescuentosVentas() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('No existe hoja Ventas'); return; }
-
-  var data = sheet.getDataRange().getValues();
-  // Construir mapa orderId → {discount, type} para no llamar la API varias veces por pedido
-  var cache = {};
-  var actualizados = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var orderId = String(data[i][2] || ''); // col C = ID interno (TiendaNube)
-    if (!orderId) continue;
-    if (!cache[orderId]) {
-      var order = fetchOrder(orderId);
-      if (!order) { Utilities.sleep(2000); cache[orderId] = { discount: 0, type: '' }; continue; }
-      cache[orderId] = {
-        discount: getOrderDiscount(order),
-        type:     getDiscountType(order)
-      };
-      Utilities.sleep(400);
-    }
-    var d = cache[orderId];
-    sheet.getRange(i + 1, 19).setValue(d.discount); // col S
-    sheet.getRange(i + 1, 20).setValue(d.type);     // col T
-    actualizados++;
-  }
-  Logger.log('migrarDescuentosVentas: ' + actualizados + ' filas actualizadas.');
-}
-
-// Rellena col 12 (Descuento) en filas de Retiros que no la tienen aún
-function migrarDescuentosRetiros() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Retiros');
-  if (!sheet) { Logger.log('No existe hoja Retiros'); return; }
-
-  var data = sheet.getDataRange().getValues();
-  var actualizados = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    var orderId = String(row[0]);
-    if (!orderId) continue;
-    var order = fetchOrder(orderId);
-    if (!order) { Utilities.sleep(2000); continue; } // pausa extra si hay error
-    if (String(order.number) === '232') {
-      Logger.log('DEBUG migrar #232: discount=' + order.discount +
-        ' promo=' + JSON.stringify(order.promotional_discount) +
-        ' discount_coupon=' + order.discount_coupon);
-    }
-    var discount     = getOrderDiscount(order);
-    var discountType = getDiscountType(order);
-    sheet.getRange(i + 1, 12).setValue(discount);
-    sheet.getRange(i + 1, 13).setValue(discountType);
-    actualizados++;
-    Logger.log('Retiro fila ' + (i+1) + ' pedido #' + row[1] + ' discount=' + discount + ' type=' + discountType);
-    Utilities.sleep(400); // ~150 pedidos × 400ms = ~60 segundos, dentro del límite
-  }
-  Logger.log('Migración completa. ' + actualizados + ' filas actualizadas.');
-}
-
 function getVentasSheet() {
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
   var sheet = ss.getSheetByName('Ventas');
@@ -946,14 +865,6 @@ function registrarEnVentas(order) {
     var gradoNorm     = normalizarGradoGAS(nota);
     var gradoValido   = (gradoNorm && gradoNorm !== '(Sin observaciones)') ? gradoNorm : '';
 
-    // Log de diagnóstico para pedido #232
-    if (String(order.number) === '232') {
-      Logger.log('DEBUG #232: discount=' + order.discount +
-        ' promotional_discount=' + JSON.stringify(order.promotional_discount) +
-        ' discount_coupon=' + order.discount_coupon +
-        ' total=' + order.total);
-    }
-
     order.products.forEach(function(p) {
       var nombre = (typeof p.name === 'object')
         ? (p.name.es || p.name.pt || Object.values(p.name)[0] || '')
@@ -1023,212 +934,6 @@ function registrarEnVentas(order) {
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
   }
-}
-
-// Rellena col U (AporteGrado) y col W (AporteEscuela) en filas históricas de Ventas donde
-// quedaron en 0 porque se procesaron antes de que existiera esa columna en el GAS.
-// Solo toca filas donde aporte=0 y hay grado válido + regla de config.
-function recalcularAportesVentas() {
-  var ss     = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet  = ss.getSheetByName('Ventas');
-  var data   = sheet.getDataRange().getValues();
-  var config = leerConfigProductos();
-  var actualizadas = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var row  = data[i];
-    var fecha = row[0] instanceof Date ? row[0] : null;
-    if (!fecha) continue;
-
-    var aporteExistente = parseFloat(row[20]) || 0;
-    if (aporteExistente > 0) continue; // ya tiene aporte calculado
-
-    var totalPagadoLinea = parseFloat(row[14]) || 0;
-    if (totalPagadoLinea <= 0) continue;
-
-    var gradoRaw  = String(row[21] || row[11] || '').trim();
-    var gradoNorm = normalizarGradoGAS(gradoRaw);
-    if (!gradoNorm || gradoNorm === '(Sin observaciones)') continue;
-
-    var skuUp   = String(row[6]  || '').trim().toUpperCase();
-    var marcaUp = String(row[12] || '').trim().toUpperCase();
-    var regla   = buscarRegla(config, skuUp, fecha)
-               || buscarRegla(config, 'MARCA:' + marcaUp, fecha)
-               || buscarRegla(config, 'DEFAULT', fecha);
-    if (!regla) continue;
-
-    var aporteGrado   = Math.round(totalPagadoLinea * regla.pctGrado);
-    var costoUnit     = parseFloat(row[13]) || 0;
-    var qty           = parseInt(row[7]) || 1;
-    var aporteEscuela;
-    if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
-      aporteEscuela = Math.round(totalPagadoLinea * regla.pctEscuela);
-    } else {
-      aporteEscuela = Math.max(0, Math.round(totalPagadoLinea - costoUnit * qty - aporteGrado));
-    }
-
-    // col U = índice 21 en A1 notation (col V hoja = índice 22)
-    sheet.getRange(i + 1, 21).setValue(aporteGrado);                      // col U
-    sheet.getRange(i + 1, 22).setValue(aporteGrado > 0 ? gradoNorm : ''); // col V — vacío si no hay aporte
-    sheet.getRange(i + 1, 23).setValue(aporteEscuela);    // col W
-    actualizadas++;
-  }
-  Logger.log('recalcularAportesVentas: ' + actualizadas + ' filas actualizadas');
-}
-
-// Reprocesa órdenes que cayeron en Digitales por error (weight=0 ya no es criterio de digital).
-// IDs internos de TiendaNube: 770→2106489043, 771→2089714189, 775→2108754123
-function reprocesarOrdenesFaltantes() {
-  var ids = ['2106489043', '2089714189', '2108754123'];
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  ids.forEach(function(id) {
-    var order = fetchOrder(id);
-    if (!order) { Logger.log('No encontré orden ID ' + id); return; }
-    // Borrar filas existentes en Ventas para este pedido
-    var data = sheet.getDataRange().getValues();
-    for (var i = data.length - 1; i >= 1; i--) {
-      if (String(data[i][1]) === String(order.number)) sheet.deleteRow(i + 1);
-    }
-    // Reescribir con todos los productos (sin filtro digital)
-    registrarEnVentas(order);
-    Logger.log('Reprocesado pedido #' + order.number + ' (' + order.products.length + ' líneas)');
-  });
-}
-
-// Agrega los headers de Aporte Grado, Grado Destino y Aporte Escuela a la hoja Ventas existente
-function migrarHeaderVentas() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('No existe hoja Ventas'); return; }
-  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  if (header.indexOf('Aporte Grado') !== -1) {
-    Logger.log('Headers ya existen'); return;
-  }
-  var nextCol = sheet.getLastColumn() + 1;
-  sheet.getRange(1, nextCol, 1, 3).setValues([['Aporte Grado', 'Grado Destino', 'Aporte Escuela']]);
-  sheet.getRange(1, nextCol, 1, 3).setFontWeight('bold');
-  Logger.log('Headers agregados en cols ' + nextCol + ', ' + (nextCol + 1) + ' y ' + (nextCol + 2));
-}
-
-// Recalcula cols U (Aporte Grado), V (Grado Destino) y W (Aporte Escuela) para todas las filas existentes
-function reprocesarAportesVentas() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('No existe hoja Ventas'); return; }
-
-  var config = leerConfigProductos();
-  var data   = sheet.getDataRange().getValues();
-  if (data.length <= 1) { Logger.log('Sin filas de datos'); return; }
-
-  var aporteData = [];
-
-  for (var i = 1; i < data.length; i++) {
-    var row        = data[i];
-    var fecha      = row[0] ? new Date(row[0]) : new Date();
-    var sku             = String(row[6]  || '').trim().toUpperCase();
-    var qty             = parseInt(row[7])  || 1;
-    var totalPagado     = parseFloat(row[14]) || parseFloat(row[9]) || 0;  // col O (pagado) con fallback a col J (bruto)
-    var comentario      = String(row[11] || '').trim();
-    var marca           = String(row[12] || '').trim().toUpperCase();
-    var costoUnit       = parseFloat(row[13]) || 0;
-
-    var gradoNorm   = normalizarGradoGAS(comentario);
-    var gradoValido = (gradoNorm && gradoNorm !== '(Sin observaciones)') ? gradoNorm : '';
-
-    var regla = buscarRegla(config, sku, fecha)
-             || buscarRegla(config, 'MARCA:' + marca, fecha)
-             || buscarRegla(config, 'DEFAULT', fecha);
-
-    if (!regla) {
-      // Sin regla vigente para esta fecha → celdas vacías
-      aporteData.push(['', '', '']);
-    } else {
-      // Aporte grado: solo si el comprador eligió grado
-      var aporteLinea = gradoValido ? Math.round(totalPagado * regla.pctGrado) : 0;
-      // Aporte escuela: siempre que haya regla vigente
-      var aporteEscuelaLinea = 0;
-      if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
-        aporteEscuelaLinea = Math.round(totalPagado * regla.pctEscuela);
-      } else {
-        var costoTotal = costoUnit * qty;
-        aporteEscuelaLinea = Math.max(0, Math.round(totalPagado - costoTotal - aporteLinea));
-      }
-      aporteData.push([aporteLinea, gradoValido, aporteEscuelaLinea]);
-    }
-  }
-
-  sheet.getRange(2, 21, aporteData.length, 3).setValues(aporteData);
-  Logger.log('Filas procesadas: ' + aporteData.length);
-}
-
-function limpiarNAenGradoDestino() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('No existe hoja Ventas'); return; }
-  var data    = sheet.getDataRange().getValues();
-  var limpios = 0;
-  for (var i = 1; i < data.length; i++) {
-    var v = String(data[i][21] || '').trim().toLowerCase();
-    if (v === 'na' || v === 'n/a' || v === 'no aplica' || v === 'ninguno' || v === 'ninguna') {
-      sheet.getRange(i + 1, 22).clearContent();
-      limpios++;
-    }
-  }
-  Logger.log('Celdas limpiadas: ' + limpios);
-}
-
-function testReprocesarFila() {
-  // Testea la lógica de una fila específica sin tocar el sheet
-  var config      = leerConfigProductos();
-  var fecha       = new Date('2026-09-10'); // fecha dentro de vigencia
-  var totalPagado = 13000;
-  var costoUnit   = 10000;
-  var qty         = 1;
-  var comentario  = 'GRADO:1';
-  var sku         = '';
-  var marca       = 'PARAISA';
-
-  var gradoNorm   = normalizarGradoGAS(comentario);
-  var gradoValido = (gradoNorm && gradoNorm !== '(Sin observaciones)') ? gradoNorm : '';
-
-  var regla = buscarRegla(config, sku, fecha)
-           || buscarRegla(config, 'MARCA:' + marca, fecha)
-           || buscarRegla(config, 'DEFAULT', fecha);
-
-  Logger.log('gradoValido: ' + gradoValido);
-  Logger.log('regla: ' + JSON.stringify(regla));
-
-  var aporteLinea = gradoValido ? Math.round(totalPagado * regla.pctGrado) : 0;
-  Logger.log('aporteLinea: ' + aporteLinea);
-
-  var aporteEscuelaLinea = 0;
-  if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
-    aporteEscuelaLinea = Math.round(totalPagado * regla.pctEscuela);
-    Logger.log('aporteEscuela (fijo): ' + aporteEscuelaLinea);
-  } else {
-    var costoTotal = costoUnit * qty;
-    aporteEscuelaLinea = Math.max(0, Math.round(totalPagado - costoTotal - aporteLinea));
-    Logger.log('aporteEscuela (residual): ' + aporteEscuelaLinea + ' = ' + totalPagado + ' - ' + costoTotal + ' - ' + aporteLinea);
-  }
-
-  Logger.log('SUMA: ' + (aporteLinea + aporteEscuelaLinea) + ' | MARGEN ESPERADO: ' + (totalPagado - costoUnit * qty));
-}
-
-function testFechasConfig() {
-  var config = leerConfigProductos();
-  Logger.log('=== CONFIG cargada ===');
-  config.forEach(function(r) {
-    Logger.log('clave=' + r.clave + ' | pctGrado=' + r.pctGrado + ' | vigente=' + r.vigente + ' | tipo=' + typeof r.vigente);
-  });
-
-  // Testear con una fecha de agosto (antes del sistema) y una de septiembre
-  var fechaAntes  = new Date('2026-08-15');
-  var fechaDespues = new Date('2026-09-10');
-  var reglaAntes   = buscarRegla(config, 'DEFAULT', fechaAntes);
-  var reglaDespues = buscarRegla(config, 'DEFAULT', fechaDespues);
-  Logger.log('buscarRegla DEFAULT para 15/08/2026: ' + JSON.stringify(reglaAntes));
-  Logger.log('buscarRegla DEFAULT para 10/09/2026: ' + JSON.stringify(reglaDespues));
 }
 
 function yaFueEnviado(orderId) {
@@ -1826,25 +1531,6 @@ function enviarEmailEntrega(email, nombre, numeroPedido, productos) {
 // UTILIDADES
 // ──────────────────────────────────────────────────────────
 
-// Registra manualmente una orden digital que ya entró antes del fix
-function reprocesarOrdenDigital() {
-  var ORDER_ID = '2091239608'; // Taller Tercer Septenio
-  var order = fetchOrder(ORDER_ID);
-  if (!order) { Logger.log('Pedido no encontrado'); return; }
-  var partes = separarProductos(order);
-  if (partes.digitales.length === 0) { Logger.log('No se detectaron productos digitales'); return; }
-  registrarEnDigitales(order, partes.digitales);
-  Logger.log('OK — ' + partes.digitales.length + ' producto(s) registrado(s) en hoja Digitales');
-}
-
-function testConPedido() {
-  var ORDER_ID_REAL = 'PEGA_UN_ID_DE_PEDIDO_REAL'; // ← reemplazá
-  var order = fetchOrder(ORDER_ID_REAL);
-  if (!order) { Logger.log('No se encontró el pedido'); return; }
-  Logger.log('Pedido encontrado: #' + order.number + ' — ' + order.contact_email);
-  procesarPedido(order);
-}
-
 // Trae todas las órdenes pagadas de Tiendanube con paginación
 function fetchAllPaidOrders() {
   var allOrders = [];
@@ -1927,37 +1613,6 @@ function reprocesarPendientes() {
     }
   });
   Logger.log('Listo.');
-}
-
-// ──────────────────────────────────────────────────────────
-// REPROCESO — Marcar en TiendaNube todos los pedidos ya entregados en Sheets
-// Ejecutar UNA SOLA VEZ manualmente desde el editor de GAS
-// ──────────────────────────────────────────────────────────
-function reprocesarEntregasTiendaNube() {
-  var sheet = getSheet();
-  var data  = sheet.getDataRange().getValues();
-  var procesados = 0;
-  var errores    = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var orderId = String(data[i][0]);
-    var estado  = String(data[i][7]);
-
-    if (estado.indexOf('ENTREGADO') === -1) continue;
-    if (!orderId || orderId === '') continue;
-
-    Logger.log('Procesando orden ' + orderId + ' (fila ' + (i+1) + ')...');
-    try {
-      marcarFulfillmentTiendanube(orderId);
-      procesados++;
-      Utilities.sleep(500); // pausa entre llamadas para no saturar la API
-    } catch(err) {
-      Logger.log('ERROR en orden ' + orderId + ': ' + err);
-      errores++;
-    }
-  }
-
-  Logger.log('=== REPROCESO COMPLETO === Procesados: ' + procesados + ' | Errores: ' + errores);
 }
 
 function registrarWebhook() {
@@ -2347,81 +2002,6 @@ function getRetirosData(estadoFiltro, diasFiltro) {
   return result;
 }
 
-// ── TEST: distintos casos de uso ──────────────────────────────
-function _logAporte(label, resultado, totalCompra, esperadoGrado, esperadoEscuela) {
-  Logger.log('');
-  Logger.log('=== ' + label + ' ===');
-  if (!resultado || (resultado.montoGrado === 0 && resultado.montoEscuela === 0)) {
-    Logger.log('Sin aporte — bloque no aparece en el mail.');
-    return;
-  }
-  Logger.log('Compra total:  $' + totalCompra);
-  if (resultado.montoGrado > 0)   Logger.log('→ ' + formatearGrado(resultado.grado) + ': $' + resultado.montoGrado  + (esperadoGrado   ? '  (esperado: $' + esperadoGrado + ')' : ''));
-  if (resultado.montoEscuela > 0) Logger.log('→ Escuela:      $' + resultado.montoEscuela + (esperadoEscuela ? '  (esperado: $' + esperadoEscuela + ')' : ''));
-}
-
-// CASO 1 — Productos regulares con grado seleccionado (pedido 630)
-// Esperado: $4.800 al grado 9, $9.541 a la escuela
-function testCaso1_RegularConGrado() {
-  var order = {
-    id: '2070879050', number: 630, total: '32000.00',
-    created_at: '2026-09-15T12:00:00-03:00', note: '9',
-    products: [
-      { sku: 'MIEL_GUARDIANES_COLMENA_1000',       product_id: '335149136', variant_id: '1490635565', price: '11000.00', quantity: 1 },
-      { sku: 'YERBA_CABALLO_NEGRO_BARBACUA_1KG',    product_id: '330467927', variant_id: '1576337722', price: '8000.00',  quantity: 1 },
-      { sku: 'YERBA_CABALLO_NEGRO_TRADICIONAL_1KG', product_id: '330386845', variant_id: '1576330774', price: '8000.00',  quantity: 1 },
-      { sku: 'YERBA_YEMARI_1KG',                   product_id: '330380951', variant_id: '1470321979', price: '5000.00',  quantity: 1 }
-    ]
-  };
-  _logAporte('CASO 1: Regulares con grado (pedido 630)', calcularAporteGrado(order), 32000, 4800, 9541);
-}
-
-// CASO 2 — Solo escuela: pizza con grado seleccionado → 0% grado, 10% escuela
-// Esperado: $0 al grado, $2.500 a la escuela (10% de $25.000)
-function testCaso2_PizzaSoloEscuela() {
-  var order = {
-    id: 'TEST002', number: 999, total: '25000.00',
-    created_at: '2026-09-18T12:00:00-03:00', note: '4to',
-    products: [
-      { sku: 'PIZZAS_PAJARITO_AMARILLO_3UNIDADES', product_id: '', variant_id: '', price: '25000.00', quantity: 1 }
-    ]
-  };
-  _logAporte('CASO 2: Pizza — solo va a la escuela', calcularAporteGrado(order), 25000, 0, 2500);
-}
-
-// CASO 3 — Alfajores Nazareno con grado: 25% grado, 5% escuela
-// Esperado: $2.000 al grado, $400 a la escuela (sobre $8.000)
-function testCaso3_Nazareno() {
-  var order = {
-    id: 'TEST003', number: 998, total: '8000.00',
-    created_at: '2026-09-18T12:00:00-03:00', note: '6to',
-    products: [
-      { sku: 'NAZARENO_ALFAJORES_CHOCO_TRADICIONAL', product_id: '', variant_id: '', price: '8000.00', quantity: 1 }
-    ]
-  };
-  _logAporte('CASO 3: Nazareno — 25% grado / 5% escuela', calcularAporteGrado(order), 8000, 2000, 400);
-}
-
-// CASO 4 — Sin grado en la nota → no aparece el bloque
-function testCaso4_SinGrado() {
-  var order = {
-    id: 'TEST004', number: 997, total: '12000.00',
-    created_at: '2026-09-18T12:00:00-03:00', note: '',
-    products: [
-      { sku: 'MIEL_GUARDIANES_COLMENA_1000', product_id: '335149136', variant_id: '1490635565', price: '12000.00', quantity: 1 }
-    ]
-  };
-  _logAporte('CASO 4: Sin grado — no muestra bloque', calcularAporteGrado(order), 12000, null, null);
-}
-
-// Corre todos los casos juntos (solo logs, no manda mails)
-function testTodosLosCasos() {
-  testCaso1_RegularConGrado();
-  testCaso2_PizzaSoloEscuela();
-  testCaso3_Nazareno();
-  testCaso4_SinGrado();
-}
-
 // ─────────────────────────────────────────────────────────────
 //  REENVIAR QR — regenera y reenvía a todas las órdenes PENDIENTE
 //  Usar cuando cambió QR_SECRET y los QRs viejos quedaron inválidos.
@@ -2490,35 +2070,6 @@ function reenviarQRsPendientes() {
     }
   }
   Logger.log('=== reenviarQRsPendientes: ' + enviados + ' enviados, ' + errores + ' errores, ' + omitidos + ' omitidos (históricos >'+DIAS_MAX+'d) ===');
-}
-
-// Manda el mail exacto (con QR real) a robertson.ine@gmail.com usando el pedido 630
-// Corré desde el editor — no requiere redeploy
-function testEnviarEmailAporte() {
-  var ORDER_ID = '2070879050';
-  var resp  = UrlFetchApp.fetch(
-    'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders/' + ORDER_ID,
-    { headers: { 'Authentication': 'bearer ' + CONFIG.API_TOKEN, 'User-Agent': CONFIG.TIENDA_NOMBRE + ' (retiro-automatico)' }, muteHttpExceptions: true }
-  );
-  var order = JSON.parse(resp.getContentText());
-
-  var orderId   = String(order.id);
-  var nombre    = (order.contact_name || 'Familia').split(' ')[0];
-  var productos = (order.products || []).map(function(p) {
-    var n = p.name; n = (typeof n === 'object') ? (n.es || n.pt || Object.values(n)[0] || '') : (n || '');
-    return p.quantity + 'x ' + n;
-  }).join('\n');
-
-  var token     = generarToken(orderId);
-  var verifyUrl = 'https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=qr&id='
-                  + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
-  var qrApiUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=L&margin=1&data='
-                  + encodeURIComponent(verifyUrl);
-  var qrBlob    = UrlFetchApp.fetch(qrApiUrl).getBlob().setName('qr.png').setContentType('image/png');
-
-  // Redirigir a email de prueba en lugar del comprador real
-  enviarEmail('robertson.ine@gmail.com', nombre, order, qrBlob, productos);
-  Logger.log('[TEST] Mail enviado a robertson.ine@gmail.com — pedido #' + order.number);
 }
 
 // ── PREVIEW INFORME MENSUAL (browser, sin enviar mails) ─────────────────────
@@ -2773,97 +2324,6 @@ function enviarInformeMensual() {
   });
 
   Logger.log('Informe ' + mesLabel + ' enviado a ' + enviados + '/' + emails.length + ' destinatarios. Aporte total: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
-}
-
-// Test: envía el informe solo a robertson.ine@gmail.com para previsualizar
-function testEnviarInformeMensual() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('Sheet Ventas no encontrada.'); return; }
-
-  var data = sheet.getDataRange().getValues();
-
-  // Forzar septiembre 2026 para el test
-  var mesPasado = new Date(2026, 8, 1);
-  var mesNum    = mesPasado.getMonth();
-  var anioNum   = mesPasado.getFullYear();
-  var mesNombre = mesPasado.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-  var mesLabel  = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
-
-  var porGrado      = {};
-  var totalAporte   = 0;
-  var totalUnidades = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var row   = data[i];
-    var fecha = new Date(row[0]);
-    if (isNaN(fecha.getTime())) continue;
-    if (fecha.getMonth() !== mesNum || fecha.getFullYear() !== anioNum) continue;
-
-    var qty         = parseInt(row[7])    || 0;
-    var aporteGrado = parseFloat(row[20]) || 0;
-    var grado       = normalizarGradoGAS(String(row[21] || ''));
-
-    totalUnidades += qty;
-    totalAporte   += aporteGrado;
-
-    if (grado && grado !== '(Sin observaciones)') {
-      if (!porGrado[grado]) porGrado[grado] = { aporte: 0, unidades: 0 };
-      porGrado[grado].aporte   += aporteGrado;
-      porGrado[grado].unidades += qty;
-    }
-  }
-
-  var grados = Object.keys(porGrado).sort(function(a, b) {
-    if (a === 'J') return -1;
-    if (b === 'J') return 1;
-    return parseInt(a) - parseInt(b);
-  });
-
-  if (grados.length === 0) {
-    Logger.log('[TEST] Sin aportes por grado en ' + mesLabel + '. Nada para enviar.');
-    return;
-  }
-
-  var filasGrado = grados.map(function(g) {
-    var d = porGrado[g];
-    return '<tr>' +
-      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;color:#374151">' + formatearGrado(g) + '</td>' +
-      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;font-weight:700;color:#1a5c2a">$' + Math.round(d.aporte).toLocaleString('es-AR') + '</td>' +
-      '<td style="padding:10px 14px;border-bottom:1px solid #e8f5e9;text-align:right;color:#6b7280">' + d.unidades + '</td>' +
-      '</tr>';
-  }).join('');
-
-  var html =
-    '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;max-width:560px;margin:auto;padding:24px;color:#1a1a2e">' +
-    '<div style="text-align:center;padding:0 0 24px 0">' +
-    '<img src="' + LOGO_B64 + '" style="max-width:200px;width:55%" alt="Diente de León">' +
-    '</div>' +
-    '<h2 style="color:#3a7d44;margin:0 0 8px 0;font-size:20px">Resumen de aportes · ' + mesLabel + '</h2>' +
-    '<p style="color:#555;margin:0 0 20px 0;font-size:14px;line-height:1.6">Gracias a las compras de toda la comunidad Dandelion, este mes se generaron aportes para cada grado. Acá compartimos el resumen:</p>' +
-    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #c8e6c9">' +
-    '<thead><tr style="background:#3a7d44">' +
-    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:13px;font-weight:600">Grado</th>' +
-    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Aporte recaudado</th>' +
-    '<th style="padding:11px 14px;text-align:right;color:#fff;font-size:13px;font-weight:600">Unidades vendidas</th>' +
-    '</tr></thead>' +
-    '<tbody>' + filasGrado + '</tbody>' +
-    '<tfoot><tr style="background:#e8f5e9">' +
-    '<td style="padding:11px 14px;font-weight:700;font-size:14px">Total</td>' +
-    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#1a5c2a">$' + Math.round(totalAporte).toLocaleString('es-AR') + '</td>' +
-    '<td style="padding:11px 14px;text-align:right;font-weight:700;font-size:14px;color:#555">' + totalUnidades + '</td>' +
-    '</tr></tfoot>' +
-    '</table>' +
-    '<p style="font-size:13px;color:#555;line-height:1.6">Los aportes se transfieren a cada grado durante los primeros días del mes. Si tenés alguna consulta o querés verificar el destino de tu aporte, <a href="https://escuela-dandelion.github.io/Comision-Recursos/wiki-aportes-grado.html" style="color:#3a7d44">visitá nuestra wiki</a>.</p>' +
-    '<p style="font-size:11px;color:#aaa;margin-top:24px;padding-top:14px;border-top:1px solid #eee;text-align:center">Tienda Diente de León · Escuela Dandelion Pedagogía Waldorf · Córdoba</p>' +
-    '</div>';
-
-  GmailApp.sendEmail('robertson.ine@gmail.com', '[TEST] Tienda Diente de León — Aportes de ' + mesLabel, '', {
-    htmlBody: html,
-    from:     'tiendavirtual.dientedeleon@gmail.com',
-    name:     'Tienda Diente de León'
-  });
-  Logger.log('[TEST] Mail de prueba enviado a robertson.ine@gmail.com — ' + mesLabel + ' | Aportes: $' + Math.round(totalAporte) + ' | Unidades: ' + totalUnidades);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3292,54 +2752,6 @@ function activarLimpiezaEnviados() {
   ScriptApp.newTrigger('limpiarEnviadosQR')
     .timeBased().everyDays(1).atHour(3).create();
   Logger.log('Trigger diario limpiarEnviadosQR activado (3am).');
-}
-
-// ═══════════════════════════════════════════════════════════
-//  MIGRACIÓN — normalizar col M (Marca) al nombre de Proveedor
-//  Correr desde el editor GAS: primero migrarMarcasDryRun() para
-//  revisar los cambios, luego migrarMarcasVentas() para aplicar.
-// ═══════════════════════════════════════════════════════════
-
-function migrarMarcasDryRun() {
-  var cambios = _calcularCambiosMarcas();
-  if (!cambios.length) { Logger.log('Sin cambios pendientes.'); return; }
-  Logger.log('=== DRY RUN — ' + cambios.length + ' filas a actualizar ===');
-  cambios.forEach(function(c) {
-    Logger.log('Fila ' + c.fila + ' | "' + c.antes + '" → "' + c.despues + '"  (pedido ' + c.pedido + ')');
-  });
-  Logger.log('Total: ' + cambios.length + ' filas. Ejecutá migrarMarcasVentas() para aplicar.');
-}
-
-function migrarMarcasVentas() {
-  var cambios = _calcularCambiosMarcas();
-  if (!cambios.length) { Logger.log('Sin cambios pendientes.'); return; }
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  cambios.forEach(function(c) {
-    sheet.getRange(c.fila, 13).setValue(c.despues); // col 13 = col M (1-indexed)
-  });
-  SpreadsheetApp.flush();
-  Logger.log('Migración completada: ' + cambios.length + ' filas actualizadas.');
-  // Invalidar caché para que el próximo api_dashboard traiga datos frescos
-  try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
-}
-
-function _calcularCambiosMarcas() {
-  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var sheet = ss.getSheetByName('Ventas');
-  if (!sheet) { Logger.log('No se encontró la hoja Ventas.'); return []; }
-  var data = sheet.getDataRange().getValues();
-  var cambios = [];
-  for (var i = 1; i < data.length; i++) {
-    var row       = data[i];
-    var marcaActual = String(row[12] || '').trim();
-    if (!marcaActual) continue;
-    var proveedor = MARCA_A_PROVEEDOR[marcaActual.toUpperCase()];
-    if (proveedor && proveedor !== marcaActual) {
-      cambios.push({ fila: i + 1, antes: marcaActual, despues: proveedor, pedido: String(row[1] || '') });
-    }
-  }
-  return cambios;
 }
 
 // ═══════════════════════════════════════════════════════════

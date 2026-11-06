@@ -7,6 +7,7 @@
   <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pedidos a Proveedor — Diente de León</title>
+<script src="ddl-utils.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -813,20 +814,14 @@ var _proveedoresMap = {}; // nombre → tel (cargado desde GAS)
 var _impMarcas = [];      // filtro de marcas por URL param _vAs_marcas (FGP)
 
 function cargarProveedoresMap() {
-  var _aeP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
-  console.log('[DdL] cargarProveedoresMap — email:', _aeP || '(sin email)');
-  fetch(SCRIPT_URL + '?action=getProveedores' + (_aeP ? '&email=' + encodeURIComponent(_aeP) : ''), { redirect: 'follow' })
-    .then(function(r){ console.log('[DdL] getProveedores HTTP status:', r.status); return r.json(); })
-    .then(function(data) {
-      console.log('[DdL] getProveedores data.ok:', data.ok, '| proveedores:', Array.isArray(data.proveedores) ? data.proveedores.length : data.proveedores);
-      if (!data.ok || !data.proveedores) return;
-      data.proveedores.forEach(function(p) { _proveedoresMap[p.nombre] = p.tel || ''; });
-      // Actualizar tel en memoria si algún pedido no lo tenía
-      todosLosPedidos.forEach(function(p) {
-        if (!p.tel && _proveedoresMap[p.proveedor]) p.tel = _proveedoresMap[p.proveedor];
-      });
-      poblarFiltroProveedor(); // reconstruir con todos los proveedores conocidos
-    }).catch(function(err){ console.error('[DdL] cargarProveedoresMap ERROR:', err); });
+  ddlFetchProveedores(function(data) {
+    if (!data.ok || !data.proveedores) return;
+    data.proveedores.forEach(function(p) { _proveedoresMap[p.nombre] = p.tel || ''; });
+    todosLosPedidos.forEach(function(p) {
+      if (!p.tel && _proveedoresMap[p.proveedor]) p.tel = _proveedoresMap[p.proveedor];
+    });
+    poblarFiltroProveedor();
+  });
 }
 
 function poblarSelectorProveedor() {
