@@ -2091,30 +2091,47 @@ function refrescarPedidoActual(callback) {
     .catch(function(){}); // silencioso — el usuario ya vio el feedback del guardado
 }
 
+function _aplicarSelectProveedor() {
+  var sel = document.getElementById('input-proveedor-sel');
+  var inp = document.getElementById('input-proveedor');
+  poblarSelectorProveedor();
+  // Preselección case-insensitive (pedido puede tener "TIENDA LIMON" mientras el map tiene "Tienda Limón")
+  var provNorm = (pedidoActual.proveedor || '').toLowerCase().trim();
+  var encontrado = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value.toLowerCase().trim() === provNorm) {
+      sel.selectedIndex = i; encontrado = true; break;
+    }
+  }
+  if (!encontrado) sel.selectedIndex = 0;
+  sel.style.display = ''; inp.style.display = 'none';
+  onEditProveedorChange();
+}
+
 function toggleEditProveedor() {
   var view = document.getElementById('d-proveedor-view');
   var edit = document.getElementById('d-proveedor-edit');
   var btn  = document.getElementById('btn-toggle-proveedor');
   if (edit.style.display === 'none') {
-    var sel = document.getElementById('input-proveedor-sel');
     var inp = document.getElementById('input-proveedor');
-    poblarSelectorProveedor();
-    if (Object.keys(_proveedoresMap).length > 0) {
-      // Preseleccionar proveedor actual si está en la lista
-      var encontrado = false;
-      for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === pedidoActual.proveedor) { sel.selectedIndex = i; encontrado = true; break; }
-      }
-      if (!encontrado) sel.selectedIndex = 0;
-      sel.style.display = ''; inp.style.display = 'none';
-    } else {
-      sel.style.display = 'none'; inp.style.display = '';
-    }
     inp.value = pedidoActual.proveedor || '';
     document.getElementById('input-tel-proveedor').value = pedidoActual.tel || '';
     view.style.display = 'none';
     edit.style.display = 'block';
     btn.textContent = '✕ Cancelar';
+    if (Object.keys(_proveedoresMap).length > 0) {
+      _aplicarSelectProveedor();
+    } else {
+      // Proveedores todavía cargando: mostrar text input transitoriamente y esperar el fetch
+      inp.style.display = '';
+      document.getElementById('input-proveedor-sel').style.display = 'none';
+      ddlFetchProveedores(function(data) {
+        if (data.ok && data.proveedores) {
+          data.proveedores.forEach(function(p) { _proveedoresMap[p.nombre] = p.tel || ''; });
+        }
+        if (Object.keys(_proveedoresMap).length > 0) _aplicarSelectProveedor();
+      });
+    }
   } else {
     edit.style.display = 'none';
     view.style.display = 'block';

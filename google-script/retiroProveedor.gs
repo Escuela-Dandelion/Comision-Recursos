@@ -1,4 +1,4 @@
-// v2026-11-06f — refactor: se eliminaron funciones de migración ya ejecutadas y tests
+// v2026-11-06j — normProv global, getProductosTN filtra por proveedor (brand TN → MARCA_A_PROVEEDOR_RP)
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -32,6 +32,13 @@ const MARCA_A_PROVEEDOR_RP = {
 
 function marcaToProveedorRP(marca) {
   return MARCA_A_PROVEEDOR_RP[(marca || '').trim().toUpperCase()] || null;
+}
+
+// Normaliza nombre de proveedor para comparaciones: lowercase + sin tildes
+// Permite matchear "TIENDA LIMON" con "Tienda Limón"
+function normProv(s) {
+  return String(s || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 const PHONE_MAP = {
@@ -128,7 +135,8 @@ function doGet(e) {
     }
 
     if (action === 'getProductosTN') {
-      const productos = obtenerProductosTN();
+      const provFilter = e.parameter.proveedor || '';
+      const productos = obtenerProductosTN(provFilter);
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, productos: productos }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -275,30 +283,51 @@ function doGet(e) {
       const desde    = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
       const hasta    = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
 
-      // Leer pedidos para determinar cobertura por SKU
-      // Los productos se almacenan como texto: "Granola x2 ($1200) [SKU123]\nLentejas x5 ($800) [SKU456]"
+      // Leer pedidos: por proveedor, ordenados por fecha (más viejos primero)
+      // Matching FIFO por cantidad: cada venta se asigna al pedido más viejo con qty disponible del SKU
       const ESTADOS_OCULTAR = ['Entregado en Escuela', 'Cerrado'];
-      const pedidosPorProv  = {}; // prov → [{skus: Set, estado}]
+      const pedidosPorProv  = {}; // normProv → [{norden, estado, fecha, skuQty: {sku → qty restante}}]
       try {
         const sPed  = getPedidosSheet();
         const dPed  = sPed.getDataRange().getValues();
         for (let i = 1; i < dPed.length; i++) {
-          const fila  = dPed[i];
-          const prov  = String(fila[COL.PROVEEDOR] || '').trim();
-          const est   = String(fila[COL.ESTADO]    || '').trim();
-          const prods = String(fila[COL.PRODUCTOS]  || '');
+          const fila   = dPed[i];
+          const prov   = normProv(fila[COL.PROVEEDOR]);
+          const est    = String(fila[COL.ESTADO]    || '').trim();
+          const prods  = String(fila[COL.PRODUCTOS]  || '');
+          const norden = String(fila[COL.NORDEN]     || '').trim();
           if (!prov || est === 'Cancelado') continue;
-          // Extraer SKUs del campo productos: todo lo que esté entre [ ]
-          const skus = new Set();
-          var rx = /\[([^\]]+)\]/g, m;
-          while ((m = rx.exec(prods)) !== null) skus.add(m[1].trim());
-          if (skus.size === 0) continue;
+          // Parsear qty por SKU: cada línea tiene formato "Nombre xN Unidad ($precio) [SKU]"
+          // El precio y la unidad son opcionales; SKU siempre está entre [ ]
+          const skuQty = {};
+          prods.split('\n').forEach(function(line) {
+            const skuMatch = line.match(/\[([^\]]+)\]/);
+            if (!skuMatch) return;
+            const sku = skuMatch[1].trim();
+            const qtyMatch = line.match(/x(\d+)/);
+            const qty = qtyMatch ? (parseInt(qtyMatch[1]) || 1) : 1;
+            skuQty[sku] = (skuQty[sku] || 0) + qty;
+          });
+          if (Object.keys(skuQty).length === 0) continue;
+          const fechaRaw = fila[COL.FECHA];
+          let fechaPed;
+          if (fechaRaw instanceof Date) {
+            fechaPed = fechaRaw;
+          } else {
+            const pp = String(fechaRaw).match(/^(\d+)\/(\d+)\/(\d+)/);
+            fechaPed = pp ? new Date(parseInt(pp[3]), parseInt(pp[2]) - 1, parseInt(pp[1])) : new Date(fechaRaw);
+          }
           if (!pedidosPorProv[prov]) pedidosPorProv[prov] = [];
-          pedidosPorProv[prov].push({ skus: skus, estado: est });
+          pedidosPorProv[prov].push({ norden, estado: est, fecha: fechaPed, skuQty });
         }
+        // Ordenar pedidos de cada proveedor más viejo primero (FIFO)
+        Object.keys(pedidosPorProv).forEach(function(p) {
+          pedidosPorProv[p].sort(function(a, b) { return a.fecha - b.fecha; });
+        });
       } catch(pe) { Logger.log('Error leyendo pedidos: ' + pe.message); }
 
-      const lineas = [];
+      // Recolectar ventas en el rango sin asignar todavía
+      const rawLineas = [];
       for (let i = 1; i < data.length; i++) {
         const fila     = data[i];
         const rawFecha = fila[0];
@@ -324,33 +353,43 @@ function doGet(e) {
         const costo     = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
         const proveedor = String(fila[12] || '').trim();
 
-        // Determinar cobertura por SKU: buscar cualquier pedido activo al mismo proveedor que incluya este SKU
+        rawLineas.push({ fechaObj: fecha, pedido: String(fila[1] || ''), comprador: String(fila[3] || ''),
+          producto: String(fila[5] || ''), sku, cantidad, precio: String(fila[8] || ''), proveedor, costo });
+      }
+
+      // Ordenar ventas de más vieja a más nueva para asignación FIFO
+      rawLineas.sort(function(a, b) { return a.fechaObj - b.fechaObj; });
+
+      // Asignar cada venta al pedido más viejo con qty disponible del SKU
+      const lineas = [];
+      rawLineas.forEach(function(l) {
+        const pedsProv = pedidosPorProv[normProv(l.proveedor)] || [];
         let estadoPedido = null;
-        const pedsProv = pedidosPorProv[proveedor] || [];
+        let norden = null;
         for (let pi = 0; pi < pedsProv.length; pi++) {
           const ped = pedsProv[pi];
-          if (!ped.skus.has(sku)) continue;
-          if (ESTADOS_OCULTAR.indexOf(ped.estado) !== -1) {
-            if (estadoPedido === null) estadoPedido = 'entregado'; // 'vigente' gana si hay otro pedido activo
-          } else {
-            estadoPedido = 'vigente'; // pedido activo con este SKU
-          }
+          if (!ped.skuQty[l.sku] || ped.skuQty[l.sku] <= 0) continue;
+          ped.skuQty[l.sku] -= l.cantidad;
+          norden = ped.norden;
+          estadoPedido = ESTADOS_OCULTAR.indexOf(ped.estado) !== -1 ? 'entregado' : 'vigente';
+          break;
         }
-        if (estadoPedido === 'entregado') continue; // ocultar
+        if (estadoPedido === 'entregado') return; // ocultar ventas ya entregadas
 
         lineas.push({
-          fecha:        Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
-          pedido:       String(fila[1] || ''),
-          comprador:    String(fila[3] || ''),
-          producto:     String(fila[5] || ''),
-          sku:          sku,
-          cantidad:     cantidad,
-          precio:       String(fila[8] || ''),
-          proveedor:    proveedor,
-          costo:        costo,
+          fecha:        Utilities.formatDate(l.fechaObj, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+          pedido:       l.pedido,
+          comprador:    l.comprador,
+          producto:     l.producto,
+          sku:          l.sku,
+          cantidad:     l.cantidad,
+          precio:       l.precio,
+          proveedor:    l.proveedor,
+          costo:        l.costo,
           estadoPedido: estadoPedido, // null | 'vigente'
+          norden:       norden,       // norden del pedido que cubre esta venta, o null
         });
-      }
+      });
 
       const grupos = {};
       lineas.forEach(function(l) {
@@ -491,20 +530,28 @@ function obtenerMarcasTN() {
   return brands;
 }
 
-function obtenerProductosTN() {
+function obtenerProductosTN(provFilter) {
   const resp = UrlFetchApp.fetch(
-    'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200&fields=id,name,variants', {
+    'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200&fields=id,name,brand,variants', {
     headers: {
       'Authentication': 'bearer ' + TN_API_TOKEN,
       'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
     }
   });
-  const data  = JSON.parse(resp.getContentText());
-  const seen  = {};
-  const lista = [];
+  const data         = JSON.parse(resp.getContentText());
+  const normFilter   = provFilter ? normProv(provFilter) : '';
+  const seen         = {};
+  const lista        = [];
   data.forEach(function(p) {
     const nombreBase = p.name && p.name.es ? p.name.es : String(p.name || '');
+    // Filtrar por proveedor si se especifica: brand TN → proveedor via MARCA_A_PROVEEDOR_RP
+    if (normFilter) {
+      const brand   = String(p.brand || '').trim();
+      const provDeBrand = marcaToProveedorRP(brand);
+      if (!provDeBrand || normProv(provDeBrand) !== normFilter) return;
+    }
     (p.variants || []).forEach(function(v) {
+      if (v.visible === false) return;
       const sku = v.sku ? String(v.sku).trim() : '';
       const varNombre = v.values && v.values.length
         ? v.values.map(function(val) { return val.es || val; }).join(' / ')
@@ -1141,7 +1188,7 @@ function getStockDashboard() {
 }
 
 function normalizarTexto(s) {
-  return String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return String(s).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 function invDetectarMarca(nombreProd) {
   const n = normalizarTexto(nombreProd);

@@ -209,37 +209,54 @@
   var _skuMap   = {};       // nombre_upper|sku_upper → sku
   var _nombreMap = {};      // sku_upper → nombre (para hint)
 
-  // ── CARGAR SKUs DE TIENDANUBE ───────────────────────────────
-  fetch(SCRIPT_URL + '?action=getProductosTN', { redirect: 'follow' })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (!data.ok || !data.productos) return;
-      var list = document.getElementById('tn-productos-list');
-      data.productos.forEach(function(p) {
-        _skuMap[p.nombre.toUpperCase()] = p.sku;   // nombre → sku
-        if (p.sku) {
-          _skuMap[p.sku.toUpperCase()]   = p.sku;   // sku → sku (validación directa)
-          _nombreMap[p.sku.toUpperCase()] = p.nombre;
-        }
-        if (list) {
-          var opt = document.createElement('option');
-          opt.value = p.sku || p.nombre;
-          list.appendChild(opt);
-        }
-      });
-      // Inyectar hints y handlers en todas las filas de productos
-      document.querySelectorAll('.p-nombre').forEach(function(input) {
-        input.placeholder = 'Buscar SKU…';
-        var hint = document.createElement('div');
-        hint.style.cssText = 'font-size:10px;color:#9ca3af;margin-top:2px;display:none;';
-        input.parentNode.appendChild(hint);
-        input.addEventListener('input', function() {
-          var nombre = _nombreMap[input.value.trim().toUpperCase()];
-          hint.textContent = nombre || '';
-          hint.style.display = nombre ? '' : 'none';
+  // ── CARGAR SKUs DE TIENDANUBE (filtrados por proveedor) ────
+  // Se llama desde onProveedorChange() para traer solo los productos del proveedor seleccionado
+  function cargarProductosPorProveedor(proveedor) {
+    _skuMap = {}; _nombreMap = {};
+    var list = document.getElementById('tn-productos-list');
+    while (list && list.firstChild) list.removeChild(list.firstChild);
+    fetch(SCRIPT_URL + '?action=getProductosTN&proveedor=' + encodeURIComponent(proveedor), { redirect: 'follow' })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (!data.ok || !data.productos) return;
+        data.productos.forEach(function(p) {
+          _skuMap[p.nombre.toUpperCase()] = p.sku;  // nombre → sku
+          if (p.sku) {
+            _skuMap[p.sku.toUpperCase()]    = p.sku;      // sku → sku (validación directa)
+            _nombreMap[p.sku.toUpperCase()] = p.nombre;   // sku → nombre (hint inverso)
+          }
+          if (list) {
+            var opt = document.createElement('option');
+            opt.value = p.nombre; // buscar por nombre
+            list.appendChild(opt);
+          }
         });
-      });
-    }).catch(function(){});
+        // Setear hints en todas las filas; actualizar las pre-llenadas desde draft
+        document.querySelectorAll('.p-nombre').forEach(function(input) {
+          input.placeholder = 'Buscar producto…';
+          var hint = input.parentNode.querySelector('.sku-hint');
+          if (!hint) {
+            hint = document.createElement('div');
+            hint.className = 'sku-hint';
+            hint.style.cssText = 'font-size:10px;color:#9ca3af;margin-top:2px;display:none;';
+            input.parentNode.appendChild(hint);
+          }
+          function actualizarHint() {
+            var val = input.value.trim();
+            var sku = _skuMap[val.toUpperCase()];
+            if (!sku) { hint.textContent = ''; hint.style.display = 'none'; input.closest('tr').dataset.sku = ''; return; }
+            input.closest('tr').dataset.sku = sku;
+            // si val ya es el SKU → mostrar el nombre; si es el nombre → mostrar el SKU
+            var esElSku = sku.toUpperCase() === val.toUpperCase();
+            var hintText = esElSku ? (_nombreMap[sku.toUpperCase()] || '') : sku;
+            hint.textContent = hintText;
+            hint.style.display = hintText ? '' : 'none';
+          }
+          input.addEventListener('input', actualizarHint);
+          if (input.value) actualizarHint();
+        });
+      }).catch(function(){});
+  }
 
   // ── CARGAR PROVEEDORES ──────────────────────────────────────
   (function cargarProveedores() {
@@ -278,6 +295,7 @@
       inp.value = val;
       var tel = _proveedoresMap[val] || '';
       if (tel) document.getElementById('f-tel').value = tel;
+      cargarProductosPorProveedor(val);
     }
   }
 
@@ -318,7 +336,9 @@
       if (!e.target.classList.contains('p-nombre')) return;
       var val = e.target.value.trim();
       if (!val) { e.target.classList.remove('sku-invalid'); return; }
-      var valido = !!_skuMap[val.toUpperCase()];
+      // No validar si los productos aún no cargaron (evita rojo prematuro)
+      if (Object.keys(_skuMap).length === 0) return;
+      var valido = !!_skuMap[val.toUpperCase()] || !!e.target.closest('tr').dataset.sku;
       e.target.classList.toggle('sku-invalid', !valido);
       e.target.title = valido ? '' : '⚠️ Este producto no existe en TiendaNube';
     });
@@ -388,7 +408,7 @@
           });
         }
         fila.dataset.sku  = prod.sku || '';
-        fila.querySelector('.p-nombre').value = prod.nombre || '';
+        fila.querySelector('.p-nombre').value = prod.nombre || prod.sku || '';
         fila.querySelector('.p-unid').value   = 'Unidades';
         fila.querySelector('.p-cant').value   = prod.cantidad || '';
         fila.querySelector('.p-precio').value = prod.costo ? String(prod.costo) : '';
@@ -446,7 +466,7 @@
       return;
     }
 
-    var sinSku = f.filasValidas.filter(function(r) { return !_skuMap[r.nombre.toUpperCase().trim()]; });
+    var sinSku = f.filasValidas.filter(function(r) { return !r._sku && !_skuMap[r.nombre.toUpperCase().trim()]; });
     if (sinSku.length) {
       var nombresInvalidos = sinSku.map(function(r) { return '"' + r.nombre + '"'; }).join(', ');
       if (!confirm('⚠️ Los siguientes productos no existen en TiendaNube:\n\n' + nombresInvalidos + '\n\nVerificá que el nombre sea exacto. ¿Querés registrar el pedido igual?')) return;

@@ -228,13 +228,14 @@
                   ' data-nombre="' + esc(l.producto) + '"' +
                   ' data-cantidad="' + l.cantidad + '"' +
                   ' data-costo="' + l.costo + '"' +
+                  (l.estadoPedido === 'vigente' ? ' data-con-pedido="1"' : '') +
                   ' onchange="onSeleccionCambio()">' +
                 '</td>' +
                 '<td class="col-fecha">' + l.fecha + '</td>' +
                 '<td class="col-pedido">#' + l.pedido + '</td>' +
                 '<td>' + esc(l.comprador) + '</td>' +
                 '<td class="col-producto">' + esc(l.producto) +
-                  (l.estadoPedido === 'vigente' ? ' <span class="pill-vigente">Pedido Vigente</span>' : '') +
+                  (l.estadoPedido === 'vigente' ? ' <span class="pill-vigente">Pedido ' + esc(l.norden || '') + '</span>' : '') +
                 '</td>' +
                 '<td class="col-sku">' + esc(l.sku) + '</td>' +
                 '<td class="col-num cant">' + l.cantidad + '</td>' +
@@ -262,6 +263,9 @@
 
   function toggleTodos(prov, checked) {
     document.querySelectorAll('.item-check[data-prov="' + prov + '"]').forEach(function(cb) {
+      // Al marcar "todos": solo selecciona ventas sin pedido asignado
+      // Al desmarcar: limpia todo
+      if (checked && cb.dataset.conPedido) return;
       cb.checked = checked;
       cb.closest('tr').classList.toggle('selected', checked);
     });
@@ -281,13 +285,13 @@
       cb.closest('tr').classList.toggle('selected', cb.checked);
     });
 
-    // sincronizar checkbox "todos" por proveedor
+    // sincronizar checkbox "todos" — refleja solo las ventas sin pedido asignado
     document.querySelectorAll('.prov-check-all').forEach(function(allCb) {
-      var prov   = allCb.dataset.prov;
-      var todos  = document.querySelectorAll('.item-check[data-prov="' + prov + '"]');
-      var marcados = document.querySelectorAll('.item-check[data-prov="' + prov + '"]:checked');
-      allCb.indeterminate = marcados.length > 0 && marcados.length < todos.length;
-      allCb.checked = marcados.length === todos.length && todos.length > 0;
+      var prov        = allCb.dataset.prov;
+      var sinPedido   = document.querySelectorAll('.item-check[data-prov="' + prov + '"]:not([data-con-pedido])');
+      var marcados    = document.querySelectorAll('.item-check[data-prov="' + prov + '"]:not([data-con-pedido]):checked');
+      allCb.indeterminate = marcados.length > 0 && marcados.length < sinPedido.length;
+      allCb.checked = sinPedido.length > 0 && marcados.length === sinPedido.length;
     });
 
     if (!seleccionados.length) {
