@@ -242,7 +242,8 @@
 
   // ── CARGAR PROVEEDORES ──────────────────────────────────────
   (function cargarProveedores() {
-    fetch(GAS_URL_RQ + '?action=getProveedores')
+    var _emailOP = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
+    fetch(GAS_URL_RQ + '?action=getProveedores' + (_emailOP ? '&email=' + encodeURIComponent(_emailOP) : ''), { redirect: 'follow' })
       .then(function(r){ return r.json(); })
       .then(function(data) {
         var sel = document.getElementById('f-proveedor-sel');

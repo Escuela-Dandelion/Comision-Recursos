@@ -1,4 +1,4 @@
-// v2026-11-06d — registrarPedido guarda proveedor tal cual; getPedidos normaliza legacy brand→proveedor
+// v2026-11-06e — getProveedores excluye digitales; orden-de-pedido pasa email para filtro FGP
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -168,7 +168,11 @@ function doGet(e) {
       Object.keys(nombrePorKey).forEach(function(key) {
         if (!provMap[key]) provMap[key] = { nombre: nombrePorKey[key], tel: telPorProv[key] || '' };
       });
-      let lista = Object.values(provMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      // Excluir proveedores de productos digitales/servicios (no generan pedidos físicos)
+      const EXCLUIR_PEDIDOS = ['Carlos Villegas'];
+      let lista = Object.values(provMap)
+        .filter(function(p) { return EXCLUIR_PEDIDOS.indexOf(p.nombre) === -1; })
+        .sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
       // 4. Si es FGP, filtrar solo sus proveedores (ahora p.nombre ya ES un proveedor)
       const emailGP = (e.parameter.email || '').toLowerCase().trim();
       const proveedoresGP = getMarcasFGP(emailGP);
