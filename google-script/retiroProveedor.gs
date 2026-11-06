@@ -1,4 +1,4 @@
-// v2026-11-06a — getVentasSinStock: cruza con Pedidos para pill "Pedido Vigente" y oculta Entregados
+// v2026-11-06b — getProveedores devuelve nombres de Proveedor (no brands TN); FGP filter simplificado
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -131,38 +131,47 @@ function doGet(e) {
     }
 
     if (action === 'getProveedores') {
-      // 1. Teles guardados en la tab Proveedores
+      // 1. Teles guardados en la tab Proveedores (col A = nombre proveedor, col B = tel)
       const ss    = SpreadsheetApp.openById(CONFIG_RETIRO.PEDIDOS_SHEET_ID);
       const sheet = ss.getSheetByName('Proveedores');
-      const telMap = {};
+      const telPorProv = {}; // PROVEEDOR_UPPER → tel
+      const nombrePorKey = {}; // PROVEEDOR_UPPER → nombre original (para display)
       if (sheet) {
         const data = sheet.getDataRange().getValues();
         for (let i = 1; i < data.length; i++) {
-          if (data[i][0]) telMap[String(data[i][0]).toUpperCase()] = String(data[i][1] || '');
+          const nombre = String(data[i][0] || '').trim();
+          if (!nombre) continue;
+          const key = nombre.toUpperCase();
+          telPorProv[key]    = String(data[i][1] || '');
+          nombrePorKey[key]  = nombre;
         }
       }
-      // 2. Marcas de TiendaNube como lista base
+      // 2. Marcas de TiendaNube → mapear a nombre de Proveedor
       let brandsSet = {};
       try { brandsSet = obtenerMarcasTN(); } catch(e) { Logger.log('Error marcas TN: ' + e.message); }
-      // 3. Merge: marcas TN + proveedores del Sheet
-      const listaMap = {};
-      Object.keys(brandsSet).forEach(function(key) {
-        listaMap[key] = { nombre: brandsSet[key], tel: telMap[key] || '' };
+      // 3. Construir lista con NOMBRES DE PROVEEDOR (no brands)
+      //    Para cada brand TN: si mapea a un proveedor conocido, usar ese; si no, usar la brand como proveedor
+      const provMap = {}; // PROVEEDOR_UPPER → { nombre, tel }
+      Object.keys(brandsSet).forEach(function(brandKey) {
+        const brandNombre = brandsSet[brandKey];
+        const provName = marcaToProveedorRP(brandNombre) || brandNombre;
+        const provKey  = provName.toUpperCase();
+        if (!provMap[provKey]) {
+          provMap[provKey] = { nombre: provName, tel: telPorProv[provKey] || '' };
+        }
       });
-      Object.keys(telMap).forEach(function(key) {
-        if (!listaMap[key]) listaMap[key] = { nombre: key, tel: telMap[key] };
+      // Agregar proveedores del Sheet que no vinieron de TN
+      Object.keys(nombrePorKey).forEach(function(key) {
+        if (!provMap[key]) provMap[key] = { nombre: nombrePorKey[key], tel: telPorProv[key] || '' };
       });
-      let lista = Object.values(listaMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
-      // 4. Si el email pertenece a un FGP, filtrar solo sus proveedores
+      let lista = Object.values(provMap).sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      // 4. Si es FGP, filtrar solo sus proveedores (ahora p.nombre ya ES un proveedor)
       const emailGP = (e.parameter.email || '').toLowerCase().trim();
       const proveedoresGP = getMarcasFGP(emailGP);
       if (Array.isArray(proveedoresGP)) {
         const provsLower = proveedoresGP.map(function(p){ return p.toLowerCase(); });
         lista = lista.filter(function(p) {
-          // Acepta si el nombre ES el proveedor, o si la marca mapea a ese proveedor
-          var provDeMarca = marcaToProveedorRP(p.nombre);
-          return provsLower.indexOf(p.nombre.toLowerCase()) !== -1
-              || (provDeMarca && provsLower.indexOf(provDeMarca.toLowerCase()) !== -1);
+          return provsLower.indexOf(p.nombre.toLowerCase()) !== -1;
         });
       }
       return ContentService
