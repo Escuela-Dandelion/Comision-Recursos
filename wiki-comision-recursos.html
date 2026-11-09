@@ -987,6 +987,25 @@
           <div class="step-body">
             <div class="step-title">Registrar el pedido en el sistema</div>
             <p class="step-desc">El responsable abre <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a>, crea un nuevo pedido, completa proveedor, responsable y productos con cantidades, y envía. El pedido queda registrado con estado <em>Solicitado</em>.</p>
+
+            <div class="callout callout-warn" style="margin-top:12px">
+              <div class="icon">⚠️</div>
+              <div>
+                <div class="callout-title">Indicar la unidad de medida del pedido</div>
+                Al cargar la cantidad, especificá siempre si son <strong>unidades</strong>, <strong>cajas</strong> o <strong>kg</strong>. No es lo mismo pedir "10" sin aclarar — si el proveedor trabaja por caja y cada caja tiene 12 unidades, el stock que va a entrar es muy distinto al esperado.
+              </div>
+            </div>
+
+            <div class="callout callout-tip" style="margin-top:10px">
+              <div class="icon">📝</div>
+              <div>
+                <div class="callout-title">Usá las notas para dejar el costo final</div>
+                Si el proveedor cobra envío o el precio varía según cantidad, dejá en el campo de notas el <strong>costo por unidad que quedó al cerrar el trato</strong>, incluyendo el envío prorrateado. Esto es importante para que el dashboard de ventas refleje el margen real.<br><br>
+                <strong>Ejemplo — Yerba Caballo Negro:</strong><br>
+                El proveedor cobra $18.000 la caja de 10 kg (10 u. × 1 kg) más $3.500 de envío por correo postal. Si pedimos 2 cajas: (2 × $18.000 + $3.500) ÷ 20 unidades = <strong>$1.975 por unidad</strong>. Eso es lo que va en las notas del pedido.
+              </div>
+            </div>
+
             <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank">
               <img src="nuevo-pedido.png" alt="Pantalla de Nuevo Pedido" style="margin-top:12px;width:100%;max-width:480px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
             </a>
