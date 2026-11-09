@@ -1069,9 +1069,12 @@
           <tr><td><span class="badge badge-draft">Solicitado</span></td><td>El pedido fue registrado en el sistema. Todavía no fue confirmado por el proveedor. <strong>Único estado donde se puede eliminar el pedido</strong> (solo admins).</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó que puede despachar el pedido.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>La mercadería ya fue despachada (correo) o está siendo retirada (retiro).</td><td>Responsable del proveedor</td></tr>
-          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida por Claudio. El stock todavía no se actualizó. Ya no se puede cancelar.</td><td>Responsable del proveedor</td></tr>
-          <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo. El pago fue registrado y el pedido está cerrado.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida por Claudio o alguien de la Comisión de Recursos. El stock todavía no se actualizó. Ya no se puede cancelar.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>El stock fue actualizado en Gestión de Productos con la distribución por tienda (Primaria y Secundaria). El pedido ya no se puede modificar.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#fdecea;color:#c62828">Cancelado</span></td><td>El pedido fue cancelado. Solo se puede cancelar en estado Solicitado, Confirmado o En Camino. Queda registrado pero no afecta el stock.</td><td>Responsable del proveedor / Admin</td></tr>
+          <tr><td colspan="3" style="background:#f8fafc;color:#64748b;font-size:11px;text-align:center;padding:5px 8px;border-top:2px solid #e2e8f0">Estado de pago — independiente del flujo anterior. Un pedido puede estar en cualquier estado del flujo y tener cualquier estado de pago.</td></tr>
+          <tr><td><span class="badge" style="background:#fff7ed;color:#9a3412">No Pagado</span></td><td>El pago al proveedor aún no fue registrado. Estado inicial de todo pedido.</td><td>Sistema</td></tr>
+          <tr><td><span class="badge" style="background:#f0fdf4;color:#166534">Pagado</span></td><td>El pago fue realizado y se adjuntó el comprobante en el pedido.</td><td>Responsable del proveedor</td></tr>
         </tbody>
       </table>
 
@@ -1156,18 +1159,23 @@
       <!-- PEDIDOS -->
       <div id="guia-pedidos" style="margin-bottom:32px">
         <h3>📦 Pedidos a Proveedores</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Registro y seguimiento de órdenes de compra a proveedores. Cada pedido avanza por estados a medida que se ejecuta el proceso.</p>
+        <p style="font-size:12px;margin-bottom:10px"><strong>Crear pedido:</strong> botón "Nueva Orden" (arriba a la derecha) → completar productos y cantidades → indicar unidad (unidades, cajas o Kg) → recomendación: dejar el costo final unitario en Notas si incluye envío. El pedido inicia en estado <em>Solicitado</em>.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Cada pedido avanza por estados a medida que se ejecuta el proceso:</p>
         <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
           <thead><tr><th>Estado</th><th>Qué significa</th></tr></thead>
           <tbody>
             <tr><td><span class="badge badge-draft">Solicitado</span></td><td>Registrado, esperando confirmación del proveedor.</td></tr>
             <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó el despacho.</td></tr>
             <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>Mercadería despachada o en camino a retirar.</td></tr>
-            <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>Llegó a la escuela y fue recibida por Claudio. El stock se actualiza al cerrar el pedido.</td></tr>
-            <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo: pago registrado <strong>y</strong> stock actualizado en Gestión de Productos con la distribución por tienda (Primaria y Secundaria).</td></tr>
+            <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>Llegó a la escuela y fue recibida por Claudio o alguien de la Comisión de Recursos. El stock se actualiza al cerrar el pedido, no en este momento.</td></tr>
+            <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>El stock fue actualizado en Gestión de Productos con la distribución por tienda (Primaria y Secundaria).</td></tr>
+            <tr><td colspan="2" style="background:#f8fafc;color:#64748b;font-size:11px;text-align:center;padding:5px 8px;border-top:2px solid #e2e8f0">Estado de pago — independiente del flujo anterior</td></tr>
+            <tr><td><span class="badge" style="background:#fff7ed;color:#9a3412">No Pagado</span></td><td>El pago aún no fue registrado. Un pedido puede estar <em>Entregado en Escuela</em> y <em>No Pagado</em> al mismo tiempo.</td></tr>
+            <tr><td><span class="badge" style="background:#f0fdf4;color:#166534">Pagado</span></td><td>El pago fue realizado y se adjuntó el comprobante. Un pedido puede estar <em>Solicitado</em> y <em>Pagado</em> al mismo tiempo.</td></tr>
           </tbody>
         </table>
-        <p style="font-size:12px;margin-bottom:4px"><strong>Crear pedido:</strong> botón "Nueva Orden" (arriba a la derecha) → completar productos y cantidades → indicar unidad (unidades, cajas o Kg) → dejar el costo final en Notas si incluye envío.</p>
+        <h4 style="margin:16px 0 6px;font-size:13px;color:var(--dark)">¿Cómo pagamos a los proveedores?</h4>
+        <p style="font-size:12px;margin-bottom:8px">Algunos proveedores piden el pago al solicitarlo, otros cuando lo recibimos. Para agilizar la gestión, tenemos guardados los datos bancarios de cada uno. Desde el pedido, hacé click en los 3 puntitos y seleccioná "Solicitar Pago": le va a llegar un WhatsApp a <strong>Inés Robertson</strong> (Encargada de la administración) con todos los datos para que realice el pago.</p>
         <p style="font-size:12px;margin-bottom:8px"><strong>Solicitar pago:</strong> 3 puntitos del pedido → "Solicitar Pago" → se abre WhatsApp con un mensaje prearmado listo para enviarle a Inés Robertson:</p>
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.7;font-family:monospace;margin-bottom:8px;white-space:pre-wrap">🌼 *Tienda Diente de León*
 💸 Pago pendiente a proveedor
@@ -1184,7 +1192,7 @@ Titular: Natalia Irene Duarte David
 Banco: Naranja X
 
 📋 Productos: Limones x 5kg, Naranjas x 3kg</div>
-        <p style="font-size:12px;margin-bottom:4px"><strong>Adjuntar comprobante:</strong> desde el pedido → subir imagen del comprobante de transferencia.</p>
+        <p style="font-size:12px;margin-bottom:4px"><strong>Adjuntar comprobante:</strong> lo puede hacer el FGP o Inés Robertson inmediatamente después de realizar el pago. Desde el pedido → subir imagen del comprobante de transferencia.</p>
         <p style="font-size:12px;margin-bottom:0"><strong>Para cerrar el pedido</strong> es obligatorio haber actualizado el stock en <a href="admin.html?view=gestion-productos" target="_blank" style="color:var(--green)">Gestión de Productos</a> e indicado cuántas unidades quedaron en la <strong>Tienda Primaria</strong> y en la <strong>Tienda Secundaria</strong>.</p>
       </div>
 
@@ -1231,7 +1239,8 @@ Banco: Naranja X
         <h3>📋 Ventas a Pedido</h3>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Muestra las ventas de productos sin stock fijo (a pedido), donde el proveedor fabrica o entrega a demanda. Se usa para acumular pedidos y luego hacer el encargo al proveedor.</p>
         <p style="font-size:13px;margin-bottom:4px"><strong>Cómo funciona:</strong> las familias compran normalmente en la tienda virtual, el sistema registra la venta pero no descuenta stock. Cuando hay suficiente demanda acumulada, el FGP genera el pedido al proveedor desde esta pantalla.</p>
-        <p style="font-size:13px;margin-bottom:0"><strong>Proveedores que usan este modelo:</strong> Tienda Limón, Nazareno, Sol de Oro, El Maitén, Pajarito Amarillo.</p>
+        <p style="font-size:13px;margin-bottom:4px"><strong>Ventas con pedido ya asociado:</strong> si una venta ya tiene un pedido en curso, aparece con una pill verde con el número de orden (ej. <span style="display:inline-block;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;border-radius:12px;padding:1px 8px;font-size:11px;font-weight:600">Pedido #247</span>) y se muestra al final de la lista. Estas ventas no se pueden seleccionar para generar un nuevo pedido. Una vez que el pedido llega a estado <em>Entregado en Escuela</em> o <em>Cerrado</em>, esas ventas desaparecen automáticamente de la lista.</p>
+        <p style="font-size:13px;margin-bottom:0"><strong>Proveedores que usan este modelo:</strong> Tienda Limón, Nazareno, Sol de Oro, Pajarito Amarillo.</p>
       </div>
     </div>
 
@@ -1300,7 +1309,7 @@ Banco: Naranja X
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo cierro un pedido? <span class="arrow">▶</span></div>
-        <div class="faq-body">Cuando llega la mercadería, marcá el pedido como <em>Entregado en Escuela</em> en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos</a>. Después: (1) solicitá el pago a Inés Robertson usando el botón "Solicitar Pago" y adjuntá el comprobante; (2) actualizá el stock en Gestión de Productos y registrá la distribución por tienda. Con eso completo el pedido puede cerrarse.</div>
+        <div class="faq-body">Cuando llega la mercadería, marcá el pedido como <em>Entregado en Escuela</em> en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos</a>. Para cerrarlo, actualizá el stock en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a> e indicá cuántas unidades van a la Tienda Primaria y cuántas a la Tienda Secundaria. El pago al proveedor es un estado separado: podés solicitarlo y adjuntar el comprobante independientemente de en qué paso del flujo esté el pedido.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo solicito acceso al sistema? <span class="arrow">▶</span></div>
