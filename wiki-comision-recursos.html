@@ -708,7 +708,7 @@
           <tr><td><strong>Actualizar stock</strong></td><td>Por ciclo de reposición</td><td>Ingresar el nuevo stock en Gestión de Productos para cada variante. Ya no es necesario entrar a TiendaNube.</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a></td></tr>
           <tr><td><strong>Almacenar en tienda física</strong></td><td>Por ciclo de reposición</td><td>Llevar la mercadería a las tiendas físicas y coordinar el almacenamiento: con Claudio en primaria y con Inés en el secundario</td><td>—</td></tr>
           <tr><td><strong>Actualizar precios y costos</strong></td><td>Cuando el proveedor actualiza</td><td>Si el proveedor actualiza sus precios, reflejarlo en Gestión de Productos. Si sube el costo, conviene esperar a que se liquide el 100% del stock anterior antes de actualizar, de lo contrario el dashboard mostrará márgenes mezclados que no reflejan correctamente cuánto se vendió, a qué precio y con qué costo.</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a></td></tr>
-          <tr><td><strong>Registrar Pago a Proveedor</strong></td><td>Por ciclo de reposición</td><td>Solicitar el dinero a Inés Robertson, realizar la transferencia al proveedor y adjuntar el comprobante en el pedido correspondiente</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a></td></tr>
+          <tr><td><strong>Solicitar y Registrar Pago a Proveedor</strong></td><td>Por ciclo de reposición</td><td>Solicitar el dinero a Inés Robertson via "Solicitar Pago" en el pedido, adjuntar el comprobante una vez realizada la transferencia</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a></td></tr>
         </tbody>
       </table>
 
@@ -1069,8 +1069,16 @@
         <div class="step">
           <div class="step-num">7</div>
           <div class="step-body">
+            <div class="step-title">Solicitar y Registrar Pago a Proveedor</div>
+            <p class="step-desc">El dinero para pagar al proveedor se solicita a <strong>Inés Robertson</strong>, en cuya cuenta se registran todas las compras de Diente de León. Para brindarle todos los datos por whatsapp, podés ir al pedido, click en los 3 puntitos y click en "Solicitar Pago". Esto abre un WhatsApp con todos los datos del pedido, CBU y total para facilitar la mensajería. Una vez realizado el pago, hay que adjuntar el comprobante en el pedido (<a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a> → adjuntar comprobante). El pedido pasa a estado <em>Pagado</em>.</p>
+          </div>
+        </div>
+        <div class="step-connector"><div></div></div>
+        <div class="step">
+          <div class="step-num">8</div>
+          <div class="step-body">
             <div class="step-title">Distribuir a las tiendas físicas y registrar por tienda</div>
-            <p class="step-desc">El stock se almacena principalmente en la tienda de <strong>Claudio (primaria)</strong>. Coordinar con él dónde y cómo guardar los productos. Una parte del stock hay que trasladarla al <strong>secundario</strong> — para eso se puede pedir ayuda al pool o a <strong>Franco Alini</strong>, que va todos los miércoles al mediodía.</p>
+            <p class="step-desc">El stock se almacena principalmente en la tienda de <strong>Claudio (primaria)</strong>. Coordinar con él dónde y cómo guardar los productos. Una parte del stock hay que trasladarla al <strong>secundario</strong>, para eso se puede pedir ayuda al pool o a <strong>Franco Alini</strong>, que va todos los miércoles al mediodía.</p>
             <p class="step-desc" style="margin-top:10px">Una vez distribuida la mercadería, <strong>registrar cuántas unidades quedaron en cada tienda</strong> en Gestión de Productos. Esto permite tener control del stock real por ubicación y es lo que alimenta el semáforo.</p>
             <div style="margin-top:12px">
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — edición de stock por tienda</div>
@@ -1083,14 +1091,6 @@
                 Ingresar las cantidades por tienda (Primario y Secundario) <strong>no actualiza el stock en TiendaNube</strong> — es solo un registro interno para control. El total se calcula automáticamente. Si los valores de Umbral y Piso están vacíos, el sistema los calcula solo; si los modificás a mano, los respeta tal cual.
               </div>
             </div>
-          </div>
-        </div>
-        <div class="step-connector"><div></div></div>
-        <div class="step">
-          <div class="step-num">8</div>
-          <div class="step-body">
-            <div class="step-title">Registrar Pago a Proveedor y cerrar el pedido</div>
-            <p class="step-desc">El dinero para pagar al proveedor se solicita a <strong>Inés Robertson</strong>, en cuya cuenta se registran todas las compras de Diente de León. Una vez realizado el pago, adjuntar el comprobante en el pedido (<a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a> → adjuntar comprobante). El pedido pasa a estado <em>Pagado</em> y queda cerrado.</p>
           </div>
         </div>
       </div>
