@@ -1131,8 +1131,16 @@
             <tr><td><strong>Actualizar stock</strong></td><td>Click en el producto → editá el stock de cada variante → indicá cuántas unidades quedan en <strong>Tienda Primaria</strong> y <strong>Tienda Secundaria</strong> → Guardar.</td></tr>
             <tr><td><strong>Actualizar precio</strong></td><td>Click en el producto → editá el precio de venta de la variante → Guardar. Se actualiza automáticamente en TiendaNube.</td></tr>
             <tr><td><strong>Actualizar costo</strong></td><td>Click en el producto → editá el costo de la variante. Refleja el precio que se le paga al proveedor. Afecta el margen que muestra el dashboard.</td></tr>
+            <tr><td><strong>Actualizar umbral</strong></td><td>Click en el producto → editá el Umbral de la variante. Ver explicación abajo.</td></tr>
           </tbody>
         </table>
+        <div class="callout callout-info" style="margin-bottom:12px">
+          <div class="icon">📊</div>
+          <div>
+            <div class="callout-title">¿Qué es el Umbral?</div>
+            El Umbral es el nivel de stock en el que se dispara la alarma de reposición. Cuando el stock cae por debajo de este número, el sistema envía un mail de alerta y el semáforo pasa a naranja (<span style="background:#ffedd5;color:#9a3412;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">⚠️ Stock bajo</span>). Se calcula automáticamente en base a la velocidad de venta y el tiempo que tarda el proveedor en entregar, pero podés ajustarlo a mano si el valor calculado no se adapta a la realidad del proveedor. También existe el <strong>Piso</strong>, que es el mínimo absoluto de emergencia: si el stock cae por debajo del Piso, el semáforo pasa a rojo (<span style="background:#fdecea;color:#c62828;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">🚨 Stock crítico</span>).
+          </div>
+        </div>
         <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
           <thead><tr><th>Semáforo</th><th>Qué significa</th></tr></thead>
           <tbody>
