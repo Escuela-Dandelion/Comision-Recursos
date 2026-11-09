@@ -784,6 +784,8 @@ function impersonarAdmin(valor) {
     renderWelcomeCards(_adminOriginal.role.toLowerCase());
     _recargarGestionProductos();
     _recargarPedidos();
+    _recargarVentasSinStock();
+    _actualizarNavVentasPedido(null);
     if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
     return;
   }
@@ -801,6 +803,8 @@ function impersonarAdmin(valor) {
   renderWelcomeCards(impRole.toLowerCase());
   _recargarGestionProductos();
   _recargarPedidos();
+  _recargarVentasSinStock();
+  _actualizarNavVentasPedido(impMarcas);
   if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
 }
 
@@ -813,6 +817,26 @@ function _recargarPedidos() {
     url += '&_vAs_marcas=' + encodeURIComponent(provsPedidos.join(','));
   }
   pIframe.src = url;
+}
+
+var _MARCAS_VENTAS_PEDIDO = ['TIENDA LIMÓN','NAZARENO','SOL DE ORO','EL MAITEN','PAJARITO AMARILLO','BIOSALUD'];
+
+function _recargarVentasSinStock() {
+  var vssIframe = document.getElementById('iframe-ventas-sin-stock');
+  if (!vssIframe) return;
+  var url = 'ventas-sin-stock.html';
+  if (_currentImpersonation) {
+    url += '?email=' + encodeURIComponent(_currentImpersonation.email);
+  }
+  vssIframe.src = url;
+}
+
+function _actualizarNavVentasPedido(marcas) {
+  var btn = document.querySelector('[data-view="ventas-sin-stock"]');
+  if (!btn) return;
+  // admins (marcas=null) siempre ven; FGPs solo si tienen al menos una marca en ventas a pedido
+  var visible = !marcas || marcas.some(function(m) { return _MARCAS_VENTAS_PEDIDO.indexOf(m) !== -1; });
+  btn.style.display = visible ? 'flex' : 'none';
 }
 
 function _recargarGestionProductos() {
@@ -909,10 +933,14 @@ function showView(viewId, navBtn, opts) {
     }
   }
 
-  // Ventas sin Stock: recargar al activar para resetear estado
+  // Ventas sin Stock: recargar al activar; pasa email impersonado si aplica
   if (viewId === 'ventas-sin-stock') {
     var vssIframe = document.getElementById('iframe-ventas-sin-stock');
-    if (vssIframe) vssIframe.src = 'ventas-sin-stock.html';
+    if (vssIframe) {
+      var vssUrl = 'ventas-sin-stock.html';
+      if (_currentImpersonation) vssUrl += '?email=' + encodeURIComponent(_currentImpersonation.email);
+      vssIframe.src = vssUrl;
+    }
   }
 
   // Retiro: setear iframe con URL específica del pedido
