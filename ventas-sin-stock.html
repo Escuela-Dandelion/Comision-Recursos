@@ -139,17 +139,13 @@
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 
-  // Fechas default: jueves a jueves (ciclo semanal de pedidos)
-  // "hasta" = próximo jueves (o hoy si es jueves); "desde" = 7 días antes
+  // Fechas default: desde inicio del año hasta hoy
+  // Los entregados/cerrados ya desaparecen solos por el GAS
   (function() {
     var hoy = new Date();
-    var diasHastaJueves = (4 - hoy.getDay() + 7) % 7; // 0 si hoy es jueves
-    var proximoJueves = new Date(hoy);
-    proximoJueves.setDate(hoy.getDate() + diasHastaJueves);
-    var juevesPasado = new Date(proximoJueves);
-    juevesPasado.setDate(proximoJueves.getDate() - 7);
-    document.getElementById('f-desde').value = juevesPasado.toISOString().split('T')[0];
-    document.getElementById('f-hasta').value = proximoJueves.toISOString().split('T')[0];
+    var inicio = new Date(hoy.getFullYear(), 0, 1); // 1 ene del año actual
+    document.getElementById('f-desde').value = inicio.toISOString().split('T')[0];
+    document.getElementById('f-hasta').value = hoy.toISOString().split('T')[0];
     cargar();
   })();
 
