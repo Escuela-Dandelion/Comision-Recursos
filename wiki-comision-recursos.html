@@ -700,14 +700,14 @@
       <table class="wiki-table">
         <thead><tr><th>Tarea</th><th>Frecuencia</th><th>Descripción</th><th>Herramienta</th></tr></thead>
         <tbody>
-          <tr><td><strong>Monitorear el stock</strong></td><td>Fin de mes</td><td>Revisar alertas automáticas o chequear el Estado de Inventario</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=inventario" target="_blank" style="color:var(--green);font-weight:600">Admin → Estado Inventario ↗</a></td></tr>
-          <tr><td><strong>Registrar el pedido</strong></td><td>Por ciclo de reposición</td><td>Completar la Orden de Pedido con productos y cantidades</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank" style="color:var(--green);font-weight:600">Admin → Nuevo Pedido ↗</a></td></tr>
+          <tr><td><strong>Monitorear el stock</strong></td><td>Fin de mes</td><td>Revisar el semáforo de inventario en Gestión de Productos. 🔴 Rojo = urgente. 🟡 Amarillo = atención. 🟢 Verde = OK.</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a></td></tr>
+          <tr><td><strong>Registrar el pedido</strong></td><td>Por ciclo de reposición</td><td>Completar la Orden de Pedido con productos y cantidades</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a></td></tr>
           <tr><td><strong>Contactar al proveedor</strong></td><td>Por ciclo de reposición</td><td>Confirmar el pedido por WhatsApp, mail o llamada según el proveedor</td><td><a href="#proveedores" style="color:var(--green);font-weight:600">Ver ficha del proveedor ↓</a></td></tr>
           <tr><td><strong>Gestionar la llegada</strong></td><td>Por ciclo de reposición</td><td>Si es correo: seguir el tracking. Si es retiro: coordinar fecha, lugar y quién va</td><td>Ver sección Proveedores</td></tr>
           <tr><td><strong>Recibir en escuela</strong></td><td>Por ciclo de reposición</td><td>Controlar cantidades y estado contra el remito. Registrar cualquier diferencia</td><td>—</td></tr>
-          <tr><td><strong>Actualizar stock TiendaNube</strong></td><td>Por ciclo de reposición</td><td>Ingresar el nuevo stock en TiendaNube para cada variante</td><td><a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank" style="color:var(--green);font-weight:600">TiendaNube → Inventario ↗</a></td></tr>
+          <tr><td><strong>Actualizar stock</strong></td><td>Por ciclo de reposición</td><td>Ingresar el nuevo stock en Gestión de Productos para cada variante. Ya no es necesario entrar a TiendaNube.</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a></td></tr>
           <tr><td><strong>Almacenar en tienda física</strong></td><td>Por ciclo de reposición</td><td>Llevar la mercadería a las tiendas físicas y coordinar el almacenamiento: con Claudio en primaria y con Inés en el secundario</td><td>—</td></tr>
-          <tr><td><strong>Actualizar precios y costos</strong></td><td>Cuando el proveedor actualiza</td><td>Si el proveedor actualiza sus precios, reflejarlo en TiendaNube. Si sube el costo, conviene esperar a que se liquide el 100% del stock anterior antes de actualizar — de lo contrario el dashboard mostrará márgenes mezclados que no reflejan correctamente cuánto se vendió, a qué precio y con qué costo</td><td><a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank" style="color:var(--green);font-weight:600">TiendaNube → Inventario ↗</a></td></tr>
+          <tr><td><strong>Actualizar precios y costos</strong></td><td>Cuando el proveedor actualiza</td><td>Si el proveedor actualiza sus precios, reflejarlo en Gestión de Productos. Si sube el costo, conviene esperar a que se liquide el 100% del stock anterior antes de actualizar, de lo contrario el dashboard mostrará márgenes mezclados que no reflejan correctamente cuánto se vendió, a qué precio y con qué costo.</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a></td></tr>
           <tr><td><strong>Registrar Pago a Proveedor</strong></td><td>Por ciclo de reposición</td><td>Solicitar el dinero a Inés Robertson, realizar la transferencia al proveedor y adjuntar el comprobante en el pedido correspondiente</td><td><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a></td></tr>
         </tbody>
       </table>
@@ -937,7 +937,7 @@
             <p class="step-desc">Hay dos formas de saberlo:</p>
             <ul style="margin:6px 0 12px 16px;font-size:12px;color:var(--muted)">
               <li><strong>Email automático:</strong> el sistema revisa el stock periódicamente y manda un email cuando un producto cae por debajo del umbral. El mail le llega únicamente al responsable de ese proveedor, no a todo el equipo. Incluye links directos para hacer el pedido con los productos ya cargados por defecto.</li>
-              <li><strong><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=inventario" target="_blank" style="color:var(--green)">Admin → Estado de Inventario ↗</a>:</strong> en cualquier momento se puede ver el semáforo de cada producto. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
+              <li><strong><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green)">Admin → Gestión de Productos ↗</a>:</strong> en cualquier momento se puede ver el semáforo de cada producto en la tabla de inventario. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
             </ul>
 
             <div style="border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;max-width:480px;font-size:12px;font-family:Arial,sans-serif;">
@@ -961,7 +961,7 @@
               </div>
             </div>
             <div style="margin-top:12px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Estado de Inventario</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — tabla de inventario</div>
               <img src="estado-inventario.png" alt="Pantalla de Estado de Inventario" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
             </div>
             <div class="callout callout-info" style="margin-top:12px">
@@ -970,14 +970,14 @@
                 <div class="callout-title">¿Qué es el umbral?</div>
                 Es la cantidad mínima de stock recomendada para no quedarse sin producto antes de que llegue el próximo pedido. Se calcula automáticamente: <strong>velocidad de venta (u./día) × días de lead time del proveedor × 1.5</strong> de margen de seguridad.<br><br>
                 Ejemplo: si se venden 0,7 u./día y el proveedor tarda 14 días, el umbral es 0,7 × 14 × 1,5 ≈ <strong>15 unidades</strong>. Cuando el stock baja de 15, aparece el semáforo rojo.<br><br>
-                El umbral se puede ajustar manualmente en Estado de Inventario si la fórmula no refleja la realidad del producto. Si se modifica a mano, el sistema lo respeta y ya no lo recalcula automáticamente — quedará visible el valor editado para que se sepa que fue intervenido.
+                El umbral se puede ajustar manualmente en Gestión de Productos si la fórmula no refleja la realidad del producto. Si se modifica a mano, el sistema lo respeta y ya no lo recalcula automáticamente — quedará visible el valor editado para que se sepa que fue intervenido.
               </div>
             </div>
 
             <!-- Sección interpretación semáforo + evolución -->
             <div style="margin-top:20px">
               <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:10px">¿Cómo saber si hay que pedir sin esperar el email?</div>
-              <p style="font-size:12px;color:var(--muted);margin:0 0 10px">El semáforo del Estado de Inventario muestra cuatro columnas. Con esos datos podés estimar cuántos días de stock quedan y decidir antes de que llegue la alerta automática.</p>
+              <p style="font-size:12px;color:var(--muted);margin:0 0 10px">El semáforo en Gestión de Productos muestra cuatro columnas. Con esos datos podés estimar cuántos días de stock quedan y decidir antes de que llegue la alerta automática.</p>
 
               <img src="inv-semaforo.png" alt="Ejemplo de semáforo de stock — Caballo Negro" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;margin-bottom:14px">
 
@@ -1024,15 +1024,8 @@
           <div class="step-num">2</div>
           <div class="step-body">
             <div class="step-title">Registrar el pedido en el sistema</div>
-            <p class="step-desc">El responsable abre <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank" style="color:var(--green);font-weight:600">Admin → Nuevo Pedido ↗</a>, completa proveedor, responsable y productos con cantidades, y envía. El pedido queda registrado con estado <em>Solicitado</em>. Si el email de alerta tenía el botón "Hacer el pedido", los productos ya vienen cargados por defecto.</p>
-            <div class="callout callout-warn" style="margin-top:12px;">
-              <div class="icon">⚠️</div>
-              <div>
-                <div class="callout-title">No escribas el nombre del producto a mano</div>
-                Empezá a tipear y el sistema busca los productos de TiendaNube — seleccioná el que corresponde de la lista. Esto es importante: si el producto no queda vinculado correctamente, el semáforo de Estado de Inventario va a seguir mostrándolo en 🔴 rojo aunque ya haya un pedido en estado <em>Solicitado</em>. Al vincular bien el producto, el sistema sabe que ya hay un pedido activo para esa alerta.
-              </div>
-            </div>
-            <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank">
+            <p class="step-desc">El responsable abre <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos ↗</a>, crea un nuevo pedido, completa proveedor, responsable y productos con cantidades, y envía. El pedido queda registrado con estado <em>Solicitado</em>.</p>
+            <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank">
               <img src="nuevo-pedido.png" alt="Pantalla de Nuevo Pedido" style="margin-top:12px;width:100%;max-width:480px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
             </a>
           </div>
@@ -1082,11 +1075,8 @@
         <div class="step">
           <div class="step-num">6</div>
           <div class="step-body">
-            <div class="step-title">Actualizar stock en TiendaNube</div>
-            <p class="step-desc">Ingresar el stock nuevo en <a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank" style="color:var(--green);font-weight:600">TiendaNube → Inventario ↗</a> para cada producto y variante recibida. El número a la izquierda es el stock actual — se edita directamente en esa pantalla.</p>
-            <a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank">
-              <img src="tiendanube-inventario.png" alt="Pantalla de inventario TiendaNube" style="margin-top:12px;width:100%;max-width:480px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
-            </a>
+            <div class="step-title">Actualizar stock en Gestión de Productos</div>
+            <p class="step-desc">Ingresar el stock nuevo en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a> para cada producto y variante recibida. Ya no es necesario entrar a TiendaNube.</p>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
@@ -1190,19 +1180,19 @@
 
       <div class="faq-item">
         <div class="faq-q">¿Cómo sé cuándo hay que reponer un producto? <span class="arrow">▶</span></div>
-        <div class="faq-body">El sistema envía un email automático al responsable del proveedor cuando el stock cae por debajo del umbral de reposición. También podés revisar el semáforo en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=inventario" target="_blank" style="color:var(--green);font-weight:600">Estado Inventario</a>: 🔴 requiere acción inmediata, 🟡 pronto por reponer, 🟢 stock suficiente.</div>
+        <div class="faq-body">Podés revisar el semáforo de stock en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a>: 🔴 requiere acción inmediata, 🟡 pronto por reponer, 🟢 stock suficiente.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo registro un pedido a un proveedor? <span class="arrow">▶</span></div>
-        <div class="faq-body">Entrá a <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=ordenes" target="_blank" style="color:var(--green);font-weight:600">Nuevo Pedido</a> en el panel de administración. El email de alerta incluye un botón "Hacer el pedido" que pre-completa el formulario con los productos sugeridos.</div>
+        <div class="faq-body">Entrá a <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=pedidos" target="_blank" style="color:var(--green);font-weight:600">Admin → Pedidos</a> y creá un nuevo pedido desde ahí.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Qué hago cuando llega la mercadería? <span class="arrow">▶</span></div>
-        <div class="faq-body">Contá los productos recibidos y actualizá el stock en TiendaNube. Avisale a Claudio qué productos llegaron y en qué cantidades para que reponga la tienda física. Si hay productos para el secundario, coordinar el traslado con Franco Alini (va todos los miércoles) o el pool de ayuda.</div>
+        <div class="faq-body">Contá los productos recibidos y actualizá el stock en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a>. Avisale a Claudio qué productos llegaron y en qué cantidades para que reponga la tienda física. Si hay productos para el secundario, coordinar el traslado con Franco Alini (va todos los miércoles) o el pool de ayuda.</div>
       </div>
       <div class="faq-item">
-        <div class="faq-q">¿Cómo actualizo el stock en TiendaNube? <span class="arrow">▶</span></div>
-        <div class="faq-body">Ingresá al <a href="https://tiendadientedeleon.mitiendanube.com/admin/inventory?page=1&locationId=01KK9XQ2VJ3P11A8NFVZ8DY4MM" target="_blank" style="color:var(--green);font-weight:600">panel de inventario de TiendaNube</a> y modificá las cantidades directamente. Necesitás acceso de administrador a TiendaNube.</div>
+        <div class="faq-q">¿Cómo actualizo el stock? <span class="arrow">▶</span></div>
+        <div class="faq-body">Entrá a <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a> y modificá las cantidades directamente desde ahí. Ya no necesitás entrar a TiendaNube.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo cierro un pedido? <span class="arrow">▶</span></div>
