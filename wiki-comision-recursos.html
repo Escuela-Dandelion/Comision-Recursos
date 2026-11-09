@@ -1069,8 +1069,20 @@
         <div class="step">
           <div class="step-num">7</div>
           <div class="step-body">
-            <div class="step-title">Distribuir a las tiendas físicas</div>
+            <div class="step-title">Distribuir a las tiendas físicas y registrar por tienda</div>
             <p class="step-desc">El stock se almacena principalmente en la tienda de <strong>Claudio (primaria)</strong>. Coordinar con él dónde y cómo guardar los productos. Una parte del stock hay que trasladarla al <strong>secundario</strong> — para eso se puede pedir ayuda al pool o a <strong>Franco Alini</strong>, que va todos los miércoles al mediodía.</p>
+            <p class="step-desc" style="margin-top:10px">Una vez distribuida la mercadería, <strong>registrar cuántas unidades quedaron en cada tienda</strong> en Gestión de Productos. Esto permite tener control del stock real por ubicación y es lo que alimenta el semáforo.</p>
+            <div style="margin-top:12px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — edición de stock por tienda</div>
+              <img src="gestion-productos-stock-tiendas.png" alt="Edición de stock por tienda en Gestión de Productos" style="width:100%;max-width:500px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
+            </div>
+            <div class="callout callout-info" style="margin-top:12px">
+              <div class="icon">ℹ️</div>
+              <div>
+                <div class="callout-title">Solo redistribución interna</div>
+                Ingresar las cantidades por tienda (Primario y Secundario) <strong>no actualiza el stock en TiendaNube</strong> — es solo un registro interno para control. El total se calcula automáticamente. Si los valores de Umbral y Piso están vacíos, el sistema los calcula solo; si los modificás a mano, los respeta tal cual.
+              </div>
+            </div>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
