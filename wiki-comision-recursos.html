@@ -359,6 +359,7 @@
   <a href="#roles" class="sub">→ Roles</a>
   <a href="#proveedores" class="sub">→ Proveedores</a>
   <a href="#flujo" class="sub">→ Flujo del Proceso</a>
+  <a href="#guias" class="sub">→ Guías de Uso</a>
 
   <a href="https://escuela-dandelion.github.io/Comision-Recursos/dashboard-general.html" target="_blank" class="sub">→ 📊 Dashboard de Ventas</a>
 
@@ -1107,6 +1108,91 @@
           <div class="callout-title">Regla sin excepciones: sin QR no hay entrega</div>
           Esta regla aplica tanto en la tienda de primaria (Claudio) como en la del secundario (Inés). El código QR es el único comprobante válido de pago. No se entrega mercadería por promesa de pago posterior, transferencia no confirmada ni ningún otro medio. El QR llega al mail de la familia únicamente cuando el pago fue procesado.
         </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- GUÍAS DE USO -->
+    <div class="section" id="guias">
+      <h2><span class="icon">📱</span> Guías de Uso — Panel de Administración</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Referencia rápida para cada pantalla del panel. Accedé desde el ícono <strong>?</strong> de cada sección.</p>
+
+      <!-- GESTIÓN DE PRODUCTOS -->
+      <div id="guia-gestion-productos" style="margin-bottom:32px">
+        <h3>🏷️ Gestión de Productos</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Monitoreo de stock y actualización de inventario después de cada reposición. Es la pantalla principal del ciclo de abastecimiento.</p>
+        <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
+          <thead><tr><th>Qué ves</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td><span style="background:#fdecea;color:#c62828;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">🚨 Stock crítico</span></td><td>El stock cayó por debajo del Piso. Requiere atención inmediata.</td></tr>
+            <tr><td><span style="background:#ffedd5;color:#9a3412;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">⚠️ Stock bajo</span></td><td>El stock cayó por debajo del Umbral. Hay que hacer el pedido.</td></tr>
+            <tr><td>Punto 🟢 junto al número</td><td>Stock OK — no se requiere acción.</td></tr>
+            <tr><td><span style="background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">∞ Infinito</span></td><td>Variante sin gestión de stock (productos a pedido). No genera semáforo.</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px;margin-bottom:6px"><strong>Actualizar stock:</strong> click en el producto → editá el stock de cada variante → ingresá cuántas unidades quedan en <strong>Tienda Primaria</strong> y <strong>Tienda Secundaria</strong> → Guardar.</p>
+        <p style="font-size:12px;margin-bottom:0"><strong>Ver más:</strong> <a href="#flujo" style="color:var(--green)">Flujo de Reposición ↓</a> — Paso 1 (detectar) y Paso 7 (actualizar stock y distribuir).</p>
+      </div>
+
+      <!-- PEDIDOS -->
+      <div id="guia-pedidos" style="margin-bottom:32px">
+        <h3>📦 Pedidos a Proveedores</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Registro y seguimiento de órdenes de compra a proveedores. Cada pedido avanza por estados a medida que se ejecuta el proceso.</p>
+        <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
+          <thead><tr><th>Estado</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-draft">Solicitado</span></td><td>Registrado, esperando confirmación del proveedor.</td></tr>
+            <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó el despacho.</td></tr>
+            <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>Mercadería despachada o en camino a retirar.</td></tr>
+            <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>Llegó a la escuela. Desde acá se actualiza el stock.</td></tr>
+            <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo. Pago registrado.</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px;margin-bottom:4px"><strong>Crear pedido:</strong> botón "Nueva Orden" (arriba a la derecha) → completar productos y cantidades → indicar unidad (unidades, cajas o Kg) → dejar el costo final en Notas si incluye envío.</p>
+        <p style="font-size:12px;margin-bottom:4px"><strong>Solicitar pago:</strong> 3 puntitos del pedido → "Solicitar Pago" → se abre WhatsApp con CBU y total listo para enviarle a Inés Robertson.</p>
+        <p style="font-size:12px;margin-bottom:0"><strong>Adjuntar comprobante:</strong> desde el pedido → subir imagen del comprobante de transferencia.</p>
+      </div>
+
+      <!-- REGISTRAR ENTREGA (QR) -->
+      <div id="guia-qr" style="margin-bottom:32px">
+        <h3>📷 Registrar Entrega</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Para escanear el código QR de una familia y registrar la entrega de su pedido en la tienda física.</p>
+        <ol style="font-size:13px;padding-left:20px;line-height:2">
+          <li>Identificarte con tu cuenta Google.</li>
+          <li>Escanear el QR desde el celular del comprador.</li>
+          <li>El sistema muestra los productos del pedido y a quién pertenece.</li>
+          <li>Si algo falta, marcar "Queda algo pendiente" y agregar una nota.</li>
+          <li>Confirmar entrega — el pedido queda registrado como entregado.</li>
+        </ol>
+        <div class="callout callout-danger" style="margin-top:12px">
+          <div class="icon">🔒</div>
+          <div><div class="callout-title">Sin QR no hay entrega</div>El código QR es el único comprobante válido de pago. No se entrega por promesa de pago, transferencia no confirmada ni ningún otro medio.</div>
+        </div>
+      </div>
+
+      <!-- VENTAS -->
+      <div id="guia-ventas" style="margin-bottom:32px">
+        <h3>🛒 Ventas</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Historial de todas las ventas de la tienda. Permite ver qué se vendió, a quién, cuándo y en qué estado está la entrega.</p>
+        <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
+          <thead><tr><th>Filtro</th><th>Para qué sirve</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Pendiente / Entregado / Todos</strong></td><td>Filtrar por estado de entrega. "Pendiente" muestra las ventas que todavía no fueron retiradas.</td></tr>
+            <tr><td><strong>Mes</strong></td><td>Acceso rápido al mes actual y meses anteriores.</td></tr>
+            <tr><td><strong>Grado</strong></td><td>Ver qué compras se destinaron a un grado específico.</td></tr>
+            <tr><td><strong>Quien entregó</strong></td><td>Filtrar las entregas registradas por Claudio o Inés Vázquez.</td></tr>
+            <tr><td><strong>Producto / Proveedor / Marca</strong></td><td>Ver ventas de un proveedor o producto específico.</td></tr>
+            <tr><td><strong>Comprador / Nro. de orden</strong></td><td>Buscar una venta puntual por nombre o número.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- VENTAS A PEDIDO -->
+      <div id="guia-ventas-pedido" style="margin-bottom:16px">
+        <h3>📋 Ventas a Pedido</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Muestra las ventas de productos sin stock fijo (a pedido), donde el proveedor fabrica o entrega a demanda. Se usa para acumular pedidos y luego hacer el encargo al proveedor.</p>
+        <p style="font-size:13px;margin-bottom:4px"><strong>Cómo funciona:</strong> las familias compran normalmente en la tienda virtual, el sistema registra la venta pero no descuenta stock. Cuando hay suficiente demanda acumulada, el FGP genera el pedido al proveedor desde esta pantalla.</p>
+        <p style="font-size:13px;margin-bottom:0"><strong>Proveedores que usan este modelo:</strong> Tienda Limón, Nazareno, Sol de Oro, El Maitén, Pajarito Amarillo, Biosalud.</p>
       </div>
     </div>
 
