@@ -1,4 +1,4 @@
-// v2026-11-06j — normProv global, getProductosTN filtra por proveedor (brand TN → MARCA_A_PROVEEDOR_RP)
+// v2026-11-09a — skusInf cacheado 1h en CacheService (fix timeout web app)
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -567,22 +567,33 @@ function obtenerProductosTN(provFilter) {
 }
 
 function obtenerSkusStockInfinito() {
-  const resp = UrlFetchApp.fetch(
-    'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200&fields=id,brand,variants', {
-    headers: {
-      'Authentication': 'bearer ' + TN_API_TOKEN,
-      'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
-    }
-  });
-  const data = JSON.parse(resp.getContentText());
+  const cache  = CacheService.getScriptCache();
+  const cached = cache.get('skusInf_v1');
+  if (cached) return JSON.parse(cached);
+
   const skus = {};
-  data.forEach(function(p) {
-    (p.variants || []).forEach(function(v) {
-      if (v.stock === null && v.sku) {
-        skus[v.sku.trim()] = true;
+  let page = 1;
+  while (true) {
+    const resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + TN_STORE_ID + '/products?per_page=200&page=' + page + '&fields=id,brand,variants', {
+      headers: {
+        'Authentication': 'bearer ' + TN_API_TOKEN,
+        'User-Agent': 'DienteDeLeon (dientedeleon-admin@googlegroups.com)'
       }
     });
-  });
+    const data = JSON.parse(resp.getContentText());
+    if (!data || data.length === 0) break;
+    data.forEach(function(p) {
+      (p.variants || []).forEach(function(v) {
+        if (v.stock === null && v.sku) {
+          skus[v.sku.trim()] = true;
+        }
+      });
+    });
+    if (data.length < 200) break;
+    page++;
+  }
+  cache.put('skusInf_v1', JSON.stringify(skus), 3600); // cache 1 hora
   return skus;
 }
 
@@ -1229,3 +1240,58 @@ function getStockValorizacion() {
   return { ok: true, total: Math.round(total), items: items, ts: new Date().toLocaleString('es-AR') };
 }
 
+
+// ── Tests diagnóstico ─────────────────────────────────────────────────────────
+
+function testGetVentasSinStock() {
+  const e = { parameter: { action: 'getVentasSinStock', desde: '2026-01-01', hasta: '2026-12-31' } };
+  const result = JSON.parse(doGet(e).getContent());
+  Logger.log('ok: ' + result.ok);
+  Logger.log('grupos: ' + JSON.stringify(Object.keys(result.grupos || {})));
+  const total = Object.values(result.grupos || {}).reduce(function(s, g) { return s + g.length; }, 0);
+  Logger.log('total lineas: ' + total);
+}
+
+function testSkusStockInfinito() {
+  const skus = obtenerSkusStockInfinito();
+  Logger.log('Total SKUs stock infinito: ' + Object.keys(skus).length);
+  Logger.log('CREMA_SOLIDA_BL_70G: ' + (skus['CREMA_SOLIDA_BL_70G'] ? 'SÍ' : 'NO'));
+}
+
+// Chequeo liviano: busca la venta 817/CREMA en el sheet sin llamar a TN
+function testVenta817Sheet() {
+  const ss    = SpreadsheetApp.openById(INV_VENTAS_ID);
+  const sheet = ss.getSheetByName('Ventas');
+  const data  = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === '817') {
+      Logger.log('pedido=817 sku=' + data[i][6] + ' proveedor=' + data[i][12]);
+    }
+  }
+}
+
+// Chequeo liviano: muestra todas las ventas de CREMA_SOLIDA_BL_70G con su proveedor
+function testVentasCrema() {
+  const ss    = SpreadsheetApp.openById(INV_VENTAS_ID);
+  const sheet = ss.getSheetByName('Ventas');
+  const data  = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][6]).trim() === 'CREMA_SOLIDA_BL_70G') {
+      Logger.log('pedido=' + data[i][1] + ' proveedor=' + data[i][12] + ' normProv=' + normProv(String(data[i][12])));
+    }
+  }
+}
+
+// Chequeo liviano: muestra pedidos de Tienda Limón con sus SKUs parseados
+function testPedidosTiendaLimon() {
+  const sh   = getPedidosSheet();
+  const data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    const prov = String(data[i][COL.PROVEEDOR] || '');
+    if (normProv(prov).indexOf('tienda limon') !== -1 || normProv(prov).indexOf('tienda limon') !== -1) {
+      const prods = String(data[i][COL.PRODUCTOS] || '');
+      const skus  = (prods.match(/\[([^\]]+)\]/g) || []).join(', ');
+      Logger.log('norden=' + data[i][COL.NORDEN] + ' prov=' + prov + ' estado=' + data[i][COL.ESTADO] + ' skus=' + skus);
+    }
+  }
+}

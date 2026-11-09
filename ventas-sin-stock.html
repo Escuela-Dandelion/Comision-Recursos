@@ -140,16 +140,16 @@
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 
   // Fechas default: jueves a jueves (ciclo semanal de pedidos)
+  // "hasta" = próximo jueves (o hoy si es jueves); "desde" = 7 días antes
   (function() {
     var hoy = new Date();
-    // Encontrar el jueves más reciente (hoy si es jueves, sino retroceder)
-    var diasDesdeJueves = (hoy.getDay() + 7 - 4) % 7; // 4 = Thursday
-    var esteJueves = new Date(hoy);
-    esteJueves.setDate(hoy.getDate() - diasDesdeJueves);
-    var juevesPasado = new Date(esteJueves);
-    juevesPasado.setDate(esteJueves.getDate() - 7);
+    var diasHastaJueves = (4 - hoy.getDay() + 7) % 7; // 0 si hoy es jueves
+    var proximoJueves = new Date(hoy);
+    proximoJueves.setDate(hoy.getDate() + diasHastaJueves);
+    var juevesPasado = new Date(proximoJueves);
+    juevesPasado.setDate(proximoJueves.getDate() - 7);
     document.getElementById('f-desde').value = juevesPasado.toISOString().split('T')[0];
-    document.getElementById('f-hasta').value = esteJueves.toISOString().split('T')[0];
+    document.getElementById('f-hasta').value = proximoJueves.toISOString().split('T')[0];
     cargar();
   })();
 
