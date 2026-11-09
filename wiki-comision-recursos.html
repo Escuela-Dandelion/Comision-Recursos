@@ -1120,17 +1120,28 @@
       <!-- GESTIÓN DE PRODUCTOS -->
       <div id="guia-gestion-productos" style="margin-bottom:32px">
         <h3>🏷️ Gestión de Productos</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Monitoreo de stock y actualización de inventario después de cada reposición. Es la pantalla principal del ciclo de abastecimiento.</p>
+        <p style="font-size:13px;margin-bottom:8px">Es la pantalla central para editar los productos de la tienda. Desde acá se actualiza el <strong>precio</strong>, el <strong>stock</strong> y el <strong>costo</strong> de cada variante — sin necesidad de entrar a TiendaNube.</p>
+        <div class="callout callout-info" style="margin-bottom:12px">
+          <div class="icon">ℹ️</div>
+          <div>El alta de productos nuevos todavía no está habilitada desde esta pantalla. Por ahora solo se puede editar productos existentes.</div>
+        </div>
         <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
-          <thead><tr><th>Qué ves</th><th>Qué significa</th></tr></thead>
+          <thead><tr><th>Para qué venís acá</th><th>Qué hacés</th></tr></thead>
           <tbody>
-            <tr><td><span style="background:#fdecea;color:#c62828;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">🚨 Stock crítico</span></td><td>El stock cayó por debajo del Piso. Requiere atención inmediata.</td></tr>
-            <tr><td><span style="background:#ffedd5;color:#9a3412;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">⚠️ Stock bajo</span></td><td>El stock cayó por debajo del Umbral. Hay que hacer el pedido.</td></tr>
-            <tr><td>Punto 🟢 junto al número</td><td>Stock OK — no se requiere acción.</td></tr>
-            <tr><td><span style="background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">∞ Infinito</span></td><td>Variante sin gestión de stock (productos a pedido). No genera semáforo.</td></tr>
+            <tr><td><strong>Actualizar stock</strong></td><td>Click en el producto → editá el stock de cada variante → indicá cuántas unidades quedan en <strong>Tienda Primaria</strong> y <strong>Tienda Secundaria</strong> → Guardar.</td></tr>
+            <tr><td><strong>Actualizar precio</strong></td><td>Click en el producto → editá el precio de venta de la variante → Guardar. Se actualiza automáticamente en TiendaNube.</td></tr>
+            <tr><td><strong>Actualizar costo</strong></td><td>Click en el producto → editá el costo de la variante. Refleja el precio que se le paga al proveedor. Afecta el margen que muestra el dashboard.</td></tr>
           </tbody>
         </table>
-        <p style="font-size:12px;margin-bottom:6px"><strong>Actualizar stock:</strong> click en el producto → editá el stock de cada variante → ingresá cuántas unidades quedan en <strong>Tienda Primaria</strong> y <strong>Tienda Secundaria</strong> → Guardar.</p>
+        <table class="wiki-table" style="font-size:12px;margin-bottom:12px">
+          <thead><tr><th>Semáforo</th><th>Qué significa</th></tr></thead>
+          <tbody>
+            <tr><td><span style="background:#fdecea;color:#c62828;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">🚨 Stock crítico</span></td><td>Cayó por debajo del Piso. Urgente.</td></tr>
+            <tr><td><span style="background:#ffedd5;color:#9a3412;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">⚠️ Stock bajo</span></td><td>Cayó por debajo del Umbral. Hay que pedir.</td></tr>
+            <tr><td>Punto 🟢 junto al número</td><td>Stock OK.</td></tr>
+            <tr><td><span style="background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:700">∞ Infinito</span></td><td>Producto a pedido, sin gestión de stock.</td></tr>
+          </tbody>
+        </table>
         <p style="font-size:12px;margin-bottom:0"><strong>Ver más:</strong> <a href="#flujo" style="color:var(--green)">Flujo de Reposición ↓</a> — Paso 1 (detectar) y Paso 7 (actualizar stock y distribuir).</p>
       </div>
 
