@@ -936,7 +936,7 @@
             <div class="step-title">Detectar que hay que reponer</div>
             <p class="step-desc">Hay dos formas de saberlo:</p>
             <ul style="margin:6px 0 12px 16px;font-size:12px;color:var(--muted)">
-              <li><strong>Email automático:</strong> el sistema revisa el stock periódicamente y manda un email cuando un producto cae por debajo del umbral. El mail le llega únicamente al responsable de ese proveedor, no a todo el equipo. Incluye links directos para hacer el pedido con los productos ya cargados por defecto.</li>
+              <li><strong>Email automático:</strong> el sistema revisa el stock periódicamente y manda un email cuando un producto cae por debajo del umbral, <strong>siempre y cuando no haya un pedido vigente ya cargado</strong>. Si ya existe un pedido activo para ese proveedor, la alarma se suprime. El mail le llega únicamente al responsable de ese proveedor, no a todo el equipo.</li>
               <li><strong><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green)">Admin → Gestión de Productos ↗</a>:</strong> en cualquier momento se puede ver el semáforo de cada producto en la tabla de inventario. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
             </ul>
 
@@ -1077,6 +1077,13 @@
           <div class="step-body">
             <div class="step-title">Actualizar stock en Gestión de Productos</div>
             <p class="step-desc">Ingresar el stock nuevo en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos ↗</a> para cada producto y variante recibida. Ya no es necesario entrar a TiendaNube.</p>
+            <div class="callout callout-info" style="margin-top:12px">
+              <div class="icon">📬</div>
+              <div>
+                <div class="callout-title">Segunda alarma: recordatorio post-entrega</div>
+                Cuando el pedido pasa a estado <em>Entregado en Escuela</em>, el sistema envía una segunda alarma al responsable recordando que hay que actualizar el stock. Si el stock ya se actualizó y el semáforo volvió a verde, podés ignorarla.
+              </div>
+            </div>
           </div>
         </div>
         <div class="step-connector"><div></div></div>
@@ -1180,7 +1187,7 @@
 
       <div class="faq-item">
         <div class="faq-q">¿Cómo sé cuándo hay que reponer un producto? <span class="arrow">▶</span></div>
-        <div class="faq-body">Podés revisar el semáforo de stock en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a>: 🔴 requiere acción inmediata, 🟡 pronto por reponer, 🟢 stock suficiente.</div>
+        <div class="faq-body">El sistema envía un email automático cuando el stock cae por debajo del umbral y no hay un pedido vigente ya cargado. También envía un segundo recordatorio cuando el pedido es marcado como entregado, para que no se olvide actualizar el stock. En cualquier momento podés ver el semáforo en <a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green);font-weight:600">Admin → Gestión de Productos</a>: 🔴 urgente, 🟡 pronto por reponer, 🟢 OK.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">¿Cómo registro un pedido a un proveedor? <span class="arrow">▶</span></div>
