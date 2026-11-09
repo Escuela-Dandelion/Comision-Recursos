@@ -785,7 +785,6 @@ function impersonarAdmin(valor) {
     _recargarGestionProductos();
     _recargarPedidos();
     _recargarVentasSinStock();
-    _actualizarNavVentasPedido(null);
     if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
     return;
   }
@@ -804,7 +803,6 @@ function impersonarAdmin(valor) {
   _recargarGestionProductos();
   _recargarPedidos();
   _recargarVentasSinStock();
-  _actualizarNavVentasPedido(impMarcas);
   if (_ventasCargadas) { poblarFiltrosVentas(); aplicarFiltrosVentas(); }
 }
 
@@ -858,6 +856,14 @@ function aplicarPermisos(role) {
     var roles = btn.getAttribute('data-roles').split(',');
     btn.style.display = roles.indexOf(roleLower) !== -1 ? 'flex' : 'none';
   });
+  // Ventas a Pedido necesita check adicional por marcas, independientemente del rol
+  var marcasActuales = _currentImpersonation ? _currentImpersonation.marcas : null;
+  _actualizarNavVentasPedido(marcasActuales);
+  // Si la vista activa quedó oculta, ir al Inicio
+  var activeBtn = document.querySelector('.nav-item.active');
+  if (activeBtn && activeBtn.style.display === 'none') {
+    showView('inicio', document.querySelector('[data-view="inicio"]'));
+  }
 }
 
 function renderWelcomeCards(role) {
