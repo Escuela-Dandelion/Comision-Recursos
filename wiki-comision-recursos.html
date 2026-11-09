@@ -968,14 +968,18 @@
                   <tr><th>Columna</th><th>Qué significa</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td>🔴🟡🟢 <strong>Color + STOCK</strong></td><td>Unidades disponibles. Rojo = alerta activa (sin pedido vigente). Naranja = cerca del umbral. Verde = OK.</td></tr>
+                  <tr><td><strong>Punto naranja 🟠 junto al stock</strong></td><td>El stock de esa variante está por debajo del Umbral. Es momento de hacer el pedido.</td></tr>
+                  <tr><td><strong>Punto rojo 🔴 junto al stock</strong></td><td>El stock cayó por debajo del Piso (mínimo de emergencia). Hay que reponer urgente.</td></tr>
+                  <tr><td><strong>Punto verde 🟢 junto al stock</strong></td><td>Stock OK. No se requiere acción.</td></tr>
+                  <tr><td><span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">⚠️ Stock bajo</span> (naranja)</td><td>Al menos una variante del producto está por debajo del Umbral. Aparece en el encabezado del producto.</td></tr>
+                  <tr><td><span style="background:#fdecea;color:#c62828;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">🚨 Stock crítico</span> (rojo)</td><td>Al menos una variante cayó por debajo del Piso. Requiere atención inmediata.</td></tr>
                   <tr><td><strong>VEL/MES</strong></td><td>Velocidad de venta: unidades vendidas por mes en promedio</td></tr>
                   <tr><td><strong>UMBRAL</strong></td><td>Punto donde se dispara la alarma. Se calcula como VEL/MES × lead time del proveedor × 1,5</td></tr>
                   <tr><td><strong>PISO</strong></td><td>Mínimo absoluto de emergencia</td></tr>
                   <tr><td><strong>PRECIO / COSTO / MARGEN</strong></td><td>Precio de venta, costo registrado en el último pedido y margen resultante</td></tr>
                 </tbody>
               </table>
-              <p style="font-size:12px;color:var(--muted);margin:0">Podés filtrar por Proveedor o Marca y buscar por nombre o SKU. El badge <strong>⚠️ Stock bajo</strong> aparece en los productos que superaron el umbral.</p>
+              <p style="font-size:12px;color:var(--muted);margin:0">Podés filtrar por Proveedor o Marca y buscar por nombre o SKU.</p>
             </div>
           </div>
         </div>
