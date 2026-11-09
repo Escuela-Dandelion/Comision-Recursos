@@ -123,6 +123,18 @@
   <div class="filter-bar">
     <label>Desde <input type="date" id="f-desde"></label>
     <label>Hasta <input type="date" id="f-hasta"></label>
+    <label id="ver-como-wrap" style="display:none">Ver como
+      <select id="ver-como" onchange="cargar()">
+        <option value="">— yo mismo —</option>
+        <option value="tiendalimon.natural@gmail.com">Natalia (Tienda Limón)</option>
+        <option value="francoalini@gmail.com">Franco (Nazareno)</option>
+        <option value="dominguez.dolo@gmail.com">Dolo (Sol de Oro)</option>
+        <option value="pialucarno@gmail.com">Pia (El Maiten / Pajarito)</option>
+        <option value="martinimaria39@gmail.com">Maria (Paraisa / otros)</option>
+        <option value="monicachesta@gmail.com">Monica (La Yaya / otros)</option>
+        <option value="lmdestefano@gmail.com">Lucas (Yemari / Caballo Negro)</option>
+      </select>
+    </label>
     <button class="btn-buscar" onclick="cargar()">Buscar</button>
     <span class="loading-msg" id="loading-msg" style="display:none">Cargando…</span>
   </div>
@@ -145,10 +157,19 @@
 
   // Auth: requiere sesión activa
   var _userEmail = ddlGetEmail();
+  var _ADMINS = ['robertson.ine@gmail.com','longhi.yuliana@gmail.com','yuliana.longhi@dandelion.edu.ar'];
+  var _isAdmin = _ADMINS.indexOf(_userEmail) !== -1;
   if (!_userEmail) {
     document.getElementById('auth-msg').style.display = 'block';
     document.querySelector('.filter-bar').style.display = 'none';
     document.getElementById('content').style.display = 'none';
+  } else if (_isAdmin) {
+    document.getElementById('ver-como-wrap').style.display = 'inline-flex';
+  }
+
+  function getEffectiveEmail() {
+    var verComo = document.getElementById('ver-como').value;
+    return (_isAdmin && verComo) ? verComo : _userEmail;
   }
 
   // Fechas default: último jueves → hoy
@@ -177,7 +198,7 @@
     msg.style.display = 'inline';
     cont.innerHTML = '';
 
-    fetch(GAS_URL + '?action=getVentasSinStock&desde=' + encodeURIComponent(desde) + '&hasta=' + encodeURIComponent(hasta) + '&email=' + encodeURIComponent(_userEmail), { redirect: 'follow' })
+    fetch(GAS_URL + '?action=getVentasSinStock&desde=' + encodeURIComponent(desde) + '&hasta=' + encodeURIComponent(hasta) + '&email=' + encodeURIComponent(getEffectiveEmail()), { redirect: 'follow' })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         msg.style.display = 'none';
