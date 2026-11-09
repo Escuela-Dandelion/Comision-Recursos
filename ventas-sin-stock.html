@@ -78,7 +78,7 @@
     .col-check { width: 36px; text-align: center; }
     .col-fecha { white-space: nowrap; color: var(--muted); font-size: 12px; }
     .col-pedido { font-size: 12px; font-weight: 600; color: var(--green); white-space: nowrap; }
-    .col-producto { max-width: 260px; }
+    .col-producto { max-width: 180px; }
     .col-producto-sku { font-size: 11px; color: var(--muted); font-family: monospace; margin-top: 2px; }
     .col-num { text-align: right; white-space: nowrap; }
     .col-num.cant { font-weight: 600; }
@@ -116,6 +116,9 @@
   </style>
 </head>
 <body>
+<div id="auth-msg" style="display:none;padding:40px;text-align:center;color:#6b7280;font-size:14px">
+  Necesitás iniciar sesión. Podés hacerlo desde <a href="pedidos.html" style="color:#2d5a27">Pedidos</a>.
+</div>
 
   <div class="filter-bar">
     <label>Desde <input type="date" id="f-desde"></label>
@@ -136,15 +139,27 @@
     <button class="btn-generar" id="btn-generar" onclick="generarPedido()">📋 Generar Pedido a Proveedor</button>
   </div>
 
+<script src="ddl-utils.js"></script>
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 
-  // Fechas default: desde inicio del año hasta hoy
-  // Los entregados/cerrados ya desaparecen solos por el GAS
+  // Auth: requiere sesión activa
+  var _userEmail = ddlGetEmail();
+  if (!_userEmail) {
+    document.getElementById('auth-msg').style.display = 'block';
+    document.querySelector('.filter-bar').style.display = 'none';
+    document.getElementById('content').style.display = 'none';
+  }
+
+  // Fechas default: último jueves → hoy
+  // Ventas anteriores con pedido vigente se incluyen igual (lógica en el GAS)
   (function() {
+    if (!_userEmail) return;
     var hoy = new Date();
-    var inicio = new Date(hoy.getFullYear(), 0, 1); // 1 ene del año actual
-    document.getElementById('f-desde').value = inicio.toISOString().split('T')[0];
+    var diasDesdeJueves = (hoy.getDay() + 7 - 4) % 7;
+    var ultimoJueves = new Date(hoy);
+    ultimoJueves.setDate(hoy.getDate() - diasDesdeJueves);
+    document.getElementById('f-desde').value = ultimoJueves.toISOString().split('T')[0];
     document.getElementById('f-hasta').value = hoy.toISOString().split('T')[0];
     cargar();
   })();
@@ -162,7 +177,7 @@
     msg.style.display = 'inline';
     cont.innerHTML = '';
 
-    fetch(GAS_URL + '?action=getVentasSinStock&desde=' + encodeURIComponent(desde) + '&hasta=' + encodeURIComponent(hasta), { redirect: 'follow' })
+    fetch(GAS_URL + '?action=getVentasSinStock&desde=' + encodeURIComponent(desde) + '&hasta=' + encodeURIComponent(hasta) + '&email=' + encodeURIComponent(_userEmail), { redirect: 'follow' })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         msg.style.display = 'none';

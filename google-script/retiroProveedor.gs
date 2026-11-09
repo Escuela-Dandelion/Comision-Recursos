@@ -1,4 +1,4 @@
-// v2026-11-09a — skusInf cacheado 1h en CacheService (fix timeout web app)
+// v2026-11-09b — getVentasSinStock: auth por FGP, fechas viejas con pedido vigente siempre visibles
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -274,6 +274,18 @@ function doGet(e) {
     }
 
     if (action === 'getVentasSinStock') {
+      const emailParam    = (e.parameter.email || '').toLowerCase().trim();
+      const marcasFGP     = getMarcasFGP(emailParam);
+      // undefined = sin auth → retornar error
+      if (marcasFGP === undefined) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Sin autorización.' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      // null = admin ve todo; array = FGP ve solo sus proveedores
+      const provsPermitidos = Array.isArray(marcasFGP)
+        ? marcasFGP.map(function(p) { return normProv(p); })
+        : null;
+
       const skusInf  = obtenerSkusStockInfinito();
       const ss       = SpreadsheetApp.openById(INV_VENTAS_ID);
       const sheet    = ss.getSheetByName('Ventas');
@@ -342,8 +354,8 @@ function doGet(e) {
             : new Date(rawFecha);
         }
         if (isNaN(fecha.getTime())) continue;
-        if (desde && fecha < desde) continue;
-        if (hasta && fecha > hasta) continue;
+        if (hasta && fecha > hasta) continue; // hasta siempre estricto
+        // desde: se aplica después del FIFO para ventas sin pedido (ver abajo)
 
         const sku      = String(fila[6] || '').trim();
         const cantidad = parseInt(fila[7]) || 0;
@@ -352,6 +364,9 @@ function doGet(e) {
         const costoStr  = String(fila[13] || '');
         const costo     = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
         const proveedor = String(fila[12] || '').trim();
+
+        // Filtrar por proveedores permitidos del FGP
+        if (provsPermitidos !== null && provsPermitidos.indexOf(normProv(proveedor)) === -1) continue;
 
         rawLineas.push({ fechaObj: fecha, pedido: String(fila[1] || ''), comprador: String(fila[3] || ''),
           producto: String(fila[5] || ''), sku, cantidad, precio: String(fila[8] || ''), proveedor, costo });
@@ -375,6 +390,8 @@ function doGet(e) {
           break;
         }
         if (estadoPedido === 'entregado') return; // ocultar ventas ya entregadas
+        // Ventas anteriores al rango solo se muestran si tienen pedido vigente
+        if (desde && l.fechaObj < desde && estadoPedido !== 'vigente') return;
 
         lineas.push({
           fecha:        Utilities.formatDate(l.fechaObj, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
