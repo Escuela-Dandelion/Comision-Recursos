@@ -190,9 +190,8 @@
   /* ── VIEWS ── */
   .view { display: none; }
   .view.active { display: block; }
-  .view-title { font-size: 22px; font-weight: 700; margin-bottom: 0; }
-  .view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .help-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--green); border: none; color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; flex-shrink: 0; transition: opacity .15s; opacity: .85; }
+  .view-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+  .help-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: #fff; font-size: 12px; font-weight: 700; text-decoration: none; vertical-align: middle; margin-left: 10px; opacity: .85; transition: opacity .15s; }
   .help-btn:hover { opacity: 1; }
 
   /* ── TABLA VENTAS (estilo Pedidos) ── */
@@ -397,19 +396,13 @@
 
     <!-- PEDIDOS -->
     <div class="view" id="view-pedidos">
-      <div class="view-header">
-        <div class="view-title">📦 Órdenes de Pedido Proveedores</div>
-        <a href="wiki-comision-recursos.html#guia-pedidos" target="_blank" class="help-btn" title="Ayuda">?</a>
-      </div>
+      <div class="view-title">📦 Órdenes de Pedido Proveedores <a href="wiki-comision-recursos.html#guia-pedidos" target="_blank" class="help-btn" title="Ver ayuda">?</a></div>
       <iframe class="view-iframe" src="pedidos.html?auth=1" id="iframe-pedidos"></iframe>
     </div>
 
     <!-- VENTAS SIN STOCK -->
     <div class="view" id="view-ventas-sin-stock">
-      <div class="view-header">
-        <div class="view-title">📋 Ventas a Pedido</div>
-        <a href="wiki-comision-recursos.html#guia-ventas-pedido" target="_blank" class="help-btn" title="Ayuda">?</a>
-      </div>
+      <div class="view-title">📋 Ventas a Pedido <a href="wiki-comision-recursos.html#guia-ventas-pedido" target="_blank" class="help-btn" title="Ver ayuda">?</a></div>
       <iframe class="view-iframe" src="ventas-sin-stock.html" id="iframe-ventas-sin-stock"></iframe>
     </div>
 
@@ -426,10 +419,7 @@
 
     <!-- QR -->
     <div class="view" id="view-qr">
-      <div class="view-header">
-        <div class="view-title">📷 Registrar Entrega</div>
-        <a href="wiki-comision-recursos.html#guia-qr" target="_blank" class="help-btn" title="Ayuda">?</a>
-      </div>
+      <div class="view-title">📷 Registrar Entrega <a href="wiki-comision-recursos.html#guia-qr" target="_blank" class="help-btn" title="Ver ayuda">?</a></div>
 
       <!-- Estado 0: LOGIN (siempre primero) -->
       <div id="qr-login-wrap" style="display:none">
@@ -513,10 +503,7 @@
 
     <!-- VENTAS -->
     <div class="view" id="view-ventas">
-      <div class="view-header">
-        <div class="view-title">🛒 Ventas</div>
-        <a href="wiki-comision-recursos.html#guia-ventas" target="_blank" class="help-btn" title="Ayuda">?</a>
-      </div>
+      <div class="view-title">🛒 Ventas <a href="wiki-comision-recursos.html#guia-ventas" target="_blank" class="help-btn" title="Ver ayuda">?</a></div>
 
       <!-- Filtros estado -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
@@ -595,10 +582,7 @@
 
     <!-- GESTIÓN DE PRODUCTOS -->
     <div class="view" id="view-gestion-productos">
-      <div class="view-header">
-        <div class="view-title">🏷️ Gestión de Productos</div>
-        <a href="wiki-comision-recursos.html#guia-gestion-productos" target="_blank" class="help-btn" title="Ayuda">?</a>
-      </div>
+      <div class="view-title">🏷️ Gestión de Productos <a href="wiki-comision-recursos.html#guia-gestion-productos" target="_blank" class="help-btn" title="Ver ayuda">?</a></div>
       <iframe id="iframe-gestion-productos" class="view-iframe" src=""></iframe>
     </div>
 

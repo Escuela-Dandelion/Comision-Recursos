@@ -1041,7 +1041,7 @@
               <div class="icon">📬</div>
               <div>
                 <div class="callout-title">Segunda alarma: recordatorio post-entrega</div>
-                Cuando el pedido pasa a estado <em>Entregado en Escuela</em>, el sistema envía una segunda alarma al responsable recordando que hay que actualizar el stock. Si el stock ya se actualizó y el semáforo volvió a verde, podés ignorarla.
+                Cuando el pedido pasa a estado <em>Entregado en Escuela</em>, el sistema envía una segunda alarma al responsable recordando que hay que actualizar el stock y cerrar el pedido. El stock se actualiza al momento de cerrar el pedido, no antes.
               </div>
             </div>
             <p class="step-desc" style="margin-top:14px">El stock se almacena principalmente en la tienda de <strong>Claudio (primaria)</strong>. Coordinar con él dónde y cómo guardar los productos. Una parte del stock hay que trasladarla al <strong>secundario</strong>, para eso se puede pedir ayuda al pool o a <strong>Franco Alini</strong>, que va todos los miércoles al mediodía.</p>
@@ -1069,7 +1069,7 @@
           <tr><td><span class="badge badge-draft">Solicitado</span></td><td>El pedido fue registrado en el sistema. Todavía no fue confirmado por el proveedor. <strong>Único estado donde se puede eliminar el pedido</strong> (solo admins).</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó que puede despachar el pedido.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>La mercadería ya fue despachada (correo) o está siendo retirada (retiro).</td><td>Responsable del proveedor</td></tr>
-          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida. A partir de acá se actualiza el stock. Ya no se puede cancelar.</td><td>Responsable del proveedor</td></tr>
+          <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>La mercadería llegó a la escuela y fue recibida por Claudio. El stock todavía no se actualizó. Ya no se puede cancelar.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo. El pago fue registrado y el pedido está cerrado.</td><td>Responsable del proveedor</td></tr>
           <tr><td><span class="badge" style="background:#fdecea;color:#c62828">Cancelado</span></td><td>El pedido fue cancelado. Solo se puede cancelar en estado Solicitado, Confirmado o En Camino. Queda registrado pero no afecta el stock.</td><td>Responsable del proveedor / Admin</td></tr>
         </tbody>
@@ -1144,13 +1144,14 @@
             <tr><td><span class="badge badge-draft">Solicitado</span></td><td>Registrado, esperando confirmación del proveedor.</td></tr>
             <tr><td><span class="badge" style="background:#dbeafe;color:#1e40af">Confirmado</span></td><td>El proveedor confirmó el despacho.</td></tr>
             <tr><td><span class="badge" style="background:#fef3c7;color:#92400e">En Camino</span></td><td>Mercadería despachada o en camino a retirar.</td></tr>
-            <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>Llegó a la escuela. Desde acá se actualiza el stock.</td></tr>
-            <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo. Pago registrado.</td></tr>
+            <tr><td><span class="badge badge-active">Entregado en Escuela</span></td><td>Llegó a la escuela y fue recibida por Claudio. El stock se actualiza al cerrar el pedido.</td></tr>
+            <tr><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">Cerrado</span></td><td>Proceso completo: pago registrado <strong>y</strong> stock actualizado en Gestión de Productos con la distribución por tienda (Primaria y Secundaria).</td></tr>
           </tbody>
         </table>
         <p style="font-size:12px;margin-bottom:4px"><strong>Crear pedido:</strong> botón "Nueva Orden" (arriba a la derecha) → completar productos y cantidades → indicar unidad (unidades, cajas o Kg) → dejar el costo final en Notas si incluye envío.</p>
         <p style="font-size:12px;margin-bottom:4px"><strong>Solicitar pago:</strong> 3 puntitos del pedido → "Solicitar Pago" → se abre WhatsApp con CBU y total listo para enviarle a Inés Robertson.</p>
-        <p style="font-size:12px;margin-bottom:0"><strong>Adjuntar comprobante:</strong> desde el pedido → subir imagen del comprobante de transferencia.</p>
+        <p style="font-size:12px;margin-bottom:4px"><strong>Adjuntar comprobante:</strong> desde el pedido → subir imagen del comprobante de transferencia.</p>
+        <p style="font-size:12px;margin-bottom:0"><strong>Para cerrar el pedido</strong> es obligatorio haber actualizado el stock en <a href="admin.html?view=gestion-productos" target="_blank" style="color:var(--green)">Gestión de Productos</a> e indicado cuántas unidades quedaron en la <strong>Tienda Primaria</strong> y en la <strong>Tienda Secundaria</strong>.</p>
       </div>
 
       <!-- REGISTRAR ENTREGA (QR) -->
