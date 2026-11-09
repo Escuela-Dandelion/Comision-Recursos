@@ -78,8 +78,8 @@
     .col-check { width: 36px; text-align: center; }
     .col-fecha { white-space: nowrap; color: var(--muted); font-size: 12px; }
     .col-pedido { font-size: 12px; font-weight: 600; color: var(--green); white-space: nowrap; }
-    .col-producto { max-width: 220px; }
-    .col-sku { font-size: 11px; color: var(--muted); font-family: monospace; white-space: nowrap; }
+    .col-producto { max-width: 260px; }
+    .col-producto-sku { font-size: 11px; color: var(--muted); font-family: monospace; margin-top: 2px; }
     .col-num { text-align: right; white-space: nowrap; }
     .col-num.cant { font-weight: 600; }
     input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--green); }
@@ -215,7 +215,7 @@
             '<thead><tr>' +
               '<th class="col-check"></th>' +
               '<th>Fecha</th><th>Pedido</th><th>Comprador</th>' +
-              '<th>Producto</th><th>SKU</th>' +
+              '<th>Producto</th>' +
               '<th class="col-num">Cant.</th>' +
               '<th class="col-num">Costo unit.</th>' +
               '<th class="col-num">Subtotal</th>' +
@@ -235,10 +235,11 @@
                 '<td class="col-fecha">' + l.fecha + '</td>' +
                 '<td class="col-pedido">#' + l.pedido + '</td>' +
                 '<td>' + esc(l.comprador) + '</td>' +
-                '<td class="col-producto">' + esc(l.producto) +
-                  (l.estadoPedido === 'vigente' ? ' <a class="pill-vigente" href="pedidos.html?id=' + esc(l.norden || '') + '">Pedido ' + esc(l.norden || '') + '</a>' : '') +
+                '<td class="col-producto">' +
+                  esc(l.producto) +
+                  '<div class="col-producto-sku">' + esc(l.sku) + '</div>' +
+                  (l.estadoPedido === 'vigente' ? '<a class="pill-vigente" style="display:inline-block;margin-top:4px" href="pedidos.html?id=' + esc(l.norden || '') + '">Pedido ' + esc(l.norden || '') + '</a>' : '') +
                 '</td>' +
-                '<td class="col-sku">' + esc(l.sku) + '</td>' +
                 '<td class="col-num cant">' + l.cantidad + '</td>' +
                 '<td class="col-num">' + (l.costo ? fmt(l.costo) : '—') + '</td>' +
                 '<td class="col-num">' + (l.costo ? fmt(l.costo * l.cantidad) : '—') + '</td>' +
