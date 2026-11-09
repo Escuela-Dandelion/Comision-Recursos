@@ -92,6 +92,7 @@
       border-radius: 20px; padding: 2px 8px;
       font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
       white-space: nowrap; vertical-align: middle;
+      text-decoration: none; cursor: pointer;
     }
 
     /* ── Barra flotante ── */
@@ -189,6 +190,10 @@
     cont.innerHTML = '';
     Object.keys(grupos).sort().forEach(function(prov) {
       var lineas    = grupos[prov];
+      // sin pedido primero, vigente después
+      lineas.sort(function(a, b) {
+        return (a.estadoPedido === 'vigente' ? 1 : 0) - (b.estadoPedido === 'vigente' ? 1 : 0);
+      });
       var totalCosto = lineas.reduce(function(s, l) { return s + (l.costo * l.cantidad); }, 0);
       var totalUnid  = lineas.reduce(function(s, l) { return s + l.cantidad; }, 0);
 
@@ -235,7 +240,7 @@
                 '<td class="col-pedido">#' + l.pedido + '</td>' +
                 '<td>' + esc(l.comprador) + '</td>' +
                 '<td class="col-producto">' + esc(l.producto) +
-                  (l.estadoPedido === 'vigente' ? ' <span class="pill-vigente">Pedido ' + esc(l.norden || '') + '</span>' : '') +
+                  (l.estadoPedido === 'vigente' ? ' <a class="pill-vigente" href="pedidos.html?id=' + esc(l.norden || '') + '">Pedido ' + esc(l.norden || '') + '</a>' : '') +
                 '</td>' +
                 '<td class="col-sku">' + esc(l.sku) + '</td>' +
                 '<td class="col-num cant">' + l.cantidad + '</td>' +

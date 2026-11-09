@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <script>(function(){var V='20260814';if(location.search.indexOf('appv='+V)===-1){var p=new URLSearchParams(location.search);p.set('appv',V);location.replace(location.pathname+'?'+p.toString()+(location.hash||''));}})()</script>
+  <script>(function(){var V='20261105';if(location.search.indexOf('appv='+V)===-1){var p=new URLSearchParams(location.search);p.set('appv',V);location.replace(location.pathname+'?'+p.toString()+(location.hash||''));}})()</script>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -178,6 +178,18 @@
     .fam-right { display:flex; align-items:center; gap:8px; }
     .fam-body  { display:none; background:#fff; border-bottom:1px solid #eee; overflow-x:auto; }
     .fam-body.open { display:block; }
+
+    /* ── SECCIONES POR GRADO (vista familia) ── */
+    .grade-sec-row {
+      padding:10px 18px; display:flex; align-items:center; gap:10px;
+      cursor:pointer; background:#eaecff; border-top:1px solid #d0d5f5;
+      border-bottom:1px solid #c8ccf0; user-select:none; transition:background .15s;
+    }
+    .grade-sec-row:hover { background:#dde1ff; }
+    .grade-sec-name  { font-weight:700; font-size:13px; color:#1a1a6e; flex:1; }
+    .grade-sec-count { font-size:11px; color:#666; }
+    .grade-sec-body  { display:none; }
+    .grade-sec-body.open { display:block; }
 
     /* ── VISTA POR PRODUCTO ── */
     .prod-row {
@@ -399,6 +411,11 @@
         <option value="">Todos los proveedores</option>
       </select>
 
+      <div class="filter-label">Marca</div>
+      <select class="filter-select" id="filtro-marca" onchange="aplicarFiltros()">
+        <option value="">Todas las marcas</option>
+      </select>
+
       <div class="filter-label" id="lbl-estado" style="display:none">Estado de entrega</div>
       <select class="filter-select" id="filtro-estado" onchange="aplicarFiltros()" style="display:none">
         <option value="">Todos</option>
@@ -434,6 +451,7 @@ var currentDesde    = '';
 var currentHasta    = '';
 var currentProveedor = '';
 var currentEstado   = ''; // '' | 'Entregado' | 'Pendiente'
+var currentMarca    = '';
 var selectedGrados = []; // [] = todos
 var currentVista  = 'familia'; // 'familia' | 'producto'
 
@@ -679,6 +697,15 @@ function initDashboard(d){
     var o=document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
   });
 
+  // Marcas
+  var marcaSet={};
+  ALL_ROWS.forEach(function(r){ if(r.marca) marcaSet[r.marca]=true; });
+  var selMarca=document.getElementById('filtro-marca');
+  selMarca.innerHTML='<option value="">Todas las marcas</option>';
+  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m){
+    var o=document.createElement('option'); o.value=m; o.textContent=m; selMarca.appendChild(o);
+  });
+
   document.getElementById('contenido').style.display='block';
   render();
 }
@@ -705,6 +732,7 @@ function aplicarFiltros(){
   currentDesde=document.getElementById('filtro-desde').value;
   currentHasta=document.getElementById('filtro-hasta').value;
   currentProveedor=document.getElementById('filtro-proveedor').value;
+  currentMarca=document.getElementById('filtro-marca').value;
   currentEstado=document.getElementById('filtro-estado').value;
   render();
 }
@@ -722,6 +750,7 @@ function getRows(){
     return true;
   });
   if(currentProveedor) rows=rows.filter(function(r){ return r.proveedor===currentProveedor; });
+  if(currentMarca) rows=rows.filter(function(r){ return r.marca===currentMarca; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   if(currentEstado && Object.keys(ALL_RETIROS_MAP).length>0){
     rows=rows.filter(function(r){
@@ -839,9 +868,10 @@ function render(){
   }
 
   // Guardar estado abierto antes de re-renderizar
-  var _openFam={}, _openProd={};
+  var _openFam={}, _openProd={}, _openGradeSec={};
   document.querySelectorAll('[id^="fam-"].open').forEach(function(el){ _openFam[el.id.replace('fam-','')]=true; });
   document.querySelectorAll('[id^="prod-"].open').forEach(function(el){ _openProd[el.id.replace('prod-','')]=true; });
+  document.querySelectorAll('.grade-sec-body[data-grado]').forEach(function(el){ _openGradeSec[el.dataset.grado]=el.classList.contains('open'); });
 
   cont.innerHTML=html;
 
@@ -854,6 +884,15 @@ function render(){
     var el=document.getElementById('prod-'+i); if(el) el.classList.add('open');
     var arr=document.getElementById('arr-prod-'+i); if(arr) arr.textContent='▼';
   });
+  document.querySelectorAll('.grade-sec-body[data-grado]').forEach(function(el){
+    var gr=el.dataset.grado;
+    if(gr in _openGradeSec && !_openGradeSec[gr]){
+      el.classList.remove('open');
+      var gi=el.id.replace('grade-sec-','');
+      var arr=document.getElementById('arr-grade-sec-'+gi);
+      if(arr) arr.classList.remove('open');
+    }
+  });
 }
 
 // ── VISTA POR FAMILIA ──
@@ -861,7 +900,7 @@ function renderFamilias(rows){
   var familias={};
   rows.forEach(function(r){
     var f=r.familia||'Sin nombre';
-    if(!familias[f]) familias[f]={email:r.email||'',total:0,unidades:0,items:[],_ped:{}};
+    if(!familias[f]) familias[f]={email:r.email||'',phone:r.phone||'',grado:r.grado||'Escuela',total:0,unidades:0,items:[],_ped:{}};
     familias[f].total+=(r.total_pagado_linea||r.total_linea||0);
     familias[f].unidades+=(r.cantidad||0);
     familias[f].items.push(r);
@@ -877,7 +916,8 @@ function renderFamilias(rows){
     '</div>';
 
   var _hasRet=Object.keys(ALL_RETIROS_MAP).length>0;
-  famArr.forEach(function(fname,fi){
+
+  function renderFamRow(fname,fi){
     var fam=familias[fname];
     var _fUEntr=0, _fUPend=0;
     fam.items.forEach(function(it){
@@ -890,17 +930,16 @@ function renderFamilias(rows){
         (_fUEntr&&_fUPend?' · ':'')+
         (_fUPend?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(_fUPend)+' u.</span>':'')+
       '</div>':'';
-    html+='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
+    var rowHtml='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
         '<span class="arrow" id="arr-fam-'+fi+'">▶</span>'+
-        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+'</div>':'')+_retBadge+'</div>'+
+        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+(fam.phone?' · <a href="tel:'+esc(fam.phone)+'" style="color:#aaa;text-decoration:none">'+esc(fam.phone)+'</a>':'')+'</div>':'')+_retBadge+'</div>'+
       '</div>'+
       '<div class="fam-right">'+
         '<span class="badge-units">'+Math.round(fam.unidades)+' u.</span>'+
         '<span class="badge-pesos">'+pesos(fam.total)+'</span>'+
       '</div>'+
     '</div>';
-
     // Tabla productos
     var prodMap={};
     fam.items.forEach(function(item){
@@ -911,12 +950,10 @@ function renderFamilias(rows){
       prodMap[key].total_pagado+=(item.total_pagado_linea||item.total_linea||0);
       prodMap[key].neto+=(item.neto_linea||item.total_pagado_linea||item.total_linea||0);
     });
-
-    html+='<div class="fam-body" id="fam-'+fi+'">'+
+    rowHtml+='<div class="fam-body" id="fam-'+fi+'">'+
       '<table class="tbl-inner"><thead><tr>'+
         '<th>Producto</th><th class="num">Cant.</th><th class="num">Bruto</th><th class="num">Pagado</th><th class="num">Neto</th>'+
       '</tr></thead><tbody>';
-    // Agrupar por pedido para mostrar el descuento al final del grupo
     var pedidoGroups={};
     Object.values(prodMap).forEach(function(p){
       if(!pedidoGroups[p.pedido]) pedidoGroups[p.pedido]=[];
@@ -930,13 +967,13 @@ function renderFamilias(rows){
       var _color=_entr?'#15803d':'#92400e';
       var _bg=_entr?'#f0fdf4':'#fef9c3';
       var _fechaHora=grupo[0].fechaHora||grupo[0].fecha||'';
-      html+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
+      rowHtml+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
         '<td colspan="5" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
           _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+(_entr?'Entregado':'Pendiente de entrega')+
         '</td>'+
       '</tr>';
       grupo.forEach(function(p){
-        html+='<tr>'+
+        rowHtml+='<tr>'+
           '<td>'+esc(p.nombre)+(p.proveedor?' <span class="chip">'+esc(p.proveedor)+'</span>':'')+' </td>'+
           '<td class="num">'+Math.round(p.cantidad)+'</td>'+
           '<td class="num" style="color:#999">'+pesos(p.subtotal_bruto)+'</td>'+
@@ -946,15 +983,44 @@ function renderFamilias(rows){
       });
       var disc=grupo[0].order_discount||0;
       if(disc>0.01){
-        html+='<tr style="background:#fff8f8">'+
+        rowHtml+='<tr style="background:#fff8f8">'+
           '<td colspan="5" style="padding:4px 48px;font-size:11px;color:#e63946">'+
             '🏷 Descuento en pedido #'+esc(ped)+': <strong>–'+pesos(disc)+'</strong>'+
           '</td>'+
         '</tr>';
       }
     });
-    html+='</tbody></table></div>';
-  });
+    rowHtml+='</tbody></table></div>';
+    return rowHtml;
+  }
+
+  if(selectedGrados.length===1){
+    // Un solo grado: lista plana sin cabeceras de grado
+    famArr.forEach(function(fname,fi){ html+=renderFamRow(fname,fi); });
+  } else {
+    // Varios grados: agrupar con cabeceras expandibles/colapsables
+    var gradeGroups={};
+    famArr.forEach(function(fname){
+      var g=familias[fname].grado||'Escuela';
+      if(!gradeGroups[g]) gradeGroups[g]=[];
+      gradeGroups[g].push(fname);
+    });
+    var sortedGrades=sortGrados(Object.keys(gradeGroups));
+    var fi=0;
+    sortedGrades.forEach(function(grado,gi){
+      var gFams=gradeGroups[grado];
+      var gTotal=gFams.reduce(function(s,f){ return s+familias[f].total; },0);
+      html+='<div class="grade-sec-row" onclick="toggleGradeSec('+gi+')">'+
+        '<span class="arrow open" id="arr-grade-sec-'+gi+'">▶</span>'+
+        '<span class="grade-sec-name">'+esc(grado)+'</span>'+
+        '<span class="grade-sec-count">'+gFams.length+' '+(gFams.length===1?'familia':'familias')+'</span>'+
+        '<span class="badge-pesos">'+pesos(gTotal)+'</span>'+
+      '</div>';
+      html+='<div class="grade-sec-body open" id="grade-sec-'+gi+'" data-grado="'+esc(grado)+'">';
+      gFams.forEach(function(fname){ html+=renderFamRow(fname,fi); fi++; });
+      html+='</div>';
+    });
+  }
 
   if(!famArr.length) html+='<div style="text-align:center;padding:40px;color:#ccc;font-size:13px">Sin compras para este período</div>';
   html+='</div>';
@@ -972,7 +1038,7 @@ function renderProductos(rows){
     if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') productos[p].u_entr+=(r.cantidad||0);
     else productos[p].u_pend+=(r.cantidad||0);
     var f=r.familia||'Sin nombre';
-    if(!productos[p].familias[f]) productos[p].familias[f]={email:r.email||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedidos:[],fechaMap:{}};
+    if(!productos[p].familias[f]) productos[p].familias[f]={email:r.email||'',phone:r.phone||'',cantidad:0,subtotal_bruto:0,total_pagado:0,neto:0,pedidos:[],fechaMap:{}};
     productos[p].familias[f].cantidad+=(r.cantidad||0);
     productos[p].familias[f].subtotal_bruto+=(r.total_linea||0);
     productos[p].familias[f].total_pagado+=(r.total_pagado_linea||r.total_linea||0);
@@ -1028,7 +1094,7 @@ function renderProductos(rows){
       var _fh0=f.fechaMap&&_pid0&&f.fechaMap[_pid0]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[_pid0])+'</div>':'';
       var _noRetPed=f.pedidos.length===1?'#'+_pid0+_fh0:f.pedidos.length+' pedidos';
       html+='<tr>'+
-        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+' </td>'+
+        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+(f.phone?' <a href="tel:'+esc(f.phone)+'" class="txt-sm" style="color:#aaa;text-decoration:none">'+esc(f.phone)+'</a>':'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
@@ -1049,6 +1115,13 @@ function toggleRow(type,i){
   var arr=document.getElementById('arr-'+type+'-'+i);
   var open=body.classList.toggle('open');
   if(arr) arr.classList.toggle('open',open);
+}
+function toggleGradeSec(gi){
+  var body=document.getElementById('grade-sec-'+gi);
+  if(!body) return;
+  var isOpen=body.classList.toggle('open');
+  var arr=document.getElementById('arr-grade-sec-'+gi);
+  if(arr) arr.classList.toggle('open',isOpen);
 }
 
 // ── PDF ──
