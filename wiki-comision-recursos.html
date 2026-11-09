@@ -961,61 +961,23 @@
               </div>
             </div>
             <div style="margin-top:12px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — tabla de inventario</div>
-              <img src="estado-inventario.png" alt="Pantalla de Estado de Inventario" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
-            </div>
-            <div class="callout callout-info" style="margin-top:12px">
-              <div class="icon">📐</div>
-              <div>
-                <div class="callout-title">¿Qué es el umbral?</div>
-                Es la cantidad mínima de stock recomendada para no quedarse sin producto antes de que llegue el próximo pedido. Se calcula automáticamente: <strong>velocidad de venta (u./día) × días de lead time del proveedor × 1.5</strong> de margen de seguridad.<br><br>
-                Ejemplo: si se venden 0,7 u./día y el proveedor tarda 14 días, el umbral es 0,7 × 14 × 1,5 ≈ <strong>15 unidades</strong>. Cuando el stock baja de 15, aparece el semáforo rojo.<br><br>
-                El umbral se puede ajustar manualmente en Gestión de Productos si la fórmula no refleja la realidad del producto. Si se modifica a mano, el sistema lo respeta y ya no lo recalcula automáticamente — quedará visible el valor editado para que se sepa que fue intervenido.
-              </div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — semáforo de inventario</div>
+              <img src="gestion-productos-inventario.png" alt="Pantalla de inventario en Gestión de Productos" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
             </div>
 
-            <!-- Sección interpretación semáforo + evolución -->
-            <div style="margin-top:20px">
-              <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:10px">¿Cómo saber si hay que pedir sin esperar el email?</div>
-              <p style="font-size:12px;color:var(--muted);margin:0 0 10px">El semáforo en Gestión de Productos muestra cuatro columnas. Con esos datos podés estimar cuántos días de stock quedan y decidir antes de que llegue la alerta automática.</p>
-
-              <img src="inv-semaforo.png" alt="Ejemplo de semáforo de stock — Caballo Negro" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;margin-bottom:14px">
-
+            <div style="margin-top:16px">
+              <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:10px">¿Cómo leer el semáforo?</div>
               <table class="wiki-table" style="font-size:12px;margin-bottom:14px">
                 <thead>
-                  <tr><th>Columna</th><th>Qué significa</th><th>Ejemplo (Barbacoa)</th></tr>
+                  <tr><th>Color</th><th>Qué significa</th><th>Qué hacer</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td><strong>STOCK</strong></td><td>Unidades disponibles en TiendaNube ahora mismo</td><td>50 u.</td></tr>
-                  <tr><td><strong>UMBRAL</strong></td><td>Punto donde se dispara el email de alerta. Calculado como: vel. × lead time × 1,5</td><td>39 u.</td></tr>
-                  <tr><td><strong>PISO</strong></td><td>Mínimo absoluto de emergencia — si cae acá, la situación es crítica</td><td>10 u.</td></tr>
-                  <tr><td><strong>VEL/60D</strong></td><td>Unidades vendidas en los últimos 60 días (excluye meses de baja estacional)</td><td>60 u.</td></tr>
+                  <tr><td>🔴 <strong>Rojo — Alerta activa</strong></td><td>El stock cayó por debajo del umbral de reposición y no hay pedido vigente cargado</td><td>Registrar pedido en Admin → Pedidos de inmediato</td></tr>
+                  <tr><td>🟡 <strong>Naranja — Atención</strong></td><td>El stock está cerca del umbral</td><td>Empezar a gestionar el pedido con el proveedor</td></tr>
+                  <tr><td>🟢 <strong>Verde — OK</strong></td><td>Stock suficiente</td><td>No es necesario actuar</td></tr>
                 </tbody>
               </table>
-
-              <div class="callout callout-tip" style="margin-bottom:14px">
-                <div class="icon">🧮</div>
-                <div>
-                  <div class="callout-title">Fórmula rápida: días de stock disponibles</div>
-                  <strong>Días de stock = Stock actual ÷ (VEL/60D ÷ 60)</strong><br><br>
-                  Ejemplo con Barbacoa: 50 ÷ (60 ÷ 60) = <strong>50 días</strong> de stock.<br>
-                  Ejemplo con Tradicional: 53 ÷ (51 ÷ 60) ≈ <strong>62 días</strong> de stock.<br><br>
-                  Si los días de stock son menores que el tiempo que tarda en llegar la mercadería (lead time del proveedor), <strong>pedí sin esperar el email</strong>.
-                </div>
-              </div>
-
-              <p style="font-size:12px;color:var(--muted);margin:0 0 10px">La evolución mensual del Dashboard de Ventas sirve para validar si la velocidad es real o si hubo un mes atípico. Filtrá por marca o producto para ver la curva de ese proveedor específico.</p>
-
-              <img src="inv-evolucion.png" alt="Ejemplo de evolución mensual — Caballo Negro" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;margin-bottom:14px">
-
-              <div class="callout callout-warn" style="margin-bottom:0">
-                <div class="icon">💡</div>
-                <div>
-                  <div class="callout-title">Cómo leer el gráfico</div>
-                  Abril (167 u.) fue el primer mes completo — puede ser atípico por el lanzamiento. Mayo y junio (110–111 u.) reflejan mejor el ritmo habitual. Julio (46 u. al 28/7) está incompleto — no lo uses para calcular velocidad.<br><br>
-                  Regla práctica: usá el <strong>promedio de los 2–3 meses más recientes y completos</strong> como referencia. Si el stock actual ÷ ese promedio mensual da menos de 1 mes, es momento de pedir.
-                </div>
-              </div>
+              <p style="font-size:12px;color:var(--muted);margin:0">El número al lado del círculo es el stock actual en unidades. Si hay un pedido vigente asociado, aparece el número de orden y su estado (por ejemplo: <em>ORD-2026-029 · Solicitado</em>).</p>
             </div>
           </div>
         </div>
