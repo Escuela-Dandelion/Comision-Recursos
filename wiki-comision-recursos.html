@@ -940,24 +940,42 @@
               <li><strong><a href="https://escuela-dandelion.github.io/Comision-Recursos/admin.html?view=gestion-productos" target="_blank" style="color:var(--green)">Admin → Gestión de Productos ↗</a>:</strong> en cualquier momento se puede ver el semáforo de cada producto en la tabla de inventario. 🔴 Rojo = urgente, actuar ya. 🟡 Amarillo = atención, pronto habrá que pedir. 🟢 Verde = OK.</li>
             </ul>
 
-            <div style="margin-top:12px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — semáforo de inventario</div>
-              <img src="gestion-productos-inventario.png" alt="Pantalla de inventario en Gestión de Productos" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
+            <div style="border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;max-width:480px;font-size:12px;font-family:Arial,sans-serif;">
+              <div style="background:#3a7d44;padding:14px 20px;text-align:center;">
+                <div style="color:#fff;font-weight:700;font-size:14px">🌼 Diente de León — Stock Bajo</div>
+              </div>
+              <div style="background:#f7f8fa;padding:18px 20px;">
+                <p style="margin:0 0 10px;color:#1a1a2e">Hola <strong>Pía</strong>! Los siguientes productos de <strong>EL MAITEN</strong> tienen stock bajo:</p>
+                <ul style="margin:0 0 14px 16px;padding:0;line-height:1.8;color:#1a1a2e">
+                  <li><strong>Granola El Maiten 1 Kg</strong> — 3 unidades en stock<br>
+                    <span style="color:#92400e;font-size:11px">Según los últimos meses debés contar con <strong>16 u.</strong> — pedí al menos <strong>13 u.</strong></span>
+                  </li>
+                </ul>
+                <hr style="border:none;border-top:1px solid #e0e0e0;margin:14px 0">
+                <p style="font-size:11px;color:#6b7280;margin:0">Este mensaje fue generado automáticamente por el sistema Diente de León.</p>
+              </div>
             </div>
 
             <div style="margin-top:16px">
-              <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:10px">¿Cómo leer el semáforo?</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">Gestión de Productos — vista de inventario</div>
+              <img src="gestion-productos-inventario.png" alt="Pantalla de Gestión de Productos con columnas de inventario" style="width:100%;max-width:700px;border-radius:8px;border:1px solid #e0e0e0;display:block;">
+            </div>
+
+            <div style="margin-top:16px">
+              <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:10px">¿Cómo leer la tabla?</div>
               <table class="wiki-table" style="font-size:12px;margin-bottom:14px">
                 <thead>
-                  <tr><th>Color</th><th>Qué significa</th><th>Qué hacer</th></tr>
+                  <tr><th>Columna</th><th>Qué significa</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td>🔴 <strong>Rojo — Alerta activa</strong></td><td>El stock cayó por debajo del umbral de reposición y no hay pedido vigente cargado</td><td>Registrar pedido en Admin → Pedidos de inmediato</td></tr>
-                  <tr><td>🟡 <strong>Naranja — Atención</strong></td><td>El stock está cerca del umbral</td><td>Empezar a gestionar el pedido con el proveedor</td></tr>
-                  <tr><td>🟢 <strong>Verde — OK</strong></td><td>Stock suficiente</td><td>No es necesario actuar</td></tr>
+                  <tr><td>🔴🟡🟢 <strong>Color + STOCK</strong></td><td>Unidades disponibles. Rojo = alerta activa (sin pedido vigente). Naranja = cerca del umbral. Verde = OK.</td></tr>
+                  <tr><td><strong>VEL/MES</strong></td><td>Velocidad de venta: unidades vendidas por mes en promedio</td></tr>
+                  <tr><td><strong>UMBRAL</strong></td><td>Punto donde se dispara la alarma. Se calcula como VEL/MES × lead time del proveedor × 1,5</td></tr>
+                  <tr><td><strong>PISO</strong></td><td>Mínimo absoluto de emergencia</td></tr>
+                  <tr><td><strong>PRECIO / COSTO / MARGEN</strong></td><td>Precio de venta, costo registrado en el último pedido y margen resultante</td></tr>
                 </tbody>
               </table>
-              <p style="font-size:12px;color:var(--muted);margin:0">El número al lado del círculo es el stock actual en unidades. Si hay un pedido vigente asociado, aparece el número de orden y su estado (por ejemplo: <em>ORD-2026-029 · Solicitado</em>).</p>
+              <p style="font-size:12px;color:var(--muted);margin:0">Podés filtrar por Proveedor o Marca y buscar por nombre o SKU. El badge <strong>⚠️ Stock bajo</strong> aparece en los productos que superaron el umbral.</p>
             </div>
           </div>
         </div>
