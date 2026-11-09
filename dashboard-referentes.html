@@ -933,7 +933,7 @@ function renderFamilias(rows){
     var rowHtml='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
         '<span class="arrow" id="arr-fam-'+fi+'">▶</span>'+
-        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+(fam.phone?' · <a href="tel:'+esc(fam.phone)+'" style="color:#aaa;text-decoration:none">'+esc(fam.phone)+'</a>':'')+'</div>':'')+_retBadge+'</div>'+
+        '<div><div class="fam-name">'+esc(fname)+'</div>'+(fam.email?'<div class="fam-email">'+esc(fam.email)+(fam.phone?' · <a href="https://wa.me/'+fam.phone.replace(/\D/g,'')+'" target="_blank" style="color:#aaa;text-decoration:none">'+esc(fam.phone)+'</a>':'')+'</div>':'')+_retBadge+'</div>'+
       '</div>'+
       '<div class="fam-right">'+
         '<span class="badge-units">'+Math.round(fam.unidades)+' u.</span>'+
@@ -1094,7 +1094,7 @@ function renderProductos(rows){
       var _fh0=f.fechaMap&&_pid0&&f.fechaMap[_pid0]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[_pid0])+'</div>':'';
       var _noRetPed=f.pedidos.length===1?'#'+_pid0+_fh0:f.pedidos.length+' pedidos';
       html+='<tr>'+
-        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+(f.phone?' <a href="tel:'+esc(f.phone)+'" class="txt-sm" style="color:#aaa;text-decoration:none">'+esc(f.phone)+'</a>':'')+' </td>'+
+        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+(f.phone?' <a href="https://wa.me/'+f.phone.replace(/\D/g,'')+'" target="_blank" class="txt-sm" style="color:#aaa;text-decoration:none">'+esc(f.phone)+'</a>':'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
