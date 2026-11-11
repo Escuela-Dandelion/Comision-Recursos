@@ -1,4 +1,4 @@
-// v2026-11-11 — normMarca quita tildes para matchear marcas con/sin acento
+// v2026-11-11b — agrega PEDIDOS_SHEET_ID a CONFIG (faltaba → pedidos siempre vacíos)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -13,6 +13,7 @@ var CONFIG = {
   STAFF_TOKEN:     'test',
   VENTAS_SHEET_ID:       _P.getProperty('VENTAS_SHEET_ID'),
   BD_COMPRADORES_ID:     '1qsq48RpQbOYpbMp_qZRClrlJrMQ7JkgCEo_I5LS5hWk',
+  PEDIDOS_SHEET_ID:      '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
 
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
