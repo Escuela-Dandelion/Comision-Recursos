@@ -1,4 +1,4 @@
-// v2026-11-06g — restauradas testEnviarEmailAporte y testEnviarInformeMensual
+// v2026-11-11 — normMarca quita tildes para matchear marcas con/sin acento
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -11,7 +11,8 @@ var CONFIG = {
   SECRET:          _P.getProperty('QR_SECRET'),
   TIENDA_NOMBRE:   'Diente de León',
   STAFF_TOKEN:     'test',
-  VENTAS_SHEET_ID: _P.getProperty('VENTAS_SHEET_ID'),
+  VENTAS_SHEET_ID:       _P.getProperty('VENTAS_SHEET_ID'),
+  BD_COMPRADORES_ID:     '1qsq48RpQbOYpbMp_qZRClrlJrMQ7JkgCEo_I5LS5hWk',
 
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
@@ -844,6 +845,69 @@ function fetchMarcaDeProducto(productId) {
   return fetchDatosDeProducto(productId, null).marca;
 }
 
+// ── BD Compradores ────────────────────────────────────────────────────────────
+
+function getBDCompradores() {
+  return SpreadsheetApp.openById(CONFIG.BD_COMPRADORES_ID).getSheetByName('Hoja 1');
+}
+
+// Upsert celular en BD por email. Solo escribe si la celda E está vacía.
+function upsertCompradorCelular(email, nombre, phone) {
+  if (!email || !phone) return;
+  var emailNorm = email.toLowerCase().trim();
+  var sh   = getBDCompradores();
+  var data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0] || '').toLowerCase().trim() === emailNorm) {
+      if (!data[i][4]) sh.getRange(i + 1, 5).setValue(phone);
+      return;
+    }
+  }
+  // No existe → nueva fila
+  sh.appendRow([email, nombre || '', '', '', phone]);
+}
+
+// Backfill: pagina todos los pedidos pagados de TN y llena la col Celular.
+// Ejecutar una sola vez desde el editor de Apps Script.
+function backfillCelularesCompradores() {
+  var phoneMap = {};
+  var page = 1;
+  while (true) {
+    var url = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID +
+              '/orders?payment_status=paid&per_page=200&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {
+      headers: {
+        'Authentication': 'bearer ' + CONFIG.API_TOKEN,
+        'User-Agent': CONFIG.TIENDA_NOMBRE + ' (backfill-celulares)'
+      },
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() !== 200) break;
+    var orders = JSON.parse(resp.getContentText());
+    if (!orders || orders.length === 0) break;
+    orders.forEach(function(o) {
+      var em = String(o.contact_email || '').toLowerCase().trim();
+      var ph = String(o.contact_phone || '').trim();
+      if (em && ph) phoneMap[em] = ph; // sobreescribe: queda el más reciente
+    });
+    if (orders.length < 200) break;
+    page++;
+  }
+  var sh   = getBDCompradores();
+  var data = sh.getDataRange().getValues();
+  var updated = 0;
+  for (var i = 1; i < data.length; i++) {
+    var em = String(data[i][0] || '').toLowerCase().trim();
+    if (em && phoneMap[em] && !data[i][4]) {
+      sh.getRange(i + 1, 5).setValue(phoneMap[em]);
+      updated++;
+    }
+  }
+  Logger.log('backfillCelularesCompradores: ' + updated + ' celulares cargados de ' + Object.keys(phoneMap).length + ' pedidos únicos');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function registrarEnVentas(order) {
   try {
     var sheet  = getVentasSheet();
@@ -930,6 +994,7 @@ function registrarEnVentas(order) {
       // Escribir Marca en col Y (25) sin pisar col X
       sheet.getRange(sheet.getLastRow(), 25).setValue(datos.marca);
     });
+    upsertCompradorCelular(order.contact_email, order.contact_name, order.contact_phone || '');
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
@@ -1697,6 +1762,17 @@ function apiDashboard(email) {
     return { ok: true, rows: [], retiros_map: {}, meses_todos: [], total_pedidos: 0, total_pesos: 0, total_costo: 0, actualizado: new Date().toLocaleString('es-AR') };
   }
 
+  // Leer BD Compradores para celular (email → phone)
+  var phoneMap = {};
+  try {
+    var bdData = getBDCompradores().getDataRange().getValues();
+    for (var bi = 1; bi < bdData.length; bi++) {
+      var bEmail = String(bdData[bi][0] || '').toLowerCase().trim();
+      var bPhone = String(bdData[bi][4] || '').trim();
+      if (bEmail && bPhone) phoneMap[bEmail] = bPhone;
+    }
+  } catch(e) {}
+
   // Columnas: 0=Fecha,1=Pedido#,2=IDInt,3=Nombre,4=Email,5=Producto,6=SKU,7=Cantidad,8=PrecioU,9=SubtotalBruto,10=TotPedido,11=Comentarios,12=Marca,13=CostoUnitario,14=TotalPagadoLinea,15=NetoLinea,20=AporteGrado,21=GradoDestino
   var rows       = [];
   var mesesSet   = {};
@@ -1756,7 +1832,8 @@ function apiDashboard(email) {
       order_discount:      Math.round(orderDiscount * 100) / 100,
       costo_linea:         Math.round(costoLinea * 100) / 100,
       grado:               grado,
-      aporte_grado:        Math.round(aporteGrado * 100) / 100
+      aporte_grado:        Math.round(aporteGrado * 100) / 100,
+      phone:               phoneMap[String(row[4] || '').toLowerCase().trim()] || ''
     });
   }
 
@@ -1862,7 +1939,7 @@ var AUTH_EMAILS = {
   'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  proveedores: [] },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    proveedores: ['El Maiten','Oddis','BioSalud'] },
+  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    proveedores: ['El Maiten','Oddis','BioSalud','Pajarito Amarillo'] },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
   'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', proveedores: ['La Yaya','Guardianes de la Colmena','Groen','Oddis','Yemari','Caballo Negro'] },
@@ -2606,9 +2683,10 @@ function apiProductos(email) {
       };
     });
 
-    // Pedidos activos por marca — normalización elimina artículos para comparación robusta
+    // Pedidos activos por marca — normalización elimina artículos y tildes para comparación robusta
     function normMarca(s) {
       return String(s || '').toUpperCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/\b(DE|LA|EL|LOS|LAS|DEL|Y|E)\b/g, '')
         .replace(/\s+/g, ' ').trim();
     }
