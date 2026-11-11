@@ -422,13 +422,13 @@
               <input type="text" id="caja-input" placeholder="$ 0" inputmode="numeric">
               <div class="activo-tile-sub">saldo en cuenta</div>
             </div>
-            <div class="activo-tile jardin">
-              <div class="activo-tile-label">Aportes a Grados <span class="info-tip" data-tip="Suma del aporte_grado calculado por el sistema para cada venta, usando el porcentaje real de cada producto (15% estándar, o 100% a escuela para agendas y similares). Solo incluye ventas donde se eligió un grado.">ℹ</span></div>
+            <div class="activo-tile jardin" style="cursor:pointer" title="Ver informe de aportes" onclick="window.open('https://escuela-dandelion.github.io/Comision-Recursos/informe-aportes.html','_blank')">
+              <div class="activo-tile-label">Aportes a Grados <span class="info-tip" data-tip="Suma del aporte_grado calculado por el sistema para cada venta, usando el porcentaje real de cada producto (15% estándar, o 100% a escuela para agendas y similares). Solo incluye ventas donde se eligió un grado." onclick="event.stopPropagation()">ℹ</span></div>
               <div class="activo-tile-value" id="activo-jardin">—</div>
-              <div class="activo-tile-sub">según regla de cada producto</div>
+              <div class="activo-tile-sub">según regla de cada producto &nbsp;↗</div>
             </div>
             <div class="activo-tile" style="border-left:3px solid #3a7d44">
-              <div class="activo-tile-label">Aportes a la Escuela <span class="info-tip" data-tip="Estimado como: Margen total − Aportes a Grados. Representa lo que quedó en la escuela después de distribuir a los grados. Debería aproximarse al saldo acumulado en cuenta.">ℹ</span></div>
+              <div class="activo-tile-label">Aportes a la Escuela <span class="info-tip" data-tip="Estimado como: Margen total − Aportes a Grados − Stock en Mano. Representa lo que quedó disponible después de distribuir a los grados y descontar el capital inmovilizado en stock. Debería aproximarse al saldo acumulado en cuenta.">ℹ</span></div>
               <div class="activo-tile-value" id="activo-escuela">—</div>
               <div class="activo-tile-sub">margen − aportes grados</div>
             </div>
@@ -1306,7 +1306,7 @@ function updateJardinCard() {
   var margenTotal   = rows.reduce(function(s,r){
     return s + (r.total_pagado_linea||r.total_linea||0) - (r.costo_linea||0) - comision(r.total_pagado_linea||r.total_linea||0);
   }, 0);
-  var aportesEscuela = margenTotal - aportesGrados;
+  var aportesEscuela = margenTotal - aportesGrados - (_stockTotal || 0);
   document.getElementById('activo-jardin').textContent  = '$ ' + Math.round(aportesGrados).toLocaleString('es-AR');
   document.getElementById('activo-escuela').textContent = '$ ' + Math.round(Math.max(0, aportesEscuela)).toLocaleString('es-AR');
 }

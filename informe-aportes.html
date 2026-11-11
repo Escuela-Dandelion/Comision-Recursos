@@ -173,6 +173,43 @@
       <div style="font-size:11px;color:#999;text-align:right" id="print-fecha"></div>
     </div>
 
+    <!-- Total acumulado todos los meses -->
+    <div id="resumen-total" style="display:none;margin-bottom:28px">
+      <div class="section-title">Total acumulado — todos los meses</div>
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Total aportes a grados</div>
+          <div class="kpi-value" id="rt-total">—</div>
+          <div class="kpi-sub" id="rt-periodo">calculando…</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Meses con datos</div>
+          <div class="kpi-value" id="rt-meses">—</div>
+          <div class="kpi-sub">desde el inicio</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Grados con referente</div>
+          <div class="kpi-value" id="rt-grados">—</div>
+          <div class="kpi-sub">aportes efectivizados</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="aportes-tbl">
+          <thead>
+            <tr>
+              <th>Grado</th>
+              <th>Referente</th>
+              <th class="num">Aporte acumulado</th>
+              <th class="num">Meses activos</th>
+            </tr>
+          </thead>
+          <tbody id="rt-tabla"></tbody>
+          <tfoot id="rt-pie"></tfoot>
+        </table>
+      </div>
+      <p style="font-size:11px;color:#9ca3af;margin-top:8px">* Solo incluye grados con referente asignado. Los aportes de grados sin referente no se efectivizan y quedan en la escuela.</p>
+    </div>
+
     <!-- Filtros -->
     <div class="filters no-print">
       <span class="filter-label">Período:</span>
@@ -379,6 +416,7 @@ function cargarDatos() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       allRows = data.rows || [];
+      renderResumenTotal();
       aplicarFiltro();
     })
     .catch(function(e) {
@@ -420,6 +458,74 @@ function normalizarGrado(g) {
 
 function pesos(n) {
   return '$ ' + Math.round(n).toLocaleString('es-AR');
+}
+
+function renderResumenTotal() {
+  var porGrado = {};
+  var mesesSet = {};
+
+  allRows.forEach(function(r) {
+    var aporte = parseFloat(r.aporte_grado) || 0;
+    if (aporte <= 0) return;
+    var grado = normalizarGrado(r.grado);
+    if (!grado) return;
+    if (getRecaudador(grado) === 'Sin referente') return;
+
+    if (!porGrado[grado]) porGrado[grado] = { aporte: 0, meses: {} };
+    porGrado[grado].aporte += aporte;
+    if (r.mes) {
+      porGrado[grado].meses[r.mes] = true;
+      mesesSet[r.mes] = true;
+    }
+  });
+
+  var totalGlobal = 0;
+  Object.keys(porGrado).forEach(function(g) { totalGlobal += porGrado[g].aporte; });
+
+  var mesesArr = Object.keys(mesesSet).sort();
+  var gradoKeys = Object.keys(porGrado);
+
+  document.getElementById('rt-total').textContent = pesos(totalGlobal);
+  document.getElementById('rt-meses').textContent = mesesArr.length;
+  document.getElementById('rt-grados').textContent = gradoKeys.length;
+
+  if (mesesArr.length > 0) {
+    var fmtMes = function(m) {
+      var parts = m.split('-');
+      var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+      return d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    };
+    var per = mesesArr.length === 1
+      ? fmtMes(mesesArr[0])
+      : fmtMes(mesesArr[0]) + ' – ' + fmtMes(mesesArr[mesesArr.length - 1]);
+    document.getElementById('rt-periodo').textContent = per;
+  }
+
+  var orden = ['Jardín','1ro','2do','3ro','4to','5to','6to','7mo','8vo','9no','10mo','11mo','12vo'];
+  var tbody = document.getElementById('rt-tabla');
+  var tfoot = document.getElementById('rt-pie');
+  tbody.innerHTML = '';
+
+  orden.forEach(function(g) {
+    var d = porGrado[g];
+    if (!d) return;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><span class="badge-grado">' + esc(g) + '</span></td>' +
+      '<td style="color:#555">' + esc(getRecaudador(g)) + '</td>' +
+      '<td class="num"><span class="aporte-val">' + pesos(d.aporte) + '</span></td>' +
+      '<td class="num">' + Object.keys(d.meses).length + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  tfoot.innerHTML =
+    '<tr class="total-row">' +
+    '<td colspan="2">Total</td>' +
+    '<td class="num">' + pesos(totalGlobal) + '</td>' +
+    '<td class="num"></td>' +
+    '</tr>';
+
+  document.getElementById('resumen-total').style.display = 'block';
 }
 
 function aplicarFiltro() {
