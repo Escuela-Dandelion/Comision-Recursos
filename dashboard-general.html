@@ -428,7 +428,7 @@
               <div class="activo-tile-sub">según regla de cada producto &nbsp;↗</div>
             </div>
             <div class="activo-tile" style="border-left:3px solid #3a7d44">
-              <div class="activo-tile-label">Aportes a la Escuela <span class="info-tip" data-tip="Estimado como: Margen total − Aportes a Grados − Stock en Mano. Representa lo que quedó disponible después de distribuir a los grados y descontar el capital inmovilizado en stock. Debería aproximarse al saldo acumulado en cuenta.">ℹ</span></div>
+              <div class="activo-tile-label">Aportes a la Escuela <span class="info-tip" data-tip="Margen (solo ventas con costo registrado) − Aportes a Grados − Stock en Mano. Si hay productos sin costo en TiendaNube, el número es una subestimación. Para el valor exacto, el GAS debería devolver aporte_escuela por fila.">ℹ</span></div>
               <div class="activo-tile-value" id="activo-escuela">—</div>
               <div class="activo-tile-sub">margen − aportes grados</div>
             </div>
@@ -1303,12 +1303,29 @@ function actualizarTotalActivos() {
 function updateJardinCard() {
   var rows = _lastFilteredRows.length ? _lastFilteredRows : ALL_ROWS;
   var aportesGrados = rows.reduce(function(s,r){ return s + (r.aporte_grado||0); }, 0);
-  var margenTotal   = rows.reduce(function(s,r){
-    return s + (r.total_pagado_linea||r.total_linea||0) - (r.costo_linea||0) - comision(r.total_pagado_linea||r.total_linea||0);
+
+  // Solo sumamos margen donde tenemos costo real; sin costo = no podemos calcular margen
+  var rowsConCosto  = rows.filter(function(r){ return r.costo_linea > 0; });
+  var rowsSinCosto  = rows.length - rowsConCosto.length;
+  var margenTotal   = rowsConCosto.reduce(function(s,r){
+    return s + (r.total_pagado_linea||r.total_linea||0) - r.costo_linea - comision(r.total_pagado_linea||r.total_linea||0);
   }, 0);
+
   var aportesEscuela = margenTotal - aportesGrados - (_stockTotal || 0);
   document.getElementById('activo-jardin').textContent  = '$ ' + Math.round(aportesGrados).toLocaleString('es-AR');
   document.getElementById('activo-escuela').textContent = '$ ' + Math.round(Math.max(0, aportesEscuela)).toLocaleString('es-AR');
+
+  var sub = document.querySelector('#activo-escuela')
+    && document.querySelector('#activo-escuela').closest('.activo-tile')
+    && document.querySelector('#activo-escuela').closest('.activo-tile').querySelector('.activo-tile-sub');
+  if (sub) {
+    sub.textContent = rowsSinCosto > 0
+      ? 'margen − aportes grados − stock ⚠ ' + rowsSinCosto + ' filas sin costo excluidas'
+      : 'margen − aportes grados − stock';
+    sub.title = rowsSinCosto > 0
+      ? rowsSinCosto + ' ventas sin costo registrado en TiendaNube no se pudieron incluir en el cálculo de margen. Registrá los costos en TiendaNube o pedile al GAS que devuelva aporte_escuela por fila.'
+      : '';
+  }
 }
 
 function fetchStockValorizacion() {
