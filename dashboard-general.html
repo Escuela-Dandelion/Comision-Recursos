@@ -423,9 +423,14 @@
               <div class="activo-tile-sub">saldo en cuenta</div>
             </div>
             <div class="activo-tile jardin">
-              <div class="activo-tile-label">Donado al Jardín 2026</div>
+              <div class="activo-tile-label">Aportes a Grados <span class="info-tip" data-tip="Suma del aporte_grado calculado por el sistema para cada venta, usando el porcentaje real de cada producto (15% estándar, o 100% a escuela para agendas y similares). Solo incluye ventas donde se eligió un grado.">ℹ</span></div>
               <div class="activo-tile-value" id="activo-jardin">—</div>
-              <div class="activo-tile-sub">15% ventas brutas 2026</div>
+              <div class="activo-tile-sub">según regla de cada producto</div>
+            </div>
+            <div class="activo-tile" style="border-left:3px solid #3a7d44">
+              <div class="activo-tile-label">Aportes a la Escuela <span class="info-tip" data-tip="Estimado como: Margen total − Aportes a Grados. Representa lo que quedó en la escuela después de distribuir a los grados. Debería aproximarse al saldo acumulado en cuenta.">ℹ</span></div>
+              <div class="activo-tile-value" id="activo-escuela">—</div>
+              <div class="activo-tile-sub">margen − aportes grados</div>
             </div>
           </div>
           <span class="activos-toggle" onclick="toggleDesglose()">▶ Ver desglose de stock</span>
@@ -771,6 +776,7 @@ function render() {
   renderGrados(rows);
   cerrarDetalle();
   renderTablaRentabilidad(rows);
+  updateJardinCard();
 }
 
 // ── CARDS ──
@@ -1295,10 +1301,14 @@ function actualizarTotalActivos() {
 }
 
 function updateJardinCard() {
-  var rows2026 = ALL_ROWS.filter(function(r){ return r.mes && r.mes.startsWith('2026'); });
-  var ventas2026 = rows2026.reduce(function(s,r){ return s + (r.total_pagado_linea||r.total_linea||0); }, 0);
-  var jardin = Math.round(ventas2026 * 0.15);
-  document.getElementById('activo-jardin').textContent = '$ ' + jardin.toLocaleString('es-AR');
+  var rows = _lastFilteredRows.length ? _lastFilteredRows : ALL_ROWS;
+  var aportesGrados = rows.reduce(function(s,r){ return s + (r.aporte_grado||0); }, 0);
+  var margenTotal   = rows.reduce(function(s,r){
+    return s + (r.total_pagado_linea||r.total_linea||0) - (r.costo_linea||0) - comision(r.total_pagado_linea||r.total_linea||0);
+  }, 0);
+  var aportesEscuela = margenTotal - aportesGrados;
+  document.getElementById('activo-jardin').textContent  = '$ ' + Math.round(aportesGrados).toLocaleString('es-AR');
+  document.getElementById('activo-escuela').textContent = '$ ' + Math.round(Math.max(0, aportesEscuela)).toLocaleString('es-AR');
 }
 
 function fetchStockValorizacion() {
