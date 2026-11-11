@@ -1157,9 +1157,8 @@ function renderGrados(rows) {
   var data   = arr.map(function(x){ return Math.round(x.ingresos); });
   var shares = arr.map(function(x){ return totalIngresos > 0 ? (x.ingresos/totalIngresos*100).toFixed(1) : 0; });
 
-  // Altura dinámica: 28px por barra, mínimo 180px
   var canvasGrad = document.getElementById('chart-grados');
-  canvasGrad.style.height = Math.max(180, arr.length * 28) + 'px';
+  canvasGrad.style.height = Math.max(120, arr.length * 18) + 'px';
   canvasGrad.style.width  = '100%';
 
   if (chartGrad) chartGrad.destroy();
@@ -1173,7 +1172,7 @@ function renderGrados(rows) {
         backgroundColor: PALETTE,
         borderRadius: 4,
         borderSkipped: false,
-        barThickness: 16
+        barThickness: 10
       }]
     },
     options: {
