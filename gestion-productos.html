@@ -834,12 +834,11 @@ function renderLista(productos) {
         '<div class="variantes-mobile">' + filasMobile + '</div>';
     }
 
-    var tieneOrden = tieneOrdenActiva(p.pedidos);
     return '<div class="prod-row' + (i % 2 === 1 ? ' par' : '') + '" id="row-' + p.id + '" onclick="abrirEditor(\'' + p.id + '\')">' +
       '<div class="prod-main">' +
         imgHtml +
         '<div class="prod-info">' +
-          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + (!tieneOrden && p.semaforo === 'rojo' ? '<span class="badge-stock-rojo">🚨 Stock crítico</span>' : !tieneOrden && p.semaforo === 'naranja' ? '<span class="badge-stock-naranja">⚠️ Stock bajo</span>' : '') + '</div>' +
+          '<div class="prod-nombre"><span class="prod-sem ' + (p.semaforo || 'verde') + '"></span>' + esc(p.nombre) + (!p.publicado ? '<span class="badge-nopub">No listado</span>' : '') + (p.esDigital ? '<span class="badge-digital">Producto digital</span>' : '') + (p.semaforo === 'rojo' ? '<span class="badge-stock-rojo">🚨 Stock crítico</span>' : p.semaforo === 'naranja' ? '<span class="badge-stock-naranja">⚠️ Stock bajo</span>' : '') + '</div>' +
           '<div class="prod-brand">' + esc(p.brand) + '</div>' +
           (p.pedidos && p.pedidos.length ? '<div class="prod-pills">' + pedidosBadgeHtml(p.pedidos) + '</div>' : '') +
         '</div>' +
