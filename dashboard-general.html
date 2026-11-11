@@ -374,15 +374,34 @@
           <canvas id="chart-evolucion" style="max-height:260px"></canvas>
         </div>
 
-        <!-- Top productos + Unidades por grado -->
+        <!-- Por Proveedor -->
+        <div class="section-card">
+          <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Volumen por Proveedor <span id="prov-subtitulo" style="font-weight:400;font-size:12px;color:#aaa">unidades · ingresos</span></span>
+            <div style="display:flex;gap:6px">
+              <button id="btn-prov-u" onclick="toggleProv('unidades')" style="font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid #3a7d44;background:#3a7d44;color:#fff;cursor:pointer">Unidades</button>
+              <button id="btn-prov-$" onclick="toggleProv('ingresos')" style="font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid #ccc;background:#fff;color:#666;cursor:pointer">Ingresos $</button>
+            </div>
+          </div>
+          <canvas id="chart-proveedores" style="max-height:220px"></canvas>
+        </div>
+
+        <!-- Top productos + Grados -->
         <div class="grid-2">
           <div class="section-card">
             <div class="section-title" id="top-title">Top 10 productos <span>por unidades</span></div>
             <div id="top-productos-list"></div>
           </div>
           <div class="section-card">
-            <div class="section-title">Recaudación por Nivel Escolar <span>$ · % del total</span></div>
-            <canvas id="chart-grados"></canvas>
+            <div class="section-title">Recaudación por Grado <span>$ · % del total · click para aperturar</span></div>
+            <canvas id="chart-grados" style="cursor:pointer"></canvas>
+            <div id="grad-detalle" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div id="grad-detalle-titulo" style="font-size:12px;font-weight:600;color:#555"></div>
+                <button onclick="cerrarDetalle()" style="font-size:11px;color:#aaa;background:none;border:none;cursor:pointer">✕ cerrar</button>
+              </div>
+              <canvas id="chart-grado-detalle" style="max-height:180px"></canvas>
+            </div>
           </div>
         </div>
 
@@ -454,8 +473,11 @@ var PROVEEDOR_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4
 var PALETTE  = ['#a8c4e0','#b5d5c5','#c9b8d8','#f0c9a0','#aad4e8','#d4b8c7','#b8d4b8','#d4c9a8','#c4b8d8','#a8d4c4'];
 var ALL_ROWS  = [];
 var ALL_MESES = [];
-var chartEvo  = null;
-var chartGrad = null;
+var chartEvo      = null;
+var chartGrad     = null;
+var chartProv     = null;
+var chartGradDet  = null;
+var _gradDetalle  = null;
 var currentAnio      = '';
 var currentMes       = '';
 var currentDesde     = '';
@@ -743,8 +765,10 @@ function render() {
 
   updateCards(rows);
   renderEvolucion(rows);
+  renderProveedores(rows, _modoProveedor || 'unidades');
   renderTopProductos(rows);
   renderGrados(rows);
+  cerrarDetalle();
   renderTablaRentabilidad(rows);
 }
 
@@ -956,7 +980,149 @@ function renderTopProductos(rows) {
   document.getElementById('top-productos-list').innerHTML = html || '<p style="color:#ccc;font-size:13px;text-align:center;padding:20px">Sin datos</p>';
 }
 
+// ── PROVEEDORES ──
+var _modoProveedor = 'unidades';
+var _rowsProvCache = [];
+
+function toggleProv(modo) {
+  _modoProveedor = modo;
+  document.getElementById('btn-prov-u').style.background  = modo==='unidades' ? '#3a7d44' : '#fff';
+  document.getElementById('btn-prov-u').style.color       = modo==='unidades' ? '#fff'    : '#666';
+  document.getElementById('btn-prov-u').style.borderColor = modo==='unidades' ? '#3a7d44' : '#ccc';
+  document.getElementById('btn-prov-$').style.background  = modo==='ingresos' ? '#3a7d44' : '#fff';
+  document.getElementById('btn-prov-$').style.color       = modo==='ingresos' ? '#fff'    : '#666';
+  document.getElementById('btn-prov-$').style.borderColor = modo==='ingresos' ? '#3a7d44' : '#ccc';
+  renderProveedores(_rowsProvCache, modo);
+}
+
+function renderProveedores(rows, modo) {
+  _rowsProvCache = rows;
+  var map = {};
+  rows.forEach(function(r){
+    var k = r.proveedor || '(sin proveedor)';
+    if (!map[k]) map[k] = { unidades:0, ingresos:0 };
+    map[k].unidades += (r.cantidad||0);
+    map[k].ingresos += (r.total_pagado_linea||r.total_linea||0);
+  });
+  var arr = Object.keys(map).map(function(k){ return { nombre:k, unidades:map[k].unidades, ingresos:map[k].ingresos }; });
+  arr.sort(function(a,b){ return b[modo] - a[modo]; });
+
+  var canvas = document.getElementById('chart-proveedores');
+  canvas.style.height = Math.max(160, arr.length * 36) + 'px';
+  canvas.style.width  = '100%';
+
+  var total = arr.reduce(function(s,x){ return s + x[modo]; }, 0);
+  var labels = arr.map(function(x){ return x.nombre; });
+  var data   = arr.map(function(x){ return modo==='unidades' ? Math.round(x[modo]) : Math.round(x[modo]); });
+  var shares = arr.map(function(x){ return total > 0 ? (x[modo]/total*100).toFixed(1) : 0; });
+
+  if (chartProv) chartProv.destroy();
+  chartProv = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: modo, data: data, backgroundColor: PALETTE, borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      layout: { padding: { right: 8 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx){
+          return modo==='unidades'
+            ? ' ' + ctx.raw + ' u.  (' + shares[ctx.dataIndex] + '%)'
+            : ' ' + pesos(ctx.raw) + '  (' + shares[ctx.dataIndex] + '%)';
+        }}},
+        datalabels: {
+          anchor: 'center', align: 'center', color: '#fff',
+          font: { size: 11, weight: '600' },
+          formatter: function(value, ctx) {
+            var pct = shares[ctx.dataIndex];
+            return pct > 4 ? pct + '%' : '';
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { font:{size:11}, callback: function(v){
+            return modo==='unidades' ? v + ' u.' : '$ ' + (v/1000).toLocaleString('es-AR') + 'k';
+          }},
+          grid: { color:'#f0f0f0' }
+        },
+        y: { ticks: { font:{size:11}, padding:4 }, grid: { display:false }, afterFit: function(s){ s.width=100; } }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
 // ── GRADOS ──
+function cerrarDetalle() {
+  document.getElementById('grad-detalle').style.display = 'none';
+  _gradDetalle = null;
+  if (chartGradDet) { chartGradDet.destroy(); chartGradDet = null; }
+}
+
+function renderGradoDetalle(grado, rows) {
+  var map = {};
+  rows.filter(function(r){ return r.grado === grado; }).forEach(function(r){
+    var k = r.proveedor || '(sin proveedor)';
+    if (!map[k]) map[k] = { unidades:0, ingresos:0 };
+    map[k].unidades += (r.cantidad||0);
+    map[k].ingresos += (r.total_pagado_linea||r.total_linea||0);
+  });
+  var arr = Object.keys(map).map(function(k){ return { nombre:k, unidades:map[k].unidades, ingresos:map[k].ingresos }; });
+  arr.sort(function(a,b){ return b.ingresos - a.ingresos; });
+
+  document.getElementById('grad-detalle-titulo').textContent = grado + ' — compras por proveedor';
+  var panel = document.getElementById('grad-detalle');
+  panel.style.display = 'block';
+
+  var canvas = document.getElementById('chart-grado-detalle');
+  canvas.style.height = Math.max(120, arr.length * 32) + 'px';
+  canvas.style.width  = '100%';
+
+  var labels   = arr.map(function(x){ return x.nombre; });
+  var dataU    = arr.map(function(x){ return Math.round(x.unidades); });
+  var dataI    = arr.map(function(x){ return Math.round(x.ingresos); });
+  var totalI   = dataI.reduce(function(s,v){ return s+v; },0);
+  var shares   = dataI.map(function(v){ return totalI>0?(v/totalI*100).toFixed(1):0; });
+
+  if (chartGradDet) chartGradDet.destroy();
+  chartGradDet = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Ingresos $', data: dataI, backgroundColor: '#b5d5c5', borderRadius: 4, borderSkipped: false, yAxisID:'y' },
+        { label: 'Unidades',   data: dataU, backgroundColor: '#c9b8d8', borderRadius: 4, borderSkipped: false, yAxisID:'y2', type:'bar' }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      layout: { padding: { right: 8 } },
+      plugins: {
+        legend: { display: true, position: 'top', labels:{ font:{size:11}, boxWidth:12 } },
+        tooltip: { callbacks: { label: function(ctx){
+          return ctx.dataset.label === 'Ingresos $'
+            ? ' ' + pesos(ctx.raw) + '  (' + shares[ctx.dataIndex] + '%)'
+            : ' ' + ctx.raw + ' u.';
+        }}},
+        datalabels: { display: false }
+      },
+      scales: {
+        x:  { beginAtZero:true, ticks:{font:{size:10}, callback:function(v){ return '$ '+(v/1000).toLocaleString('es-AR')+'k'; }}, grid:{color:'#f0f0f0'} },
+        y:  { ticks:{font:{size:10},padding:4}, grid:{display:false}, afterFit:function(s){s.width=100;} },
+        y2: { display:false, beginAtZero:true }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
 function renderGrados(rows) {
   var map = {};
   rows.forEach(function(r){
@@ -1019,6 +1185,14 @@ function renderGrados(rows) {
           grid: { display:false },
           afterFit: function(scale){ scale.width = 90; }
         }
+      },
+      onClick: function(evt, elements) {
+        if (!elements.length) return;
+        var idx = elements[0].index;
+        var gradoSelec = grados[idx];
+        if (_gradDetalle === gradoSelec) { cerrarDetalle(); return; }
+        _gradDetalle = gradoSelec;
+        renderGradoDetalle(gradoSelec, _lastFilteredRows);
       }
     },
     plugins: [ChartDataLabels]
