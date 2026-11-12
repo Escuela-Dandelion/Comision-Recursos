@@ -1,4 +1,4 @@
-// v2026-11-09b — getVentasSinStock: auth por FGP, fechas viejas con pedido vigente siempre visibles
+// v2026-11-11 — getVentasSinStock: estadoPedido devuelve estado real (Solicitado, En Camino…)
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -386,12 +386,12 @@ function doGet(e) {
           if (!ped.skuQty[l.sku] || ped.skuQty[l.sku] <= 0) continue;
           ped.skuQty[l.sku] -= l.cantidad;
           norden = ped.norden;
-          estadoPedido = ESTADOS_OCULTAR.indexOf(ped.estado) !== -1 ? 'entregado' : 'vigente';
+          estadoPedido = ped.estado; // 'Solicitado', 'Confirmado', 'En Camino', etc.
           break;
         }
-        if (estadoPedido === 'entregado') return; // ocultar ventas ya entregadas
-        // Ventas anteriores al rango solo se muestran si tienen pedido vigente
-        if (desde && l.fechaObj < desde && estadoPedido !== 'vigente') return;
+        if (estadoPedido !== null && ESTADOS_OCULTAR.indexOf(estadoPedido) !== -1) return; // ocultar ventas ya entregadas
+        // Ventas anteriores al rango solo se muestran si tienen pedido asignado
+        if (desde && l.fechaObj < desde && estadoPedido === null) return;
 
         lineas.push({
           fecha:        Utilities.formatDate(l.fechaObj, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
@@ -976,24 +976,30 @@ const INV_FGP = {
   'ODDIS':                    { nombre: 'Luli del Castillo', email: 'lourdelcastillo@gmail.com' },
 };
 
-// Consulta a retiro_qr.gs para obtener los proveedores del FGP.
-// Devuelve array de proveedores si es FGP con restricción, null si es admin (ve todo),
-// o undefined si el email no existe o hay error.
+// Tabla local de emails autorizados (mantener sincronizada con AUTH_EMAILS en retiro_qr.gs)
+// null en proveedores = admin (ve todo); array = FGP (ve solo sus proveedores)
+const AUTH_EMAILS_RP = {
+  'robertson.ine@gmail.com':              null,
+  'longhi.yuliana@gmail.com':             null,
+  'yuliana.longhi@dandelion.edu.ar':      null,
+  'martinimaria39@gmail.com':             ['Yemari','Caballo Negro','La Yaya','Guardianes de la Colmena','El Maiten','Oddis','Groen','Paraisa'],
+  'lourdelcastillo@gmail.com':            ['La Yaya','Oddis'],
+  'pialucarno@gmail.com':                 ['El Maiten','Oddis','BioSalud','Pajarito Amarillo'],
+  'monicachesta@gmail.com':               ['La Yaya','Guardianes de la Colmena','Groen','Oddis','Yemari','Caballo Negro'],
+  'lmdestefano@dandelion.edu.ar':         ['Yemari','Caballo Negro','Sol de Oro'],
+  'lmdestefano@gmail.com':               ['Yemari','Caballo Negro','Sol de Oro'],
+  'francoalini@gmail.com':               ['Nazareno'],
+  'tiendalimon.natural@gmail.com':       ['Tienda Limón'],
+  'dominguez.dolo@gmail.com':            ['Sol de Oro'],
+};
+
+// Devuelve array de proveedores si es FGP, null si es admin (ve todo),
+// undefined si el email no está autorizado.
 function getMarcasFGP(email) {
   if (!email) return undefined;
-  var url = _PR.getProperty('RETIRO_QR_URL');
-  if (!url) return undefined;
-  try {
-    var resp = UrlFetchApp.fetch(url + '?action=verificarEmail&email=' + encodeURIComponent(email),
-      { muteHttpExceptions: true, followRedirects: true });
-    var data = JSON.parse(resp.getContentText());
-    if (!data.ok) return undefined;
-    if (data.role === 'FGP') return Array.isArray(data.proveedores) ? data.proveedores : [];
-    return null; // admin/staff ve todo
-  } catch(e) {
-    Logger.log('getMarcasFGP error: ' + e.message);
-    return undefined;
-  }
+  var em = email.toLowerCase().trim();
+  if (!(em in AUTH_EMAILS_RP)) return undefined;
+  return AUTH_EMAILS_RP[em]; // null = admin, array = FGP
 }
 
 const INV_PISO_MARCA = {
@@ -1311,4 +1317,24 @@ function testPedidosTiendaLimon() {
       Logger.log('norden=' + data[i][COL.NORDEN] + ' prov=' + prov + ' estado=' + data[i][COL.ESTADO] + ' skus=' + skus);
     }
   }
+}
+
+function testFiltroFGP() {
+  var emails = [
+    'tiendalimon.natural@gmail.com', // Natalia → solo Tienda Limón
+    'francoalini@gmail.com',         // Franco → solo Nazareno
+    'dominguez.dolo@gmail.com',      // Dolo → solo Sol de Oro
+    'robertson.ine@gmail.com',       // Ines → admin, ve todo
+    'emaildesconocido@test.com'      // sin auth → error
+  ];
+  emails.forEach(function(em) {
+    var provs = getMarcasFGP(em);
+    if (provs === undefined) {
+      Logger.log(em + ' → SIN AUTORIZACIÓN');
+    } else if (provs === null) {
+      Logger.log(em + ' → ADMIN (ve todo)');
+    } else {
+      Logger.log(em + ' → FGP: ' + JSON.stringify(provs));
+    }
+  });
 }
