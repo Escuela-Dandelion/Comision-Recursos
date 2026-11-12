@@ -201,7 +201,7 @@
       var lineas    = grupos[prov];
       // sin pedido primero, vigente después
       lineas.sort(function(a, b) {
-        return (a.estadoPedido === 'vigente' ? 1 : 0) - (b.estadoPedido === 'vigente' ? 1 : 0);
+        return (a.estadoPedido ? 1 : 0) - (b.estadoPedido ? 1 : 0);
       });
       var totalCosto = lineas.reduce(function(s, l) { return s + (l.costo * l.cantidad); }, 0);
       var totalUnid  = lineas.reduce(function(s, l) { return s + l.cantidad; }, 0);
@@ -242,7 +242,7 @@
                   ' data-nombre="' + esc(l.producto) + '"' +
                   ' data-cantidad="' + l.cantidad + '"' +
                   ' data-costo="' + l.costo + '"' +
-                  (l.estadoPedido === 'vigente' ? ' data-con-pedido="1"' : '') +
+                  (l.estadoPedido ? ' data-con-pedido="1"' : '') +
                   ' onchange="onSeleccionCambio()">' +
                 '</td>' +
                 '<td class="col-fecha">' + l.fecha + '</td>' +
@@ -271,8 +271,8 @@
   }
 
   function ordenPillHtml(norden, estado) {
-    if (!norden || !estado) return '';
-    var est = estado.toLowerCase().replace(/\s+/g, '-');
+    if (!estado) return '';
+    var est = (estado === 'vigente' ? 'solicitado' : estado).toLowerCase().replace(/\s+/g, '-');
     var cls = est === 'en-camino'            ? 'en-camino'
             : est === 'confirmado'           ? 'confirmado'
             : est === 'entregado-en-escuela' ? 'entregado'
@@ -284,8 +284,9 @@
               : est === 'entregado-en-escuela' ? '🏫'
               : est === 'recibido'             ? '📦'
               : '📋';
-    return '<a class="pedido-badge ' + cls + '" href="pedidos.html?id=' + esc(norden) + '">'
-         + emoji + ' ' + esc(norden) + ' · ' + esc(estado) + '</a>';
+    var label = norden ? (esc(norden) + ' · ' + esc(estado)) : esc(estado);
+    var href  = norden ? 'href="pedidos.html?id=' + esc(norden) + '"' : '';
+    return '<a class="pedido-badge ' + cls + '" ' + href + '>' + emoji + ' ' + label + '</a>';
   }
 
   // ── Expandir / colapsar ────────────────────────────────────────────────────
