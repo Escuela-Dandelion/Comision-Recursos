@@ -3138,7 +3138,8 @@ var PROMO_MARCA_ALT  = 'MIX Y FRUTOS SECOS';  // variante alternativa si TN la t
 
 var PROMO_HTML =
   '<p><strong>🌼✨ PROMO ESPECIAL ✨🌼</strong></p>' +
-  '<p>🏫💛 Durante el tiempo que dura esta promoción, el <strong>aporte va 100% a la Escuela Dandelion</strong>. ¡Gracias por ser parte!</p>';
+  '<p>🏫💛 Durante el tiempo que dura esta promoción, el <strong>aporte va 100% a la Escuela Dandelion</strong>. ¡Gracias por ser parte!</p>' +
+  '<p>🏪📍 Hasta fin de año, estos productos <strong>solo se retiran por la Tienda de Primaria</strong>.</p>';
 
 function _normBrand(s) {
   return String(s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
