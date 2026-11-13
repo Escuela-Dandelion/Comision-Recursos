@@ -3176,12 +3176,29 @@ function _promoAporteEscuela(dryRun) {
     var nombre  = typeof p.name        === 'object' ? (p.name.es        || '') : (p.name        || '');
     var descOld = typeof p.description === 'object' ? (p.description.es || '') : (p.description || '');
 
-    if (descOld.indexOf('PROMO ESPECIAL') !== -1) {
-      Logger.log('[YA TIENE PROMO] ' + nombre + ' (id ' + p.id + ') — se omite');
+    // Si ya tiene el bloque exacto actualizado → saltear
+    if (descOld.indexOf(PROMO_HTML) !== -1) {
+      Logger.log('[AL DÍA] ' + nombre + ' (id ' + p.id + ') — ya tiene la versión actual');
       return;
     }
 
-    var descNew = PROMO_HTML + (descOld ? '\n' + descOld : '');
+    // Si tiene una versión vieja del bloque → reemplazarla
+    var PROMO_MARCA_VIEJA = '<p><strong>🌼✨ PROMO ESPECIAL ✨🌼</strong></p>';
+    var descNew;
+    if (descOld.indexOf(PROMO_MARCA_VIEJA) !== -1) {
+      // Reemplazar desde el inicio del bloque viejo hasta antes del contenido real
+      var idxVieja = descOld.indexOf(PROMO_MARCA_VIEJA);
+      var descSinPromo = descOld.slice(idxVieja);
+      // El contenido real empieza después de la última línea del bloque viejo
+      // Buscamos el primer <p> que no forme parte de la promo
+      var idxFinPromo = descSinPromo.indexOf('</p>', descSinPromo.indexOf('</p>') + 1) + 4;
+      var resto = descSinPromo.slice(idxFinPromo).replace(/^\n+/, '');
+      descNew = PROMO_HTML + (resto ? '\n' + resto : '');
+      Logger.log((dryRun ? '[DRY RUN actualizar] ' : '[ACTUALIZANDO] ') + nombre + ' (id ' + p.id + ')');
+    } else {
+      descNew = PROMO_HTML + (descOld ? '\n' + descOld : '');
+      Logger.log((dryRun ? '[DRY RUN nuevo] ' : '[APLICANDO] ') + nombre + ' (id ' + p.id + ')');
+    }
     Logger.log((dryRun ? '[DRY RUN] ' : '[APLICANDO] ') + nombre + ' (id ' + p.id + ')');
 
     if (!dryRun) {
