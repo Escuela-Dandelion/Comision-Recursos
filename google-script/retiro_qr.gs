@@ -2243,6 +2243,46 @@ function previewInformeMensual(mesParam) {
 
 // Test: envía el mail de QR + bloque de aportes a robertson.ine@gmail.com usando el pedido 630
 // Corré desde el editor para verificar el formato antes de deployar cambios
+// ── TEST: verificar regla de aporte para una marca o SKU ─────────────────────
+// Correr desde el editor para ver en los logs qué regla aplica y cuánto
+// sería el aporte para un precio de ejemplo.
+function testConfigAporteMarca() {
+  var MARCA_O_SKU = 'MARCA:MIX Y FRUTOS SECOS'; // cambiá esto para probar otra marca o SKU
+  var PRECIO_EJEMPLO = 1000;                      // precio de venta de ejemplo
+  var FECHA_ORDEN = new Date();                   // fecha a la que se busca la regla vigente
+
+  var config = leerConfigProductos();
+  Logger.log('Reglas cargadas: ' + config.length);
+
+  var regla = buscarRegla(config, MARCA_O_SKU, FECHA_ORDEN);
+
+  if (!regla) {
+    Logger.log('⚠️ No se encontró ninguna regla para "' + MARCA_O_SKU + '" a la fecha ' + FECHA_ORDEN.toLocaleDateString('es-AR'));
+    Logger.log('Claves disponibles en ConfigProductos:');
+    config.forEach(function(r) { Logger.log('  · ' + r.clave + ' (vigente desde ' + r.vigente.toLocaleDateString('es-AR') + ')'); });
+    return;
+  }
+
+  Logger.log('✅ Regla encontrada:');
+  Logger.log('  clave:      ' + regla.clave);
+  Logger.log('  pctGrado:   ' + (regla.pctGrado * 100) + '%');
+  Logger.log('  pctEscuela: ' + (regla.pctEscuela !== null ? (regla.pctEscuela * 100) + '%' : 'calculado por margen'));
+  Logger.log('  vigente:    ' + regla.vigente.toLocaleDateString('es-AR'));
+  Logger.log('');
+  Logger.log('Simulación para precio $' + PRECIO_EJEMPLO + ':');
+
+  if (regla.pctEscuela === 1) {
+    Logger.log('  → 100% a escuela: $' + PRECIO_EJEMPLO + ' (no aplica aporte a grado)');
+  } else {
+    var aGrado   = Math.round(PRECIO_EJEMPLO * regla.pctGrado);
+    var aEscuela = regla.pctEscuela !== null
+      ? Math.round(PRECIO_EJEMPLO * regla.pctEscuela)
+      : '(depende del costo)';
+    Logger.log('  → Aporte a grado:   $' + aGrado + ' (' + (regla.pctGrado * 100) + '%)');
+    Logger.log('  → Aporte a escuela: $' + aEscuela);
+  }
+}
+
 function testEnviarEmailAporte() {
   var ORDER_ID = '2070879050';
   var resp  = UrlFetchApp.fetch(
