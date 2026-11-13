@@ -1,4 +1,4 @@
-// v2026-11-11b — agrega PEDIDOS_SHEET_ID a CONFIG (faltaba → pedidos siempre vacíos)
+// v2026-11-13 — agregarPromoAporteEscuelaDryRun / agregarPromoAporteEscuela: texto promo Mix y Frutos Secos
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3086,4 +3086,111 @@ function completarMarcasEnVentas() {
   var vacias      = colY.length - completadas;
   Logger.log('Completadas: ' + completadas + ' | Sin match: ' + vacias + ' de ' + colY.length + ' filas.');
   try { CacheService.getScriptCache().remove('DASHBOARD_V1'); } catch(e) {}
+}
+
+// ── PROMO: agregar texto de aporte 100% a la escuela ─────────────────────────
+// Correr primero agregarPromoAporteEscuelaDryRun() para ver qué productos se van a tocar.
+// Cuando estés conforme, correr agregarPromoAporteEscuela() para aplicar.
+
+var PROMO_MARCA   = 'MIX Y FRUTOS SECOS';
+var PROMO_MARCA_NORM = 'MIX Y FRUTOS SECOS'; // sin tildes, todo uppercase
+var PROMO_MARCA_ALT  = 'MIX Y FRUTOS SECOS';  // variante alternativa si TN la tiene diferente
+
+var PROMO_HTML =
+  '<p><strong>🌼✨ PROMO ESPECIAL ✨🌼</strong></p>' +
+  '<p>🏫💛 Durante el tiempo que dura esta promoción, el <strong>aporte va 100% a la Escuela Dandelion</strong>. ¡Gracias por ser parte!</p>';
+
+function _normBrand(s) {
+  return String(s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function agregarPromoAporteEscuelaDryRun() {
+  _promoAporteEscuela(true);
+}
+
+function agregarPromoAporteEscuela() {
+  _promoAporteEscuela(false);
+}
+
+function quitarPromoAporteEscuelaDryRun() {
+  _quitarPromoAporteEscuela(true);
+}
+
+function quitarPromoAporteEscuela() {
+  _quitarPromoAporteEscuela(false);
+}
+
+function _promoAporteEscuela(dryRun) {
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200';
+  var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  var productos = JSON.parse(resp.getContentText());
+
+  var encontrados = 0;
+  var modificados = 0;
+
+  productos.forEach(function(p) {
+    if (_normBrand(p.brand) !== _normBrand(PROMO_MARCA)) return;
+    encontrados++;
+
+    var nombre  = typeof p.name        === 'object' ? (p.name.es        || '') : (p.name        || '');
+    var descOld = typeof p.description === 'object' ? (p.description.es || '') : (p.description || '');
+
+    if (descOld.indexOf('PROMO ESPECIAL') !== -1) {
+      Logger.log('[YA TIENE PROMO] ' + nombre + ' (id ' + p.id + ') — se omite');
+      return;
+    }
+
+    var descNew = PROMO_HTML + (descOld ? '\n' + descOld : '');
+    Logger.log((dryRun ? '[DRY RUN] ' : '[APLICANDO] ') + nombre + ' (id ' + p.id + ')');
+
+    if (!dryRun) {
+      var payload = JSON.stringify({ description: { es: descNew } });
+      var r = UrlFetchApp.fetch('https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + p.id, {
+        method: 'put',
+        headers: _tnHeaders(),
+        payload: payload,
+        muteHttpExceptions: true
+      });
+      Logger.log('  → HTTP ' + r.getResponseCode());
+      Utilities.sleep(400);
+    }
+    modificados++;
+  });
+
+  Logger.log('--- Marca "' + PROMO_MARCA + '": ' + encontrados + ' productos encontrados, ' + modificados + (dryRun ? ' para modificar.' : ' modificados.'));
+}
+
+function _quitarPromoAporteEscuela(dryRun) {
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200';
+  var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  var productos = JSON.parse(resp.getContentText());
+
+  var modificados = 0;
+
+  productos.forEach(function(p) {
+    if (_normBrand(p.brand) !== _normBrand(PROMO_MARCA)) return;
+
+    var nombre  = typeof p.name        === 'object' ? (p.name.es        || '') : (p.name        || '');
+    var descOld = typeof p.description === 'object' ? (p.description.es || '') : (p.description || '');
+
+    if (descOld.indexOf('PROMO ESPECIAL') === -1) return;
+
+    var descNew = descOld.replace(PROMO_HTML, '').replace(/^\n+/, '');
+    Logger.log((dryRun ? '[DRY RUN] ' : '[QUITANDO] ') + nombre + ' (id ' + p.id + ')');
+
+    if (!dryRun) {
+      var payload = JSON.stringify({ description: { es: descNew } });
+      var r = UrlFetchApp.fetch('https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + p.id, {
+        method: 'put',
+        headers: _tnHeaders(),
+        payload: payload,
+        muteHttpExceptions: true
+      });
+      Logger.log('  → HTTP ' + r.getResponseCode());
+      Utilities.sleep(400);
+    }
+    modificados++;
+  });
+
+  Logger.log('Promo quitada de ' + modificados + (dryRun ? ' productos (dry run).' : ' productos.'));
 }
