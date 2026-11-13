@@ -1,4 +1,4 @@
-// v2026-11-13 — agregarPromoAporteEscuelaDryRun / agregarPromoAporteEscuela: texto promo Mix y Frutos Secos
+// v2026-11-13b — BD Compradores: backfillGradosCompradores + upsertComprador guarda grado
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -853,19 +853,65 @@ function getBDCompradores() {
 }
 
 // Upsert celular en BD por email. Solo escribe si la celda E está vacía.
-function upsertCompradorCelular(email, nombre, phone) {
-  if (!email || !phone) return;
+function upsertComprador(email, nombre, phone, grado) {
+  if (!email) return;
   var emailNorm = email.toLowerCase().trim();
   var sh   = getBDCompradores();
   var data = sh.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0] || '').toLowerCase().trim() === emailNorm) {
-      if (!data[i][4]) sh.getRange(i + 1, 5).setValue(phone);
+      if (phone  && !data[i][4]) sh.getRange(i + 1, 5).setValue(phone);
+      if (grado  && !data[i][2]) sh.getRange(i + 1, 3).setValue(grado);
       return;
     }
   }
   // No existe → nueva fila
-  sh.appendRow([email, nombre || '', '', '', phone]);
+  sh.appendRow([email, nombre || '', grado || '', '', phone || '']);
+}
+
+// Alias para compatibilidad con llamadas anteriores
+function upsertCompradorCelular(email, nombre, phone) {
+  upsertComprador(email, nombre, phone, '');
+}
+
+// Backfill: lee la Hoja Ventas y llena col C (grado) de la BD Compradores
+// con el grado más reciente que cada comprador indicó en alguna compra.
+// Solo escribe si la celda ya está vacía (no pisa lo que se haya corregido a mano).
+// Columnas Ventas: 4=Email, 21=GradoDestino
+function backfillGradosCompradores() {
+  var ventasSheet = getVentasSheet();
+  var ventas      = ventasSheet.getDataRange().getValues();
+
+  // Construir mapa email → grado más reciente (las filas están ordenadas por fecha asc)
+  var gradoPorEmail = {};
+  for (var i = 1; i < ventas.length; i++) {
+    var email = String(ventas[i][4] || '').toLowerCase().trim();
+    var grado = String(ventas[i][21] || '').trim();
+    if (email && grado) gradoPorEmail[email] = grado; // sobreescribe → queda el más reciente
+  }
+
+  Logger.log('Emails con grado en Ventas: ' + Object.keys(gradoPorEmail).length);
+
+  var sh   = getBDCompradores();
+  var data = sh.getDataRange().getValues();
+  var updated = 0;
+  var sinGrado = 0;
+
+  for (var j = 1; j < data.length; j++) {
+    var em = String(data[j][0] || '').toLowerCase().trim();
+    if (!em) continue;
+    var gradoActual = String(data[j][2] || '').trim();
+    var gradoNuevo  = gradoPorEmail[em];
+    if (gradoNuevo && !gradoActual) {
+      sh.getRange(j + 1, 3).setValue(gradoNuevo);
+      updated++;
+    } else if (!gradoNuevo) {
+      sinGrado++;
+    }
+  }
+
+  Logger.log('backfillGradosCompradores: ' + updated + ' grados cargados.');
+  Logger.log('Compradores sin ninguna compra con grado indicado: ' + sinGrado);
 }
 
 // Backfill: pagina todos los pedidos pagados de TN y llena la col Celular.
@@ -995,7 +1041,7 @@ function registrarEnVentas(order) {
       // Escribir Marca en col Y (25) sin pisar col X
       sheet.getRange(sheet.getLastRow(), 25).setValue(datos.marca);
     });
-    upsertCompradorCelular(order.contact_email, order.contact_name, order.contact_phone || '');
+    upsertComprador(order.contact_email, order.contact_name, order.contact_phone || '', gradoValido || '');
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
