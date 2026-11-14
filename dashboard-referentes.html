@@ -56,6 +56,10 @@
     .topbar-btn.primary:hover { background:#2d2d8e; }
     .topbar-btn.pdf { background:#2e7d32; color:#fff; border-color:#2e7d32; }
     .topbar-btn.pdf:hover { background:#1b5e20; }
+    #ver-como-wrap { display:none; align-items:center; gap:6px; font-size:12px; color:#6b7280; }
+    #ver-como-select { font-size:12px; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; background:#fff; color:#374151; cursor:pointer; max-width:220px; }
+    #imp-banner-ref { display:none; align-items:center; gap:10px; background:#fffbeb; border-bottom:1px solid #fcd34d; padding:8px 20px; font-size:13px; color:#92400e; }
+    #imp-banner-ref button { font-size:12px; padding:3px 10px; border:1px solid #fcd34d; border-radius:6px; background:#fff; cursor:pointer; color:#92400e; }
 
     .body-layout { display:flex; flex:1; overflow:hidden; }
 
@@ -377,6 +381,12 @@
       <h1>Dashboard Referentes — Diente de León</h1>
       <p id="txt-actualizado">—</p>
     </div>
+    <div id="ver-como-wrap">
+      <span>Ver como:</span>
+      <select id="ver-como-select" onchange="verComo(this.value)">
+        <option value="">— yo (ADMIN) —</option>
+      </select>
+    </div>
     <div class="topbar-actions">
       <button class="topbar-btn pdf" id="btn-pdf" onclick="exportarPDF()" style="display:none">⬇ Exportar PDF</button>
       <a href="informe-aportes.html" class="topbar-btn" style="background:#1b5e20;color:#fff;border-color:#1b5e20">📄 Informe de Aportes</a>
@@ -384,6 +394,12 @@
       <a href="dashboard-general.html" class="topbar-btn primary">↗ Ver general</a>
       <button class="topbar-btn" onclick="cerrarSesion()">Cerrar sesión</button>
     </div>
+  </div>
+
+  <div id="imp-banner-ref">
+    <span>👁 Viendo como:</span>
+    <strong id="imp-nombre-ref">—</strong>
+    <button onclick="verComo('')">Volver a mi sesión</button>
   </div>
 
   <div class="body-layout">
@@ -443,10 +459,14 @@
 <script>
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var ALL_ROWS  = [];
+var _ALL_ROWS_FULL = []; // copia sin filtro de rol — solo admin la usa
 var ALL_MESES = [];
 var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Pendiente'
 var DASH_CACHE_KEY  = 'dandelion_dash_v2';
 var currentMes      = '';
+var _userRole        = '';
+var _userProveedores = []; // proveedores del usuario logueado (FGP) o impersonado
+var _fgpList         = [];
 var currentDesde    = '';
 var currentHasta    = '';
 var currentProveedor = '';
@@ -646,11 +666,35 @@ function initDashboard(d){
   document.getElementById('loading-dash').style.display='none';
   var _ahora=new Date(); var _fmtFecha=_ahora.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+_ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('txt-actualizado').textContent='Versión actualizada: '+_fmtFecha+' · build 3';
-  ALL_ROWS        = (d.rows||[])
-    .filter(function(r){
-      return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(r.proveedor) === -1;
-    })
+
+  _userRole        = d.role || '';
+  _userProveedores = d.proveedores || [];
+
+  ALL_ROWS = (d.rows||[])
+    .filter(function(r){ return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(r.proveedor) === -1; })
     .map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
+  _ALL_ROWS_FULL  = ALL_ROWS;
+
+  // FGP: filtrar a sus propios proveedores, ocultar selector de proveedor
+  if (_userRole === 'FGP' && _userProveedores.length > 0) {
+    ALL_ROWS = ALL_ROWS.filter(function(r){ return _userProveedores.indexOf(r.proveedor) !== -1; });
+    document.getElementById('filtro-proveedor').style.display='none';
+  }
+
+  // ADMIN: poblar VerComo con lista de FGPs
+  if (_userRole === 'ADMIN' && d.fgp_list && d.fgp_list.length > 0) {
+    _fgpList = d.fgp_list;
+    var vcSel = document.getElementById('ver-como-select');
+    vcSel.innerHTML = '<option value="">— yo (ADMIN) —</option>';
+    d.fgp_list.forEach(function(fgp, i){
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = fgp.name + ' — ' + fgp.proveedores.join(', ');
+      vcSel.appendChild(o);
+    });
+    document.getElementById('ver-como-wrap').style.display = 'flex';
+  }
+
   ALL_MESES       = d.meses_todos||[];
   ALL_RETIROS_MAP = d.retiros_map||{};
 
@@ -714,6 +758,44 @@ function initDashboard(d){
 
   document.getElementById('contenido').style.display='block';
   render();
+}
+
+function verComo(val) {
+  if (!val) {
+    ALL_ROWS = _ALL_ROWS_FULL;
+    _userProveedores = [];
+    document.getElementById('imp-banner-ref').style.display = 'none';
+    document.getElementById('filtro-proveedor').style.display = '';
+  } else {
+    var fgp = _fgpList[parseInt(val)];
+    if (!fgp) return;
+    _userProveedores = fgp.proveedores;
+    ALL_ROWS = _ALL_ROWS_FULL.filter(function(r){ return fgp.proveedores.indexOf(r.proveedor) !== -1; });
+    document.getElementById('imp-nombre-ref').textContent = fgp.name + ' (' + fgp.proveedores.join(', ') + ')';
+    document.getElementById('imp-banner-ref').style.display = 'flex';
+    document.getElementById('filtro-proveedor').style.display = 'none';
+  }
+  _repoblarFiltros();
+  selectedGrados = [];
+  render();
+}
+
+function _repoblarFiltros() {
+  var provSet = {}, marcaSet = {};
+  ALL_ROWS.forEach(function(r){
+    if (r.proveedor) provSet[r.proveedor] = true;
+    if (r.marca) marcaSet[r.marca] = true;
+  });
+  var selProv = document.getElementById('filtro-proveedor');
+  selProv.innerHTML = '<option value="">Todos los proveedores</option>';
+  Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
+    var o = document.createElement('option'); o.value = p; o.textContent = p; selProv.appendChild(o);
+  });
+  var selMarca = document.getElementById('filtro-marca');
+  selMarca.innerHTML = '<option value="">Todas las marcas</option>';
+  Object.keys(marcaSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(m){
+    var o = document.createElement('option'); o.value = m; o.textContent = m; selMarca.appendChild(o);
+  });
 }
 
 function toggleGrado(g){

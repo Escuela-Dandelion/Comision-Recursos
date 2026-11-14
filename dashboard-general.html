@@ -51,6 +51,10 @@
       background:none; border:1px solid #ddd; border-radius:8px;
       padding:5px 12px; font-size:13px; cursor:pointer; color:#555;
     }
+    #ver-como-wrap { display:none; align-items:center; gap:6px; font-size:12px; color:#6b7280; }
+    #ver-como-select { font-size:12px; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; background:#fff; color:#374151; cursor:pointer; max-width:220px; }
+    #imp-banner-gen { display:none; align-items:center; gap:10px; background:#fffbeb; border-bottom:1px solid #fcd34d; padding:8px 20px; font-size:13px; color:#92400e; }
+    #imp-banner-gen button { font-size:12px; padding:3px 10px; border:1px solid #fcd34d; border-radius:6px; background:#fff; cursor:pointer; color:#92400e; }
 
     .body-layout { display:flex; flex:1; overflow:hidden; }
 
@@ -254,11 +258,23 @@
       <h1>Dashboard General — Diente de León</h1>
       <p id="txt-actualizado">—</p>
     </div>
+    <div id="ver-como-wrap">
+      <span>Ver como:</span>
+      <select id="ver-como-select" onchange="verComo(this.value)">
+        <option value="">— yo (ADMIN) —</option>
+      </select>
+    </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button class="topbar-btn" id="btn-export" onclick="exportarSheets()" style="background:#2e7d32;color:#fff;border-color:#2e7d32">📊 Exportar a Sheets</button>
       <a href="dashboard-referentes.html" class="topbar-btn" style="background:#1a1a6e;color:#fff;border-color:#1a1a6e;text-decoration:none;display:inline-flex;align-items:center;gap:5px">↗ Ver referentes</a>
       <button class="topbar-btn" onclick="cerrarSesion()">Cerrar sesión</button>
     </div>
+  </div>
+
+  <div id="imp-banner-gen">
+    <span>👁 Viendo como:</span>
+    <strong id="imp-nombre-gen">—</strong>
+    <button onclick="verComo('')">Volver a mi sesión</button>
   </div>
 
   <div class="body-layout">
@@ -477,8 +493,12 @@
 var APPS_URL      = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var PROVEEDOR_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 var PALETTE  = ['#a8c4e0','#b5d5c5','#c9b8d8','#f0c9a0','#aad4e8','#d4b8c7','#b8d4b8','#d4c9a8','#c4b8d8','#a8d4c4'];
-var ALL_ROWS  = [];
-var ALL_MESES = [];
+var ALL_ROWS       = [];
+var _ALL_ROWS_FULL = [];
+var ALL_MESES      = [];
+var _userRole        = '';
+var _userProveedores = [];
+var _fgpList         = [];
 var chartEvo      = null;
 var chartGrad     = null;
 var chartProv     = null;
@@ -677,7 +697,32 @@ function initDashboard(d) {
   document.getElementById('loading-dash').style.display = 'none';
   document.getElementById('txt-actualizado').textContent = 'Actualizado: ' + (d.actualizado||'');
 
-  ALL_ROWS  = (d.rows||[]).map(function(r){ r.grado = normalizarGrado(r.grado); return r; });
+  _userRole        = d.role || '';
+  _userProveedores = d.proveedores || [];
+
+  ALL_ROWS = (d.rows||[]).map(function(r){ r.grado = normalizarGrado(r.grado); return r; });
+  _ALL_ROWS_FULL = ALL_ROWS;
+
+  // FGP: filtrar a sus propios proveedores, ocultar selector de proveedor
+  if (_userRole === 'FGP' && _userProveedores.length > 0) {
+    ALL_ROWS = ALL_ROWS.filter(function(r){ return _userProveedores.indexOf(r.proveedor) !== -1; });
+    document.getElementById('filtro-proveedor').style.display = 'none';
+  }
+
+  // ADMIN: poblar VerComo con lista de FGPs
+  if (_userRole === 'ADMIN' && d.fgp_list && d.fgp_list.length > 0) {
+    _fgpList = d.fgp_list;
+    var vcSel = document.getElementById('ver-como-select');
+    vcSel.innerHTML = '<option value="">— yo (ADMIN) —</option>';
+    d.fgp_list.forEach(function(fgp, i){
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = fgp.name + ' — ' + fgp.proveedores.join(', ');
+      vcSel.appendChild(o);
+    });
+    document.getElementById('ver-como-wrap').style.display = 'flex';
+  }
+
   ALL_MESES = d.meses_todos || [];
 
   // Años únicos
@@ -713,6 +758,35 @@ function initDashboard(d) {
   updateJardinCard();
   initCaja();
   fetchStockValorizacion();
+}
+
+function verComo(val) {
+  if (!val) {
+    ALL_ROWS = _ALL_ROWS_FULL;
+    _userProveedores = [];
+    document.getElementById('imp-banner-gen').style.display = 'none';
+    document.getElementById('filtro-proveedor').style.display = '';
+  } else {
+    var fgp = _fgpList[parseInt(val)];
+    if (!fgp) return;
+    _userProveedores = fgp.proveedores;
+    ALL_ROWS = _ALL_ROWS_FULL.filter(function(r){ return fgp.proveedores.indexOf(r.proveedor) !== -1; });
+    document.getElementById('imp-nombre-gen').textContent = fgp.name + ' (' + fgp.proveedores.join(', ') + ')';
+    document.getElementById('imp-banner-gen').style.display = 'flex';
+    document.getElementById('filtro-proveedor').style.display = 'none';
+  }
+  // Repoblar proveedor dropdown y re-renderizar
+  var provSet = {};
+  ALL_ROWS.forEach(function(r){ if (r.proveedor) provSet[r.proveedor] = true; });
+  var selProv = document.getElementById('filtro-proveedor');
+  selProv.innerHTML = '<option value="">Todos los proveedores</option>';
+  Object.keys(provSet).sort(function(a,b){ return a.localeCompare(b,'es'); }).forEach(function(p){
+    var o = document.createElement('option'); o.value=p; o.textContent=p; selProv.appendChild(o);
+  });
+  currentProveedor = '';
+  poblarProductos('');
+  render();
+  updateJardinCard();
 }
 
 function poblarMeses(anio) {

@@ -1,4 +1,4 @@
-// v2026-11-14 — checkPesosYMedidas + setMedidasFaltantes (frutos secos 20x20x3)
+// v2026-11-14b — api_dashboard devuelve name/proveedores/fgp_list para permisos frontend
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -1898,9 +1898,28 @@ function apiDashboard(email) {
     }
   } catch(e) { Logger.log('Error leyendo Retiros en apiDashboard: ' + e); }
 
+  // fgp_list: solo para ADMINs — permite impersonar FGPs en el frontend
+  var fgpList = null;
+  if (userRole === 'ADMIN') {
+    fgpList = [];
+    var emailsFGP = Object.keys(AUTH_EMAILS);
+    for (var fi = 0; fi < emailsFGP.length; fi++) {
+      var u = AUTH_EMAILS[emailsFGP[fi]];
+      if (u.role === 'FGP' && u.proveedores && u.proveedores.length > 0) {
+        // Deduplicar por nombre (varios emails del mismo FGP)
+        var yaExiste = fgpList.some(function(x) { return x.name === u.name; });
+        if (!yaExiste) fgpList.push({ name: u.name, proveedores: u.proveedores });
+      }
+    }
+    fgpList.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  }
+
   return {
     ok:            true,
     role:          userRole,
+    name:          authUser.name || '',
+    proveedores:   authUser.proveedores || [],
+    fgp_list:      fgpList,
     rows:          rows,
     retiros_map:   retirosMap,
     meses_todos:   Object.keys(mesesSet).sort(),
