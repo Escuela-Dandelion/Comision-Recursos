@@ -1,4 +1,4 @@
-// v2026-11-13b — BD Compradores: backfillGradosCompradores + upsertComprador guarda grado
+// v2026-11-14 — checkPesosYMedidas + setMedidasFaltantes (frutos secos 20x20x3)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3297,4 +3297,108 @@ function _quitarPromoAporteEscuela(dryRun) {
   });
 
   Logger.log('Promo quitada de ' + modificados + (dryRun ? ' productos (dry run).' : ' productos.'));
+}
+
+// ─── DIAGNÓSTICO: PESOS Y MEDIDAS ────────────────────────────────────────────
+// Verifica que todas las variantes activas tengan peso > 0 y dimensiones > 0.
+// Las variantes con weight=0 se clasifican como digitales en TiendaNube (no generan envío).
+function checkPesosYMedidas() {
+  var sinPeso = [], sinMedidas = [], ok = 0, digitales = 0;
+
+  for (var page = 1; page <= 20; page++) {
+    var resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page,
+      { headers: _tnHeaders(), muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) break;
+    var prods = JSON.parse(resp.getContentText());
+    if (!prods || !prods.length) break;
+
+    prods.forEach(function(p) {
+      var nombre = String((p.name && p.name.es) || p.name || p.id);
+      (p.variants || []).forEach(function(v) {
+        if (v.visible === false) return; // variante inactiva — ignorar
+        var peso  = parseFloat(v.weight  || 0);
+        var ancho = parseFloat(v.width   || 0);
+        var alto  = parseFloat(v.height  || 0);
+        var prof  = parseFloat(v.depth   || 0);
+        var sku   = v.sku || ('sin-sku-' + v.id);
+        var label = nombre + ' | SKU: ' + sku + ' | variante id: ' + v.id;
+
+        if (peso === 0) {
+          digitales++;
+          return; // weight=0 → digital, no necesita envío
+        }
+        var faltaMedida = (ancho === 0 || alto === 0 || prof === 0);
+        if (faltaMedida) sinMedidas.push(label + ' | peso: ' + peso + ' kg | medidas: ' + ancho + 'x' + alto + 'x' + prof);
+        else ok++;
+      });
+    });
+
+    if (prods.length < 200) break;
+  }
+
+  Logger.log('=== checkPesosYMedidas ===');
+  Logger.log('OK (peso + medidas completos): ' + ok);
+  Logger.log('Digitales (weight=0, se omiten): ' + digitales);
+  Logger.log('Sin medidas (tienen peso pero faltan dimensiones): ' + sinMedidas.length);
+  sinMedidas.forEach(function(l) { Logger.log('  SIN MEDIDAS: ' + l); });
+  Logger.log('=========================');
+}
+
+// Variantes con peso pero sin dimensiones, agrupadas por medidas a setear.
+// Anotador Sol de Papel: completar width/height/depth cuando se tengan las medidas.
+var _MEDIDAS_A_SETEAR = [
+  { variantIds: [1581381560, 1581386730, 1581393481, 1581395209, 1581397058,
+                 1581398773, 1581400729, 1581405112, 1583174078, 1592615172],
+    width: 20, height: 20, depth: 3,
+    label: 'Frutos secos 500g' },
+  { variantIds: [1621864507, 1629132531], width: 11, height: 17.5, depth: 1.5,
+    label: 'Anotador Sol de Papel 2027' },
+];
+
+function setMedidasFaltantesDryRun() { _setMedidas(true);  }
+function setMedidasFaltantes()        { _setMedidas(false); }
+
+function _setMedidas(dryRun) {
+  // Construir mapa variantId → {productId, nombre}
+  var varMap = {};
+  for (var page = 1; page <= 20; page++) {
+    var resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page,
+      { headers: _tnHeaders(), muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) break;
+    var prods = JSON.parse(resp.getContentText());
+    if (!prods || !prods.length) break;
+    prods.forEach(function(p) {
+      (p.variants || []).forEach(function(v) {
+        varMap[v.id] = { productId: p.id, nombre: String((p.name && p.name.es) || p.name || p.id) };
+      });
+    });
+    if (prods.length < 200) break;
+  }
+
+  var total = 0, errores = 0;
+  _MEDIDAS_A_SETEAR.forEach(function(grupo) {
+    grupo.variantIds.forEach(function(vid) {
+      var info = varMap[vid];
+      if (!info) { Logger.log('[ERROR] variante id ' + vid + ' no encontrada en TiendaNube'); errores++; return; }
+      var label = (dryRun ? '[DRY RUN] ' : '[ACTUALIZANDO] ') +
+                  grupo.label + ' — ' + info.nombre + ' (var ' + vid + ') → ' +
+                  grupo.width + 'x' + grupo.height + 'x' + grupo.depth + ' cm';
+      Logger.log(label);
+      if (!dryRun) {
+        var payload = JSON.stringify({ width: grupo.width, height: grupo.height, depth: grupo.depth });
+        var r = UrlFetchApp.fetch(
+          'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + info.productId + '/variants/' + vid,
+          { method: 'put', headers: _tnHeaders(), payload: payload, muteHttpExceptions: true }
+        );
+        Logger.log('  → HTTP ' + r.getResponseCode());
+        Utilities.sleep(300);
+      }
+      total++;
+    });
+  });
+  Logger.log('=== ' + (dryRun ? 'DRY RUN' : 'LISTO') + ': ' + total + ' variantes procesadas, ' + errores + ' errores ===');
 }
