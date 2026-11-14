@@ -523,12 +523,14 @@ function waLink(phone, msg) {
   if (!phone) return '';
   return '<a href="' + waUrl(phone, msg) + '" target="_blank" title="Escribir por WhatsApp" class="contact-btn">' + _WA_ICON + '</a>';
 }
-function emailLink(email) {
+function emailLink(email, msg) {
   if (!email) return '';
-  return '<a href="mailto:' + esc(email) + '" title="' + esc(email) + '" class="contact-btn">' + _EMAIL_ICON + '</a>';
+  var subj = 'Tienda Diente de León';
+  var href = 'mailto:' + esc(email) + '?subject=' + encodeURIComponent(subj) + (msg ? '&body=' + encodeURIComponent(msg) : '');
+  return '<a href="' + href + '" title="' + esc(email) + '" class="contact-btn">' + _EMAIL_ICON + '</a>';
 }
 function contactBtns(email, phone, msg) {
-  var btns = (email ? emailLink(email) : '') + (phone ? waLink(phone, msg) : '');
+  var btns = (email ? emailLink(email, msg) : '') + (phone ? waLink(phone, msg) : '');
   return btns ? '<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle">' + btns + '</span>' : '';
 }
 function emailTxt(email) {

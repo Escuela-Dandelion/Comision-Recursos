@@ -1527,7 +1527,10 @@ function waUrlAdm(phone) {
 function contactBtnsAdm(email, phone, numero) {
   var msg = '\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido' + (numero ? ' #' + numero : '') + '.';
   var btns = '';
-  if (email) btns += '<a href="mailto:' + email + '" title="' + email + '" class="contact-btn-adm">' + _EMAIL_ICON_ADM + '</a>';
+  if (email) {
+    var subj = 'Tienda Diente de León' + (numero ? ' - Pedido #' + numero : '');
+    btns += '<a href="mailto:' + email + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg) + '" title="' + email + '" class="contact-btn-adm">' + _EMAIL_ICON_ADM + '</a>';
+  }
   if (phone) {
     var waNum = waUrlAdm(phone);
     if (waNum) btns += '<a href="https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg) + '" target="_blank" title="Escribir por WhatsApp" class="contact-btn-adm">' + _WA_ICON_ADM + '</a>';
