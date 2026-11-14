@@ -275,7 +275,7 @@
     if (!phone) return '';
     var n = phone.replace(/\D/g, '');
     if (n.substring(0, 2) !== '54') n = '54' + (n.charAt(0) === '0' ? n.slice(1) : n);
-    var msg = '🌼 Hola, te escribo de la Tienda Diente de León por tu pedido' + (pedido ? ' #' + pedido : '') + '.';
+    var msg = '\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido' + (pedido ? ' #' + pedido : '') + '.';
     var url = 'https://wa.me/' + n + '?text=' + encodeURIComponent(msg);
     return '<a href="' + url + '" target="_blank" title="Escribir por WhatsApp" style="display:inline-flex;align-items:center;gap:3px;text-decoration:none;vertical-align:middle;margin-left:4px">' + _WA_ICON_VSS + '</a>';
   }
