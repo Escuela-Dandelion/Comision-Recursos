@@ -1025,7 +1025,7 @@ function renderFamilias(rows){
       '</div>':'';
     var _pedKeys = Object.keys(fam._ped);
     var _lastPed = _pedKeys.length === 1 ? _pedKeys[0] : '';
-    var _waMsgFam = 'Hola, te escribo de Diente de Leon por esta compra' + (_lastPed ? ' #' + _lastPed : '') + '.';
+    var _waMsgFam = '🌼 Hola, te escribo de la Tienda Diente de León por tu pedido' + (_lastPed ? ' #' + _lastPed : '') + '.';
     var rowHtml='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
         '<span class="arrow" id="arr-fam-'+fi+'">▶</span>'+
@@ -1190,7 +1190,7 @@ function renderProductos(rows){
       var _fh0=f.fechaMap&&_pid0&&f.fechaMap[_pid0]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[_pid0])+'</div>':'';
       var _noRetPed=f.pedidos.length===1?'#'+_pid0+_fh0:f.pedidos.length+' pedidos';
       html+='<tr>'+
-        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+(f.phone?' '+waLink(f.phone,'Hola, te escribo de Diente de Leon por esta compra #'+(f.pedidos[0]||'')+'.')  :'')+' </td>'+
+        '<td><strong>'+esc(fname)+'</strong>'+(f.email?' <span class="txt-sm">'+esc(f.email)+'</span>':'')+(f.phone?' '+waLink(f.phone,'🌼 Hola, te escribo de la Tienda Diente de León por tu pedido #'+(f.pedidos[0]||'')+'.')  :'')+' </td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+

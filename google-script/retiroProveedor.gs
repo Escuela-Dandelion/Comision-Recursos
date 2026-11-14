@@ -1,4 +1,4 @@
-// v2026-11-11 — getVentasSinStock: estadoPedido devuelve estado real (Solicitado, En Camino…)
+// v2026-11-14 — getVentasSinStock: agrega email + phone (lookup BD Compradores) por comprador
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -286,6 +286,18 @@ function doGet(e) {
         ? marcasFGP.map(function(p) { return normProv(p); })
         : null;
 
+      // Mapa email → phone desde BD Compradores (col A=email, col E=phone)
+      const phoneMapVSS = {};
+      try {
+        const bdSS = SpreadsheetApp.openById('1qsq48RpQbOYpbMp_qZRClrlJrMQ7JkgCEo_I5LS5hWk');
+        const bdData = bdSS.getSheetByName('Hoja 1').getDataRange().getValues();
+        for (let bi = 1; bi < bdData.length; bi++) {
+          const bEmail = String(bdData[bi][0] || '').toLowerCase().trim();
+          const bPhone = String(bdData[bi][4] || '').trim();
+          if (bEmail && bPhone) phoneMapVSS[bEmail] = bPhone;
+        }
+      } catch(e) {}
+
       const skusInf  = obtenerSkusStockInfinito();
       const ss       = SpreadsheetApp.openById(INV_VENTAS_ID);
       const sheet    = ss.getSheetByName('Ventas');
@@ -368,7 +380,9 @@ function doGet(e) {
         // Filtrar por proveedores permitidos del FGP
         if (provsPermitidos !== null && provsPermitidos.indexOf(normProv(proveedor)) === -1) continue;
 
+        const emailComp = String(fila[4] || '').toLowerCase().trim();
         rawLineas.push({ fechaObj: fecha, pedido: String(fila[1] || ''), comprador: String(fila[3] || ''),
+          email: emailComp, phone: phoneMapVSS[emailComp] || '',
           producto: String(fila[5] || ''), sku, cantidad, precio: String(fila[8] || ''), proveedor, costo });
       }
 
@@ -397,6 +411,8 @@ function doGet(e) {
           fecha:        Utilities.formatDate(l.fechaObj, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
           pedido:       l.pedido,
           comprador:    l.comprador,
+          email:        l.email,
+          phone:        l.phone,
           producto:     l.producto,
           sku:          l.sku,
           cantidad:     l.cantidad,
