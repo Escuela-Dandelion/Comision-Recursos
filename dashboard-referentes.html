@@ -526,8 +526,8 @@ function waLink(phone, msg) {
 function emailLink(email, msg) {
   if (!email) return '';
   var subj = 'Tienda Diente de León';
-  var href = 'mailto:' + esc(email) + '?subject=' + encodeURIComponent(subj) + (msg ? '&body=' + encodeURIComponent(msg) : '');
-  return '<a href="' + href + '" title="' + esc(email) + '" class="contact-btn">' + _EMAIL_ICON + '</a>';
+  var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + (msg ? '&body=' + encodeURIComponent(msg) : '');
+  return '<a href="' + gmailUrl + '" target="_blank" title="' + esc(email) + '" class="contact-btn">' + _EMAIL_ICON + '</a>';
 }
 function contactBtns(email, phone, msg) {
   var btns = (email ? emailLink(email, msg) : '') + (phone ? waLink(phone, msg) : '');

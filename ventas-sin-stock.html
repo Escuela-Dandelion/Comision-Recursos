@@ -280,7 +280,8 @@
     var btns = '';
     if (email) {
       var subj = 'Tienda Diente de León' + (pedido ? ' - Pedido #' + pedido : '');
-      btns += '<a href="mailto:' + esc(email) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg) + '" title="' + esc(email) + '" class="contact-btn-vss">' + _EMAIL_ICON_VSS + '</a>';
+      var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg);
+      btns += '<a href="' + gmailUrl + '" target="_blank" title="' + esc(email) + '" class="contact-btn-vss">' + _EMAIL_ICON_VSS + '</a>';
     }
     if (phone) {
       var n = phone.replace(/\D/g, '');

@@ -1529,11 +1529,12 @@ function contactBtnsAdm(email, phone, numero) {
   var btns = '';
   if (email) {
     var subj = 'Tienda Diente de León' + (numero ? ' - Pedido #' + numero : '');
-    btns += '<a href="mailto:' + email + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg) + '" title="' + email + '" class="contact-btn-adm">' + _EMAIL_ICON_ADM + '</a>';
+    var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg);
+    btns += '<a href="' + gmailUrl + '" target="_blank" onclick="event.stopPropagation()" title="' + email + '" class="contact-btn-adm">' + _EMAIL_ICON_ADM + '</a>';
   }
   if (phone) {
     var waNum = waUrlAdm(phone);
-    if (waNum) btns += '<a href="https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg) + '" target="_blank" title="Escribir por WhatsApp" class="contact-btn-adm">' + _WA_ICON_ADM + '</a>';
+    if (waNum) btns += '<a href="https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg) + '" target="_blank" onclick="event.stopPropagation()" title="Escribir por WhatsApp" class="contact-btn-adm">' + _WA_ICON_ADM + '</a>';
   }
   return btns ? '<span style="display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle">' + btns + '</span>' : '';
 }
