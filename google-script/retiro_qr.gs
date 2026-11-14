@@ -1,4 +1,4 @@
-// v2026-11-14b — api_dashboard devuelve name/proveedores/fgp_list para permisos frontend
+// v2026-11-14c — getRetirosData: agrega phone desde BD Compradores
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2092,6 +2092,18 @@ function getRetirosData(estadoFiltro, diasFiltro) {
     }
   } catch(e) {}
 
+  // Construir mapa email → phone desde BD Compradores (col A=email, col E=phone)
+  var phoneMapRet = {};
+  try {
+    var bdSS = SpreadsheetApp.openById('1qsq48RpQbOYpbMp_qZRClrlJrMQ7JkgCEo_I5LS5hWk');
+    var bdData = bdSS.getSheetByName('Hoja 1').getDataRange().getValues();
+    for (var bi = 1; bi < bdData.length; bi++) {
+      var bEmail = String(bdData[bi][0] || '').toLowerCase().trim();
+      var bPhone = String(bdData[bi][4] || '').trim();
+      if (bEmail && bPhone) phoneMapRet[bEmail] = bPhone;
+    }
+  } catch(e) {}
+
   var sheet = ss.getSheetByName('Retiros');
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
@@ -2137,7 +2149,8 @@ function getRetirosData(estadoFiltro, diasFiltro) {
       notas:         String(row[9] || ''),
       discount:      parseFloat(row[11] || 0),
       discount_type: String(row[12] || ''),
-      proveedores:   Object.keys(proveedoresMap[String(row[1] || '')] || {})
+      proveedores:   Object.keys(proveedoresMap[String(row[1] || '')] || {}),
+      phone:         phoneMapRet[String(row[3] || '').toLowerCase().trim()] || ''
     });
   }
   var result = rows.reverse();
