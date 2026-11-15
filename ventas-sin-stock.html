@@ -275,13 +275,13 @@
 
   var _WA_ICON_VSS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
   var _EMAIL_ICON_VSS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+  var _GAS_URL_P1_VSS = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
   function contactBtnsVSS(email, phone, pedido) {
-    var msg = '\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido' + (pedido ? ' #' + pedido : '') + '.';
+    var msg = '🌼 Hola, te escribo de la Tienda Diente de León por tu pedido' + (pedido ? ' #' + pedido : '') + '.';
+    var subj = 'Te contactamos por Tienda Diente de León' + (pedido ? ' - Pedido #' + pedido : '');
     var btns = '';
     if (email) {
-      var subj = 'Tienda Diente de León' + (pedido ? ' - Pedido #' + pedido : '');
-      var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg);
-      btns += '<a href="' + gmailUrl + '" target="_blank" title="' + esc(email) + '" class="contact-btn-vss">' + _EMAIL_ICON_VSS + '</a>';
+      btns += '<button onclick="abrirModalContactoVSS(\'' + email.replace(/'/g,"\\'") + '\',\'' + subj.replace(/'/g,"\\'") + '\',\'' + msg.replace(/'/g,"\\'") + '\')" title="' + esc(email) + '" class="contact-btn-vss" style="border:none;padding:0">' + _EMAIL_ICON_VSS + '</button>';
     }
     if (phone) {
       var n = phone.replace(/\D/g, '');
@@ -293,6 +293,42 @@
   function emailTxtVSS(email) {
     return email ? '<div class="contact-email-txt-vss">' + esc(email) + '</div>' : '';
   }
+  var _mcEmailVSS = '';
+  function abrirModalContactoVSS(email, asunto, msg) {
+    _mcEmailVSS = email;
+    document.getElementById('mc-vss-para').textContent = email;
+    document.getElementById('mc-vss-asunto').value = asunto;
+    document.getElementById('mc-vss-cuerpo').value = msg;
+    document.getElementById('mc-vss-feedback').style.display = 'none';
+    var btn = document.getElementById('mc-vss-btn-enviar');
+    btn.disabled = false; btn.textContent = 'Enviar';
+    document.getElementById('modal-contacto-vss').style.display = 'flex';
+  }
+  function cerrarModalContactoVSS() {
+    document.getElementById('modal-contacto-vss').style.display = 'none';
+  }
+  function enviarMailContactoVSS() {
+    var asunto = document.getElementById('mc-vss-asunto').value.trim();
+    var cuerpo = document.getElementById('mc-vss-cuerpo').value.trim();
+    var fb     = document.getElementById('mc-vss-feedback');
+    var btn    = document.getElementById('mc-vss-btn-enviar');
+    if (!asunto || !cuerpo) { fb.textContent = 'Completá el asunto y el mensaje.'; fb.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    fb.style.display = 'none';
+    var url = _GAS_URL_P1_VSS + '?action=enviarContacto'
+      + '&auth_email='   + encodeURIComponent(_userEmail)
+      + '&destinatario=' + encodeURIComponent(_mcEmailVSS)
+      + '&asunto='       + encodeURIComponent(asunto)
+      + '&mensaje='      + encodeURIComponent(cuerpo);
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) { btn.textContent = '✓ Enviado'; setTimeout(cerrarModalContactoVSS, 1200); }
+        else { fb.textContent = 'Error: ' + (d.error || 'intentá de nuevo'); fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; }
+      })
+      .catch(function() { fb.textContent = 'Error de red.'; fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; });
+  }
+
 
   function ordenPillHtml(norden, estado) {
     if (!estado) return '';
@@ -410,5 +446,21 @@
   }
 </script>
 
+<div id="modal-contacto-vss" onclick="if(event.target===this)cerrarModalContactoVSS()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1f2937;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <h3 style="font-size:16px;font-weight:800;margin:0 0 16px;color:#f9fafb">✉ Enviar mail</h3>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Para</div>
+    <div id="mc-vss-para" style="padding:8px 12px;background:#374151;border-radius:8px;font-size:13px;color:#d1d5db;margin-bottom:12px;word-break:break-all"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Asunto</div>
+    <input id="mc-vss-asunto" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #4b5563;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:12px;background:#374151;color:#f9fafb;box-sizing:border-box">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Mensaje</div>
+    <textarea id="mc-vss-cuerpo" rows="5" style="width:100%;padding:10px 12px;border:1.5px solid #4b5563;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:12px;background:#374151;color:#f9fafb;resize:vertical;box-sizing:border-box"></textarea>
+    <div id="mc-vss-feedback" style="font-size:12px;color:#fca5a5;display:none;margin-bottom:8px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="cerrarModalContactoVSS()" style="padding:11px;background:#374151;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#9ca3af">Cancelar</button>
+      <button id="mc-vss-btn-enviar" onclick="enviarMailContactoVSS()" style="padding:11px;background:#3a7d44;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Enviar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -523,15 +523,53 @@ function waLink(phone, msg) {
   if (!phone) return '';
   return '<a href="' + waUrl(phone, msg) + '" target="_blank" title="Escribir por WhatsApp" class="contact-btn">' + _WA_ICON + '</a>';
 }
-function emailLink(email, msg) {
+function emailLink(email, msg, pedido) {
   if (!email) return '';
-  var subj = 'Tienda Diente de León';
-  var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + (msg ? '&body=' + encodeURIComponent(msg) : '');
-  return '<a href="' + gmailUrl + '" target="_blank" title="' + esc(email) + '" class="contact-btn">' + _EMAIL_ICON + '</a>';
+  var subj = 'Te contactamos por Tienda Diente de León' + (pedido ? ' - Pedido #' + pedido : '');
+  var safeEmail = email.replace(/'/g,"\\'");
+  var safeSubj  = subj.replace(/'/g,"\\'");
+  var safeMsg   = (msg||'').replace(/'/g,"\\'");
+  return '<button onclick="abrirModalContactoRef(\'' + safeEmail + '\',\'' + safeSubj + '\',\'' + safeMsg + '\')" title="' + esc(email) + '" class="contact-btn" style="border:none;padding:0">' + _EMAIL_ICON + '</button>';
 }
-function contactBtns(email, phone, msg) {
-  var btns = (email ? emailLink(email, msg) : '') + (phone ? waLink(phone, msg) : '');
+function contactBtns(email, phone, msg, pedido) {
+  var btns = (email ? emailLink(email, msg, pedido) : '') + (phone ? waLink(phone, msg) : '');
   return btns ? '<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle">' + btns + '</span>' : '';
+}
+var _mcEmailRef = '';
+function abrirModalContactoRef(email, asunto, msg) {
+  _mcEmailRef = email;
+  document.getElementById('mc-ref-para').textContent = email;
+  document.getElementById('mc-ref-asunto').value = asunto;
+  document.getElementById('mc-ref-cuerpo').value = msg;
+  document.getElementById('mc-ref-feedback').style.display = 'none';
+  var btn = document.getElementById('mc-ref-btn-enviar');
+  btn.disabled = false; btn.textContent = 'Enviar';
+  document.getElementById('modal-contacto-ref').style.display = 'flex';
+}
+function cerrarModalContactoRef() {
+  document.getElementById('modal-contacto-ref').style.display = 'none';
+}
+function enviarMailContactoRef() {
+  var asunto = document.getElementById('mc-ref-asunto').value.trim();
+  var cuerpo = document.getElementById('mc-ref-cuerpo').value.trim();
+  var fb     = document.getElementById('mc-ref-feedback');
+  var btn    = document.getElementById('mc-ref-btn-enviar');
+  if (!asunto || !cuerpo) { fb.textContent = 'Completá el asunto y el mensaje.'; fb.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  fb.style.display = 'none';
+  var authEmail = leerSesionGoogle() || '';
+  var url = APPS_URL + '?action=enviarContacto'
+    + '&auth_email='   + encodeURIComponent(authEmail)
+    + '&destinatario=' + encodeURIComponent(_mcEmailRef)
+    + '&asunto='       + encodeURIComponent(asunto)
+    + '&mensaje='      + encodeURIComponent(cuerpo);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) { btn.textContent = '✓ Enviado'; setTimeout(cerrarModalContactoRef, 1200); }
+      else { fb.textContent = 'Error: ' + (d.error || 'intentá de nuevo'); fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; }
+    })
+    .catch(function() { fb.textContent = 'Error de red.'; fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; });
 }
 function emailTxt(email) {
   return email ? '<div class="contact-email-txt">' + esc(email) + '</div>' : '';
@@ -1046,7 +1084,7 @@ function renderFamilias(rows){
     var rowHtml='<div class="fam-row" onclick="toggleRow(\'fam\','+fi+')">'+
       '<div class="fam-left">'+
         '<span class="arrow" id="arr-fam-'+fi+'">▶</span>'+
-        '<div><div class="fam-name">'+esc(fname)+contactBtns(fam.email,fam.phone,_waMsgFam)+'</div>'+emailTxt(fam.email)+_retBadge+'</div>'+
+        '<div><div class="fam-name">'+esc(fname)+contactBtns(fam.email,fam.phone,_waMsgFam,_lastPed)+'</div>'+emailTxt(fam.email)+_retBadge+'</div>'+
       '</div>'+
       '<div class="fam-right">'+
         '<span class="badge-units">'+Math.round(fam.unidades)+' u.</span>'+
@@ -1207,7 +1245,7 @@ function renderProductos(rows){
       var _fh0=f.fechaMap&&_pid0&&f.fechaMap[_pid0]?'<div style="font-size:10px;color:#9ca3af">'+esc(f.fechaMap[_pid0])+'</div>':'';
       var _noRetPed=f.pedidos.length===1?'#'+_pid0+_fh0:f.pedidos.length+' pedidos';
       html+='<tr>'+
-        '<td><strong>'+esc(fname)+'</strong>'+contactBtns(f.email,f.phone,'\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido #'+(f.pedidos[0]||'')+'.') +emailTxt(f.email)+'</td>'+
+        '<td><strong>'+esc(fname)+'</strong>'+contactBtns(f.email,f.phone,'\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido #'+(f.pedidos[0]||'')+'.', f.pedidos[0]||'') +emailTxt(f.email)+'</td>'+
         '<td class="num"><span class="chip-g">'+Math.round(f.cantidad)+'</span></td>'+
         '<td class="num" style="color:#999">'+pesos(f.subtotal_bruto)+'</td>'+
         '<td class="num"><strong>'+pesos(f.total_pagado)+'</strong></td>'+
@@ -1373,5 +1411,21 @@ function exportarPDF(){
   window.print();
 }
 </script>
+<div id="modal-contacto-ref" onclick="if(event.target===this)cerrarModalContactoRef()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <h3 style="font-size:16px;font-weight:800;margin:0 0 16px;color:#1a1a1a">✉ Enviar mail</h3>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Para</div>
+    <div id="mc-ref-para" style="padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:13px;color:#374151;margin-bottom:12px;word-break:break-all"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Asunto</div>
+    <input id="mc-ref-asunto" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:4px">Mensaje</div>
+    <textarea id="mc-ref-cuerpo" rows="5" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:12px;resize:vertical;box-sizing:border-box"></textarea>
+    <div id="mc-ref-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="cerrarModalContactoRef()" style="padding:11px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#6b7280">Cancelar</button>
+      <button id="mc-ref-btn-enviar" onclick="enviarMailContactoRef()" style="padding:11px;background:#2d5a27;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Enviar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

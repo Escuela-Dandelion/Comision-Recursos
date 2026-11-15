@@ -1,4 +1,4 @@
-// v2026-11-14c — getRetirosData: agrega phone desde BD Compradores
+// v2026-11-14d — endpoint enviarContacto: mail branded desde dashboards
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -295,6 +295,19 @@ function doGetInterno(e) {
     }
     return ContentService.createTextOutput(JSON.stringify({ ok: true, retiros: retiros }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'enviarContacto') {
+    var authEmail = (e.parameter.auth_email || '').toLowerCase().trim();
+    var user = AUTH_EMAILS[authEmail];
+    if (!user) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'No autorizado' })).setMimeType(ContentService.MimeType.JSON);
+    var res = apiEnviarContacto(
+      e.parameter.destinatario || '',
+      e.parameter.asunto       || '',
+      e.parameter.mensaje      || '',
+      authEmail
+    );
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
   if (action === 'api_auth') {
@@ -678,6 +691,36 @@ function enviarEmail(email, nombre, order, qrBlob, productos) {
     from: 'tiendavirtual.dientedeleon@gmail.com',
     inlineImages: { qr_code: qrBlob }
   });
+}
+
+function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
+  if (!destinatario || destinatario.indexOf('@') === -1) return { ok: false, error: 'Email inválido' };
+  if (!asunto)  asunto  = 'Te contactamos por Tienda Diente de León';
+  if (!mensaje) mensaje = '';
+  var html =
+    '<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px 16px">' +
+    '<div style="text-align:center;padding:16px 0 28px 0">' +
+    '<img src="' + LOGO_B64 + '" style="max-width:220px;width:60%" alt="' + CONFIG.TIENDA_NOMBRE + '">' +
+    '</div>' +
+    '<div style="background:#f5f5f5;border-radius:8px;padding:20px 24px;font-size:15px;color:#333;line-height:1.7;white-space:pre-line">' +
+    mensaje.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+    '</div>' +
+    '<p style="font-size:12px;color:#aaa;margin-top:24px;text-align:center">' +
+    'Este mensaje fue enviado desde la Tienda Diente de León — Escuela Dandelion Waldorf, Córdoba.' +
+    '</p>' +
+    '</div>';
+  var opts = {
+    htmlBody: html,
+    from: 'tiendavirtual.dientedeleon@gmail.com',
+    name: CONFIG.TIENDA_NOMBRE
+  };
+  if (cc && cc.indexOf('@') !== -1) opts.cc = cc;
+  try {
+    GmailApp.sendEmail(destinatario, asunto, mensaje, opts);
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: String(e) };
+  }
 }
 
 // ──────────────────────────────────────────────────────────

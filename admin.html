@@ -1525,12 +1525,11 @@ function waUrlAdm(phone) {
   return n;
 }
 function contactBtnsAdm(email, phone, numero) {
-  var msg = '\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido' + (numero ? ' #' + numero : '') + '.';
+  var msg = '🌼 Hola, te escribo de la Tienda Diente de León por tu pedido' + (numero ? ' #' + numero : '') + '.';
+  var subj = 'Te contactamos por Tienda Diente de León' + (numero ? ' - Pedido #' + numero : '');
   var btns = '';
   if (email) {
-    var subj = 'Tienda Diente de León' + (numero ? ' - Pedido #' + numero : '');
-    var gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(email) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(msg);
-    btns += '<a href="' + gmailUrl + '" target="_blank" onclick="event.stopPropagation()" title="' + email + '" class="contact-btn-adm">' + _EMAIL_ICON_ADM + '</a>';
+    btns += '<button onclick="event.stopPropagation();abrirModalContacto(\'' + email.replace(/'/g,"\\'") + '\',\'' + subj.replace(/'/g,"\\'") + '\',\'' + msg.replace(/'/g,"\\'") + '\')" title="' + email + '" class="contact-btn-adm" style="border:none;padding:0">' + _EMAIL_ICON_ADM + '</button>';
   }
   if (phone) {
     var waNum = waUrlAdm(phone);
@@ -1541,6 +1540,43 @@ function contactBtnsAdm(email, phone, numero) {
 function emailTxtAdm(email) {
   return email ? '<div class="contact-email-txt-adm">' + email + '</div>' : '';
 }
+var _mcEmail = '';
+function abrirModalContacto(email, asunto, msg) {
+  _mcEmail = email;
+  document.getElementById('mc-para').textContent = email;
+  document.getElementById('mc-asunto').value = asunto;
+  document.getElementById('mc-cuerpo').value = msg;
+  document.getElementById('mc-feedback').style.display = 'none';
+  var btn = document.getElementById('mc-btn-enviar');
+  btn.disabled = false; btn.textContent = 'Enviar';
+  document.getElementById('v-modal-contacto').classList.add('open');
+}
+function cerrarModalContacto() {
+  document.getElementById('v-modal-contacto').classList.remove('open');
+}
+function enviarMailContacto() {
+  var asunto = document.getElementById('mc-asunto').value.trim();
+  var cuerpo = document.getElementById('mc-cuerpo').value.trim();
+  var fb     = document.getElementById('mc-feedback');
+  var btn    = document.getElementById('mc-btn-enviar');
+  if (!asunto || !cuerpo) { fb.textContent = 'Completá el asunto y el mensaje.'; fb.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  fb.style.display = 'none';
+  var authEmail = (_adminOriginal ? _adminOriginal.email : (currentUser ? currentUser.email : ''));
+  var url = GAS_URL + '?action=enviarContacto'
+    + '&auth_email='   + encodeURIComponent(authEmail)
+    + '&destinatario=' + encodeURIComponent(_mcEmail)
+    + '&asunto='       + encodeURIComponent(asunto)
+    + '&mensaje='      + encodeURIComponent(cuerpo);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) { btn.textContent = '✓ Enviado'; setTimeout(cerrarModalContacto, 1200); }
+      else { fb.textContent = 'Error: ' + (d.error || 'intentá de nuevo'); fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; }
+    })
+    .catch(function() { fb.textContent = 'Error de red.'; fb.style.display = 'block'; btn.disabled = false; btn.textContent = 'Enviar'; });
+}
+
 
 function renderVentas(rows) {
   if (!rows) rows = _ventas;
@@ -1551,7 +1587,7 @@ function renderVentas(rows) {
     cont.style.display = 'block'; return;
   }
   cont.innerHTML = '<div class="v-table-wrap"><div style="overflow-x:auto"><table class="v-table">' +
-    '<thead><tr><th>Pedido</th><th>Comprador</th><th>Productos</th><th>Total</th><th>Estado</th><th>Grado</th><th>Quién entregó</th><th>Notas</th><th style="width:40px"></th></tr></thead><tbody>' +
+    '<thead><tr><th>Pedido</th><th>Comprador</th><th>Productos</th><th>Total</th><th>Estado</th><th style="white-space:nowrap">Aporte a Grado</th><th>Quién entregó</th><th style="min-width:160px">Notas</th><th style="width:40px"></th></tr></thead><tbody>' +
     rows.map(function(v, i) {
       var entregado = v.estado === 'Entregado';
       var esParcialV = v.estado === 'Parcial' || v.parcial === true;
@@ -1565,7 +1601,7 @@ function renderVentas(rows) {
       var detalle = prods.map(function(p){ return '<div style="padding:2px 0;font-size:12px;color:#374151">• ' + p + '</div>'; }).join('');
       return '<tr style="cursor:pointer" onclick="toggleVRow(' + i + ')">' +
         '<td><strong style="color:#2d5a27">#' + v.numero + '</strong><div style="font-size:10px;color:#9ca3af;margin-top:2px">' + v.fecha + '</div></td>' +
-        '<td><strong>' + v.nombre + '</strong>' + contactBtnsAdm(v.email, v.phone, v.numero) + emailTxtAdm(v.email) + '</td>' +
+        '<td style="max-width:160px"><strong>' + v.nombre + '</strong>' + contactBtnsAdm(v.email, v.phone, v.numero) + emailTxtAdm(v.email) + '</td>' +
         '<td><button style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#2d5a27;padding:0">' + resumen + '</button></td>' +
         '<td style="font-weight:700;color:#2d5a27;white-space:nowrap">' + fmtPesosAR(v.total) + '</td>' +
         '<td>' + pill + (entregado && v.fechaEntrega ? '<div style="font-size:10px;color:#9ca3af;margin-top:3px">' + v.fechaEntrega + '</div>' : '') + '</td>' +
@@ -1989,6 +2025,22 @@ function reiniciarQR() {
     <div class="v-modal-btns">
       <button class="v-modal-cancel" onclick="cerrarVModal('entregar')">Cancelar</button>
       <button class="v-modal-confirm" id="v-entregar-btn" onclick="confirmarEntregaDesdeListado()">Confirmar entrega</button>
+    </div>
+  </div>
+</div>
+<div class="v-modal-overlay" id="v-modal-contacto" onclick="if(event.target===this)cerrarModalContacto()">
+  <div class="v-modal" style="max-width:460px">
+    <h3>✉ Enviar mail</h3>
+    <label>Para</label>
+    <div id="mc-para" style="padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:13px;color:#374151;margin-bottom:12px;word-break:break-all"></div>
+    <label>Asunto</label>
+    <input id="mc-asunto" type="text">
+    <label>Mensaje</label>
+    <textarea id="mc-cuerpo" rows="5"></textarea>
+    <div id="mc-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
+    <div class="v-modal-btns">
+      <button class="v-modal-cancel" onclick="cerrarModalContacto()">Cancelar</button>
+      <button class="v-modal-confirm" id="mc-btn-enviar" onclick="enviarMailContacto()">Enviar</button>
     </div>
   </div>
 </div>
