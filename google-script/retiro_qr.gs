@@ -1,4 +1,4 @@
-// v2026-11-16c — fix emojis en mails: surrogate pairs → entidades HTML numéricas
+// v2026-11-16d — CC en enviarContacto: FGP del proveedor, no quien está logueado
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -305,7 +305,7 @@ function doGetInterno(e) {
       e.parameter.destinatario || '',
       e.parameter.asunto       || '',
       e.parameter.mensaje      || '',
-      authEmail
+      e.parameter.cc           || ''
     );
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
@@ -1976,7 +1976,7 @@ function apiDashboard(email) {
       if (u.role === 'FGP' && u.proveedores && u.proveedores.length > 0) {
         // Deduplicar por nombre (varios emails del mismo FGP)
         var yaExiste = fgpList.some(function(x) { return x.name === u.name; });
-        if (!yaExiste) fgpList.push({ name: u.name, proveedores: u.proveedores });
+        if (!yaExiste) fgpList.push({ name: u.name, proveedores: u.proveedores, email: emailsFGP[fi] });
       }
     }
     fgpList.sort(function(a, b) { return a.name.localeCompare(b.name); });
