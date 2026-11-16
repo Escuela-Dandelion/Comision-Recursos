@@ -200,6 +200,24 @@
   function renderGrupos(grupos) {
     var cont = document.getElementById('content');
     cont.innerHTML = '';
+
+    // Resumen global de ventas pendientes
+    var totalUnidGlobal = 0, totalCostoGlobal = 0, provsPendientes = 0;
+    Object.keys(grupos).forEach(function(prov) {
+      var pend = grupos[prov].filter(function(l) { return !l.estadoPedido; });
+      if (pend.length) {
+        provsPendientes++;
+        pend.forEach(function(l) { totalUnidGlobal += l.cantidad; totalCostoGlobal += l.costo * l.cantidad; });
+      }
+    });
+    var resumen = document.createElement('div');
+    resumen.style.cssText = 'background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;';
+    resumen.innerHTML =
+      '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534">Total pendiente</span>' +
+      '<span style="font-size:15px;font-weight:800;color:#166534">' + fmt(totalCostoGlobal) + '</span>' +
+      '<span style="font-size:13px;color:#4b7a53">' + totalUnidGlobal + ' unidades · ' + provsPendientes + ' proveedor' + (provsPendientes !== 1 ? 'es' : '') + '</span>';
+    cont.appendChild(resumen);
+
     Object.keys(grupos).sort().forEach(function(prov) {
       var lineas    = grupos[prov];
       // sin pedido primero, vigente después
