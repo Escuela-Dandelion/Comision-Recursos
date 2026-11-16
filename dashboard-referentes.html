@@ -563,7 +563,7 @@ function enviarMailContactoRef() {
     + '&destinatario=' + encodeURIComponent(_mcEmailRef)
     + '&asunto='       + encodeURIComponent(asunto)
     + '&mensaje='      + encodeURIComponent(cuerpo);
-  fetch(url)
+  fetch(url, { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.ok) { btn.textContent = '✓ Enviado'; setTimeout(cerrarModalContactoRef, 1200); }

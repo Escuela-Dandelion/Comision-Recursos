@@ -1,4 +1,4 @@
-// v2026-11-14d — endpoint enviarContacto: mail branded desde dashboards
+// v2026-11-16 — charset UTF-8 en htmlBody de apiEnviarContacto (fix emojis en mails)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -698,6 +698,7 @@ function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
   if (!asunto)  asunto  = 'Te contactamos por Tienda Diente de León';
   if (!mensaje) mensaje = '';
   var html =
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
     '<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px 16px">' +
     '<div style="text-align:center;padding:16px 0 28px 0">' +
     '<img src="' + LOGO_B64 + '" style="max-width:220px;width:60%" alt="' + CONFIG.TIENDA_NOMBRE + '">' +
@@ -708,7 +709,8 @@ function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
     '<p style="font-size:12px;color:#aaa;margin-top:24px;text-align:center">' +
     'Este mensaje fue enviado desde la Tienda Diente de León — Escuela Dandelion Waldorf, Córdoba.' +
     '</p>' +
-    '</div>';
+    '</div>' +
+    '</body></html>';
   var opts = {
     htmlBody: html,
     from: 'tiendavirtual.dientedeleon@gmail.com',
