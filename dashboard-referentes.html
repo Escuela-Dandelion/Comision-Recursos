@@ -461,6 +461,18 @@
 
 <script>
 var APPS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var _PROV_ALIAS = {
+  'TIENDA LIMON':'Tienda Limón','TIENDA LIMÓN':'Tienda Limón',
+  'EL ARISTEO':'Tienda Limón','ARISTEO':'Tienda Limón','BENDITA LLUVIA':'Tienda Limón',
+  'EL MAITEN':'El Maiten','GRANOLA':'El Maiten',
+  'MIX Y FRUTOS SECOS':'BioSalud','BIOSALUD':'BioSalud',
+  'SOL DE PAPEL':'Sol de Oro',
+  'GUARDIANES COLMENA':'Guardianes de la Colmena','GUARDIANES DE LA COLMENA':'Guardianes de la Colmena',
+  'YEMARI':'Yemari','CABALLO NEGRO':'Caballo Negro','LA YAYA':'La Yaya',
+  'GROEN':'Groen','ODDIS':'Oddis','PARAISA':'Paraisa','NAZARENO':'Nazareno',
+  'PAJARITO AMARILLO':'Pajarito Amarillo',
+};
+function normProv(p){ return _PROV_ALIAS[(p||'').trim().toUpperCase()] || (p||'').trim(); }
 var ALL_ROWS  = [];
 var _ALL_ROWS_FULL = []; // copia sin filtro de rol — solo admin la usa
 var ALL_MESES = [];
@@ -736,8 +748,8 @@ function initDashboard(d){
   _userProveedores = d.proveedores || [];
 
   ALL_ROWS = (d.rows||[])
-    .filter(function(r){ return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(r.proveedor) === -1; })
-    .map(function(r){ r.grado=normalizarGrado(r.grado); return r; });
+    .map(function(r){ r.proveedor=normProv(r.proveedor); r.grado=normalizarGrado(r.grado); return r; })
+    .filter(function(r){ return PROVEEDORES_EXCLUIR_REFERENTES.indexOf(r.proveedor) === -1; });
   _ALL_ROWS_FULL  = ALL_ROWS;
 
   // FGP: filtrar a sus propios proveedores, ocultar selector de proveedor

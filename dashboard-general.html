@@ -493,6 +493,18 @@
 var APPS_URL      = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var PROVEEDOR_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
 var PALETTE  = ['#a8c4e0','#b5d5c5','#c9b8d8','#f0c9a0','#aad4e8','#d4b8c7','#b8d4b8','#d4c9a8','#c4b8d8','#a8d4c4'];
+var _PROV_ALIAS = {
+  'TIENDA LIMON':'Tienda Limón','TIENDA LIMÓN':'Tienda Limón',
+  'EL ARISTEO':'Tienda Limón','ARISTEO':'Tienda Limón','BENDITA LLUVIA':'Tienda Limón',
+  'EL MAITEN':'El Maiten','GRANOLA':'El Maiten',
+  'MIX Y FRUTOS SECOS':'BioSalud','BIOSALUD':'BioSalud',
+  'SOL DE PAPEL':'Sol de Oro',
+  'GUARDIANES COLMENA':'Guardianes de la Colmena','GUARDIANES DE LA COLMENA':'Guardianes de la Colmena',
+  'YEMARI':'Yemari','CABALLO NEGRO':'Caballo Negro','LA YAYA':'La Yaya',
+  'GROEN':'Groen','ODDIS':'Oddis','PARAISA':'Paraisa','NAZARENO':'Nazareno',
+  'PAJARITO AMARILLO':'Pajarito Amarillo',
+};
+function normProv(p){ return _PROV_ALIAS[(p||'').trim().toUpperCase()] || (p||'').trim(); }
 var ALL_ROWS       = [];
 var _ALL_ROWS_FULL = [];
 var ALL_MESES      = [];
@@ -700,7 +712,7 @@ function initDashboard(d) {
   _userRole        = d.role || '';
   _userProveedores = d.proveedores || [];
 
-  ALL_ROWS = (d.rows||[]).map(function(r){ r.grado = normalizarGrado(r.grado); return r; });
+  ALL_ROWS = (d.rows||[]).map(function(r){ r.proveedor=normProv(r.proveedor); r.grado=normalizarGrado(r.grado); return r; });
   _ALL_ROWS_FULL = ALL_ROWS;
 
   // FGP: filtrar a sus propios proveedores, ocultar selector de proveedor
