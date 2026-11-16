@@ -231,6 +231,17 @@
             list.appendChild(opt);
           }
         });
+        // Registrar en _skuMap los pares nombre→SKU que vienen del draft
+        // (los nombres en Ventas pueden diferir levemente de los nombres en TN)
+        document.querySelectorAll('#tbody-productos tr').forEach(function(tr) {
+          var draftSku  = tr.dataset.sku;
+          var inp       = tr.querySelector('.p-nombre');
+          var draftName = inp ? inp.value.trim() : '';
+          if (draftSku && draftName && !_skuMap[draftName.toUpperCase()]) {
+            _skuMap[draftName.toUpperCase()]    = draftSku;
+            _nombreMap[draftSku.toUpperCase()]  = draftName;
+          }
+        });
         // Setear hints en todas las filas; actualizar las pre-llenadas desde draft
         document.querySelectorAll('.p-nombre').forEach(function(input) {
           input.placeholder = 'Buscar producto…';
