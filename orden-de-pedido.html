@@ -241,19 +241,24 @@
             hint.style.cssText = 'font-size:10px;color:#9ca3af;margin-top:2px;display:none;';
             input.parentNode.appendChild(hint);
           }
-          function actualizarHint() {
+          function actualizarHint(limpiarSku) {
             var val = input.value.trim();
+            var tr  = input.closest('tr');
             var sku = _skuMap[val.toUpperCase()];
-            if (!sku) { hint.textContent = ''; hint.style.display = 'none'; input.closest('tr').dataset.sku = ''; return; }
-            input.closest('tr').dataset.sku = sku;
+            if (!sku) {
+              hint.textContent = ''; hint.style.display = 'none';
+              if (limpiarSku) tr.dataset.sku = '';
+              return;
+            }
+            tr.dataset.sku = sku;
             // si val ya es el SKU → mostrar el nombre; si es el nombre → mostrar el SKU
             var esElSku = sku.toUpperCase() === val.toUpperCase();
             var hintText = esElSku ? (_nombreMap[sku.toUpperCase()] || '') : sku;
             hint.textContent = hintText;
             hint.style.display = hintText ? '' : 'none';
           }
-          input.addEventListener('input', actualizarHint);
-          if (input.value) actualizarHint();
+          input.addEventListener('input', function() { actualizarHint(true); });
+          if (input.value) actualizarHint(false);
         });
       }).catch(function(){});
   }
