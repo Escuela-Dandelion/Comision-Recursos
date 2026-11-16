@@ -206,8 +206,9 @@
       lineas.sort(function(a, b) {
         return (a.estadoPedido ? 1 : 0) - (b.estadoPedido ? 1 : 0);
       });
-      var totalCosto = lineas.reduce(function(s, l) { return s + (l.costo * l.cantidad); }, 0);
-      var totalUnid  = lineas.reduce(function(s, l) { return s + l.cantidad; }, 0);
+      var pendientes = lineas.filter(function(l) { return !l.estadoPedido; });
+      var totalCosto = pendientes.reduce(function(s, l) { return s + (l.costo * l.cantidad); }, 0);
+      var totalUnid  = pendientes.reduce(function(s, l) { return s + l.cantidad; }, 0);
 
       var div = document.createElement('div');
       div.className = 'grupo';
