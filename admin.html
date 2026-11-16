@@ -770,7 +770,7 @@ function iniciarApp(user) {
   document.getElementById('app').style.display = 'block';
   document.getElementById('header-name').textContent = user.name;
   document.getElementById('header-role').textContent = ROLE_LABELS[user.role] || user.role;
-  if (user.email === 'robertson.ine@gmail.com') {
+  if ((user.role || '').toUpperCase() === 'ADMIN') {
     document.getElementById('ver-como-wrap').style.display = 'flex';
   }
   aplicarPermisos(user.role);

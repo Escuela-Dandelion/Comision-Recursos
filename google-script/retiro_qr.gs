@@ -1,4 +1,4 @@
-// v2026-11-16 — charset UTF-8 en htmlBody de apiEnviarContacto (fix emojis en mails)
+// v2026-11-16b — Pía → ADMIN; Ver como visible para todos los ADMIN
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2050,7 +2050,7 @@ var AUTH_EMAILS = {
   'belen.ravaza@dandelion.edu.ar':   { role: 'FGP', name: 'Belén',  proveedores: [] },
   'avilaclaudio1905@gmail.com':      { role: 'referente', name: 'Claudio' },
   'inesitavasquezoliva@gmail.com':   { role: 'referente', name: 'Inés' },
-  'pialucarno@gmail.com':            { role: 'FGP',   name: 'Pia',    proveedores: ['El Maiten','Oddis','BioSalud','Pajarito Amarillo'] },
+  'pialucarno@gmail.com':            { role: 'ADMIN', name: 'Pía' },
   'elinapipino8@gmail.com':          { role: 'referente', name: 'Elina' },
   'paola@bodegatres.com.ar':         { role: 'referente', name: 'Paola' },
   'monicachesta@gmail.com':          { role: 'FGP',   name: 'Monica', proveedores: ['La Yaya','Guardianes de la Colmena','Groen','Oddis','Yemari','Caballo Negro'] },
