@@ -1,4 +1,4 @@
-// v2026-11-16b — Pía → ADMIN; Ver como visible para todos los ADMIN
+// v2026-11-16c — fix emojis en mails: surrogate pairs → entidades HTML numéricas
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -693,10 +693,33 @@ function enviarEmail(email, nombre, order, qrBlob, productos) {
   });
 }
 
+// Convierte emojis (surrogate pairs) a entidades HTML numéricas para que
+// los clientes de correo los rendericen sin importar el encoding del servidor.
+function _encodeEmojisHtml(str) {
+  var out = '';
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
+      var lo = str.charCodeAt(i + 1);
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        var cp = 0x10000 + (c - 0xD800) * 0x400 + (lo - 0xDC00);
+        out += '&#x' + cp.toString(16).toUpperCase() + ';';
+        i++;
+        continue;
+      }
+    }
+    out += str[i];
+  }
+  return out;
+}
+
 function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
   if (!destinatario || destinatario.indexOf('@') === -1) return { ok: false, error: 'Email inválido' };
   if (!asunto)  asunto  = 'Te contactamos por Tienda Diente de León';
   if (!mensaje) mensaje = '';
+  var mensajeHtml = _encodeEmojisHtml(mensaje.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  // Texto plano sin emojis (evita corrupción en la parte text/plain del multipart)
+  var mensajePlano = mensaje.replace(/[\uD800-\uDFFF]/g, '').trim() || '(Ver versión HTML)';
   var html =
     '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
     '<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px 16px">' +
@@ -704,7 +727,7 @@ function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
     '<img src="' + LOGO_B64 + '" style="max-width:220px;width:60%" alt="' + CONFIG.TIENDA_NOMBRE + '">' +
     '</div>' +
     '<div style="background:#f5f5f5;border-radius:8px;padding:20px 24px;font-size:15px;color:#333;line-height:1.7;white-space:pre-line">' +
-    mensaje.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+    mensajeHtml +
     '</div>' +
     '<p style="font-size:12px;color:#aaa;margin-top:24px;text-align:center">' +
     'Este mensaje fue enviado desde la Tienda Diente de León — Escuela Dandelion Waldorf, Córdoba.' +
@@ -718,7 +741,7 @@ function apiEnviarContacto(destinatario, asunto, mensaje, cc) {
   };
   if (cc && cc.indexOf('@') !== -1) opts.cc = cc;
   try {
-    GmailApp.sendEmail(destinatario, asunto, mensaje, opts);
+    GmailApp.sendEmail(destinatario, asunto, mensajePlano, opts);
     return { ok: true };
   } catch(e) {
     return { ok: false, error: String(e) };
