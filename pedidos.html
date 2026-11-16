@@ -350,13 +350,6 @@
   <div id="loadingSpinner">Cargando pedidos…</div>
   <div id="listaContent" style="display:none">
 
-    <!-- Resumen global de la vista actual -->
-    <div id="resumen-vista" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534" id="resumen-vista-label">Total en proceso</span>
-      <span style="font-size:15px;font-weight:800;color:#166534" id="resumen-vista-total"></span>
-      <span style="font-size:13px;color:#4b7a53" id="resumen-vista-count"></span>
-    </div>
-
     <!-- Resumen pendiente de pago -->
     <div id="resumen-pendiente" style="display:none;background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:14px;border-left:4px solid #f59e0b;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <div>
@@ -431,6 +424,7 @@
       <div id="contadorFiltro" style="font-size:12px;color:#9ca3af;margin-top:8px"></div>
     </div>
 
+    <div id="resumen-vista" style="display:none;font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 2px"></div>
     <div id="pedidosList"></div>
   </div>
 </div>
@@ -1317,7 +1311,7 @@ function renderResumenPendiente() {
 function renderLista(pedidos) {
   renderResumenPendiente();
 
-  // Resumen verde: total de la vista actual
+  // Línea de totales encima de la tabla
   var elVista = document.getElementById('resumen-vista');
   if (elVista) {
     var totalVista = 0;
@@ -1325,10 +1319,10 @@ function renderLista(pedidos) {
       var t = calcTotalProductos(p.productos || '');
       totalVista += t > 0 ? t : (parseFloat(p.total) || 0);
     });
-    if (pedidos.length && totalVista > 0) {
-      document.getElementById('resumen-vista-total').textContent = formatPesosConDec(totalVista);
-      document.getElementById('resumen-vista-count').textContent = pedidos.length + (pedidos.length === 1 ? ' pedido' : ' pedidos');
-      elVista.style.display = 'flex';
+    if (pedidos.length) {
+      var label = pedidos.length + (pedidos.length === 1 ? ' pedido' : ' pedidos');
+      elVista.textContent = totalVista > 0 ? label + ' · ' + formatPesosConDec(totalVista) : label;
+      elVista.style.display = 'block';
     } else {
       elVista.style.display = 'none';
     }
