@@ -1170,7 +1170,7 @@ function eliminarPedido(norden) {
       cerrarModal();
       todosLosPedidos = todosLosPedidos.filter(function(p) { return p.norden !== norden; });
       volverALista();
-      renderLista();
+      aplicarFiltros();
       mostrarFlash('🗑️ Pedido ' + norden + ' eliminado.', 'success');
     })
     .catch(function() {
@@ -1599,7 +1599,9 @@ function _aplicarFiltrosSync() {
 
   // Filtro impersonalización — solo pedidos de las marcas del usuario simulado
   if (_impMarcas.length > 0) {
-    resultado = resultado.filter(function(p) { return _impMarcas.indexOf((p.proveedor || '').toUpperCase()) !== -1; });
+    var _normAcc = function(s){ return (s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,''); };
+    var _impNorm = _impMarcas.map(_normAcc);
+    resultado = resultado.filter(function(p) { return _impNorm.indexOf(_normAcc(p.proveedor)) !== -1; });
   }
 
   // Mostrar/ocultar botón limpiar

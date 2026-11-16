@@ -1512,7 +1512,11 @@ function aplicarFiltrosVentas() {
   });
 
   var contador = document.getElementById('ventas-contador');
-  if (contador) contador.textContent = rows.length + ' resultado' + (rows.length !== 1 ? 's' : '');
+  if (contador) {
+    var totalVentas = rows.reduce(function(s, v) { return s + (parseFloat(v.total) || 0); }, 0);
+    var labelV = rows.length + (rows.length === 1 ? ' resultado' : ' resultados');
+    contador.textContent = totalVentas > 0 ? labelV + ' · ' + fmtPesosAR(totalVentas) : labelV;
+  }
   renderVentas(rows);
 }
 
