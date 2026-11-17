@@ -512,6 +512,7 @@ function _auditLog(recurso, id, campo, antes, despues) {
 }
 var _productos  = [];
 var _productoActual = null;
+var _descAntesQuill       = '';
 var _fotoBase64           = null;
 var _fotoMime             = null;
 var _fotoTargetVarianteId = null;
@@ -980,6 +981,7 @@ function abrirEditor(productoId) {
   document.getElementById('panel-titulo').textContent = p.nombre;
   document.getElementById('edit-nombre').value       = p.nombre;
   quill.root.innerHTML = p.descripcion || '';
+  _descAntesQuill = quill.root.innerHTML;
 
   // Fotos
   renderGaleria(p);
@@ -1162,18 +1164,19 @@ function guardarInfo() {
   var btn = document.getElementById('btn-guardar-info');
   btn.disabled = true; setSt('info', 'Guardando...');
   var _nombreAntes = _productoActual.nombre;
-  var _descAntes   = _productoActual.descripcion || '';
-  var _pInfo = new URLSearchParams({ action: 'update_producto', email: currentUser.email, producto_id: String(_productoActual.id), nombre: nombre, descripcion: desc });
-  fetch(GAS_URL + '?' + _pInfo.toString(), { redirect: 'follow' })
+  var _descAntes   = _descAntesQuill;
+  fetch(GAS_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: String(_productoActual.id), nombre: nombre, descripcion: desc }) })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     btn.disabled = false;
     if (d.ok) {
       _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
-      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes).substring(0,400), _stripHtml(desc).substring(0,400)); }
+      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes).substring(0,1000), _stripHtml(desc).substring(0,1000)); }
       setSt('info', '✓ Guardado', true);
       _productoActual.nombre      = nombre;
       _productoActual.descripcion = desc;
+      _descAntesQuill = desc;
       document.getElementById('panel-titulo').textContent = nombre;
       var row = document.getElementById('row-' + _productoActual.id);
       if (row) {
