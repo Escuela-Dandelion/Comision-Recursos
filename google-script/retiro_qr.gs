@@ -1,4 +1,4 @@
-// v2026-11-16p — Envio en Retiros (col 14) y Ventas (col Z); backfillEnvioRetiros()
+// v2026-11-16p — Envio en Retiros/Ventas; backfill renormaliza valores no reconocidos
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2119,7 +2119,7 @@ function _normalizarEnvio(order) {
   if (_esEnvioADomicilio(order)) return 'Envio a Domicilio';
   var texto = ((order.shipping_option || '') + ' ' + (order.shipping_carrier_name || '')).toLowerCase();
   if (texto.indexOf('primaria')   !== -1) return 'Retira por Primaria';
-  if (texto.indexOf('secundaria') !== -1) return 'Retira por Secundaria';
+  if (texto.indexOf('secundaria') !== -1 || texto.indexOf('secu') !== -1) return 'Retira por Secundaria';
   return order.shipping_option || order.shipping_carrier_name || '';
 }
 
@@ -2637,7 +2637,9 @@ function backfillEnvioRetiros(dryRun) {
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (!row[0]) continue;
-    if (String(row[13] || '').trim() !== '') continue; // ya tiene valor
+    var valorActual = String(row[13] || '').trim();
+    var esConocido = valorActual === 'Retira por Primaria' || valorActual === 'Retira por Secundaria' || valorActual === 'Envio a Domicilio' || valorActual === '';
+    if (valorActual !== '' && esConocido) continue; // ya está bien normalizado
     var orderId = String(row[0]);
     try {
       var order = fetchOrder(orderId);
