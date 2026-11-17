@@ -2130,7 +2130,7 @@ function _esEnvioADomicilio(order) {
   var option  = (order.shipping_option || '').toLowerCase();
   var texto   = carrier + ' ' + option;
   Logger.log('[envio] orden #' + order.number + ' carrier="' + carrier + '" option="' + option + '" min_days=' + order.shipping_min_days);
-  if (texto.indexOf('retiro') !== -1 || texto.indexOf('pickup') !== -1) return false;
+  if (texto.indexOf('retiro') !== -1 || texto.indexOf('pickup') !== -1 || texto.indexOf('dandelion') !== -1 || texto.indexOf('escuela') !== -1) return false;
   return (order.shipping_min_days || 0) > 0;
 }
 
@@ -2652,8 +2652,7 @@ function backfillEnvioRetiros(dryRun) {
     var row = data[i];
     if (!row[0]) continue;
     var valorActual = String(row[13] || '').trim();
-    var esConocido = valorActual === 'Retira por Primaria' || valorActual === 'Retira por Secundaria' || valorActual === 'Envio a Domicilio' || valorActual === '';
-    if (valorActual !== '' && esConocido) continue; // ya está bien normalizado
+    if (valorActual === 'Retira por Primaria' || valorActual === 'Retira por Secundaria') continue; // ya está bien normalizado
     var orderId = String(row[0]);
     try {
       var order = fetchOrder(orderId);
