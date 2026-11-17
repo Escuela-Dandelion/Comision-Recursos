@@ -1172,7 +1172,7 @@ function guardarInfo() {
     btn.disabled = false;
     if (d.ok) {
       _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
-      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes).substring(0,1000), _stripHtml(desc).substring(0,1000)); }
+      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes), _stripHtml(desc)); }
       setSt('info', '✓ Guardado', true);
       _productoActual.nombre      = nombre;
       _productoActual.descripcion = desc;

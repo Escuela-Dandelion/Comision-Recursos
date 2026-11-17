@@ -1,4 +1,4 @@
-// v2026-11-16g — AuditLog: doPost para textos largos (descripcion, fotos)
+// v2026-11-16h — AuditLog: descripcion sin truncado (5000 chars), otros campos 500
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3533,8 +3533,9 @@ function registrarAuditLog(email, recurso, id, campo, antes, despues) {
     sh.setFrozenRows(1);
     sh.getRange('A1:G1').setFontWeight('bold');
   }
+  var maxLen = campo === 'descripcion' ? 5000 : 500;
   sh.appendRow([new Date(), email, recurso, String(id), campo,
-    String(antes).substring(0, 1000), String(despues).substring(0, 1000)]);
+    String(antes).substring(0, maxLen), String(despues).substring(0, maxLen)]);
   // Purgar filas con más de 30 días
   var limite = new Date();
   limite.setDate(limite.getDate() - 30);
