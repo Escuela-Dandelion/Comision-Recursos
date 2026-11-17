@@ -502,6 +502,11 @@ textarea.field { min-height: 90px; resize: vertical; }
 var GAS_URL     = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var CLIENT_ID   = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
 var currentUser = null;
+function _auditLog(recurso, id, campo, antes, despues) {
+  if (String(antes) === String(despues)) return;
+  var email = (currentUser && currentUser.email) ? currentUser.email : 'desconocido';
+  fetch(GAS_URL + '?' + new URLSearchParams({ action:'auditLog', email:email, recurso:recurso, id:String(id), campo:campo, antes:String(antes).substring(0,500), despues:String(despues).substring(0,500) }).toString(), { redirect:'follow' }).catch(function(){});
+}
 var _productos  = [];
 var _productoActual = null;
 var _fotoBase64           = null;
@@ -1153,12 +1158,16 @@ function guardarInfo() {
   if (!nombre) { setSt('info', 'El nombre no puede estar vacío.', false); return; }
   var btn = document.getElementById('btn-guardar-info');
   btn.disabled = true; setSt('info', 'Guardando...');
+  var _nombreAntes = _productoActual.nombre;
+  var _descAntes   = _productoActual.descripcion || '';
   var _pInfo = new URLSearchParams({ action: 'update_producto', email: currentUser.email, producto_id: String(_productoActual.id), nombre: nombre, descripcion: desc });
   fetch(GAS_URL + '?' + _pInfo.toString(), { redirect: 'follow' })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     btn.disabled = false;
     if (d.ok) {
+      _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
+      _auditLog('Producto', _productoActual.id, 'descripcion', _descAntes, desc);
       setSt('info', '✓ Guardado', true);
       _productoActual.nombre      = nombre;
       _productoActual.descripcion = desc;
@@ -1178,19 +1187,32 @@ function guardarPrecios() {
   if (!_productoActual) return;
   var btn = document.getElementById('btn-guardar-precios');
   btn.disabled = true; setSt('precios', 'Guardando...');
+  var _preciosAntes = {};
+  _productoActual.variantes.forEach(function(v) {
+    _preciosAntes[v.id] = { precio: v.precio, promo: v.precio_promo || 0, costo: v.costo || 0 };
+  });
   var promesas = _productoActual.variantes.map(function(v) {
     var precio = document.getElementById('precio-' + v.id).value;
     var promo  = document.getElementById('promo-'  + v.id).value;
     var costoEl = document.getElementById('costo-' + v.id);
     var costo   = costoEl ? costoEl.value : String(v.costo || 0);
     var _pPr = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_productoActual.id), variante_id: String(v.id), precio: precio, precio_promo: promo, costo: costo });
-    return fetch(GAS_URL + '?' + _pPr.toString(), { redirect: 'follow' }).then(function(r) { return r.json(); });
+    return fetch(GAS_URL + '?' + _pPr.toString(), { redirect: 'follow' }).then(function(r) { return r.json().then(function(d) { return { d: d, v: v, precio: precio, promo: promo, costo: costo }; }); });
   });
   Promise.all(promesas).then(function(resultados) {
     btn.disabled = false;
-    var errores = resultados.filter(function(r) { return !r.ok; });
-    if (errores.length) { setSt('precios', errores[0].error || 'Error', false); }
-    else { setSt('precios', '✓ Guardado', true); actualizarVariantesLocales('precios'); }
+    var errores = resultados.filter(function(r) { return !r.d.ok; });
+    if (errores.length) { setSt('precios', errores[0].d.error || 'Error', false); }
+    else {
+      resultados.forEach(function(r) {
+        var label = r.v.nombre || r.v.sku || String(r.v.id);
+        var ant = _preciosAntes[r.v.id];
+        _auditLog('Producto', _productoActual.id, 'precio[' + label + ']', ant.precio, r.precio);
+        _auditLog('Producto', _productoActual.id, 'precio_promo[' + label + ']', ant.promo, r.promo);
+        _auditLog('Producto', _productoActual.id, 'costo[' + label + ']', ant.costo, r.costo);
+      });
+      setSt('precios', '✓ Guardado', true); actualizarVariantesLocales('precios');
+    }
   }).catch(function(err) { btn.disabled = false; setSt('precios', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar con el servidor'), false); });
 }
 
@@ -1238,6 +1260,11 @@ function _ejecutarGuardarStock() {
   if (!_productoActual) return;
   var btn = document.getElementById('btn-guardar-stock');
   btn.disabled = true; setSt('stock', 'Guardando...');
+  var _stockAntes = {};
+  _productoActual.variantes.forEach(function(v) {
+    var pEl = document.getElementById('stockP-' + v.id);
+    _stockAntes[v.id] = { esInf: v.stock === null, total: v.stock, ant: pEl ? pEl.dataset.totalOriginal : v.stock };
+  });
 
   var promesas = _productoActual.variantes.map(function(v) {
     var esInf = document.getElementById('inf-' + v.id).checked;
@@ -1282,6 +1309,15 @@ function _ejecutarGuardarStock() {
     var errores = resultados.filter(function(r) { return !r.ok; });
     if (errores.length) { setSt('stock', errores[0].error || 'Error', false); }
     else {
+      _productoActual.variantes.forEach(function(v) {
+        var label  = v.nombre || v.sku || String(v.id);
+        var esInfN = document.getElementById('inf-' + v.id).checked;
+        var pEl    = document.getElementById('stockP-' + v.id);
+        var sEl    = document.getElementById('stockS-' + v.id);
+        var nuevoTotal = esInfN ? '∞' : String((pEl ? (parseInt(pEl.value)||0) : 0) + (sEl ? (parseInt(sEl.value)||0) : 0));
+        var antesVal   = _stockAntes[v.id] ? (_stockAntes[v.id].esInf ? '∞' : String(_stockAntes[v.id].ant)) : '?';
+        _auditLog('Producto', _productoActual.id, 'stock[' + label + ']', antesVal, nuevoTotal);
+      });
       setSt('stock', '✓ Guardado', true);
       actualizarVariantesLocales('stock');
       setTimeout(function() { recargarProductos(); }, 800);
@@ -1334,6 +1370,7 @@ function togglePublicado() {
   if (!_productoActual) return;
   var togEl   = document.getElementById('toggle-publicado');
   var checked = togEl.checked;
+  var _pubAntes = _productoActual.publicado;
   togEl.disabled = true;
   setSt('publicado', 'Guardando...');
   var params = new URLSearchParams({
@@ -1347,6 +1384,7 @@ function togglePublicado() {
     .then(function(d) {
       togEl.disabled = false;
       if (d.ok) {
+        _auditLog('Producto', _productoActual.id, 'publicado', _pubAntes ? 'Publicado' : 'No listado', checked ? 'Publicado' : 'No listado');
         _productoActual.publicado = checked;
         document.getElementById('publicado-label').textContent = checked ? 'Publicado' : 'No listado';
         document.getElementById('badge-oculto').style.display = checked ? 'none' : '';

@@ -759,8 +759,14 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
-const SHEET_CSV  = 'https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/export?format=csv&gid=857535467';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
+const SHEET_CSV    = 'https://docs.google.com/spreadsheets/d/1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I/export?format=csv&gid=857535467';
+const AUDIT_URL    = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+function _auditLog(norden, campo, antes, despues) {
+  if (String(antes) === String(despues)) return;
+  var email = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:'desconocido'; } catch(e){ return 'desconocido'; } })();
+  fetch(AUDIT_URL + '?' + new URLSearchParams({ action:'auditLog', email:email, recurso:'Pedido', id:String(norden), campo:campo, antes:String(antes).substring(0,500), despues:String(despues).substring(0,500) }).toString(), { redirect:'follow' }).catch(function(){});
+}
 
 // PINs autorizados para vista lista
 const PINS_ADMIN = ['PIR26', 'PYL26', 'PMM26'];
@@ -1974,6 +1980,7 @@ function guardarRetiro() {
   var fb  = document.getElementById('d-retiro-feedback');
   var btn = document.getElementById('btn-guardar-retiro');
 
+  var _retiroAntes = pedidoActual ? { quien: pedidoActual.quien||'', fecha: pedidoActual.fechaRetiro||'', lugar: pedidoActual.lugarRetiro||'' } : {};
   btn.disabled = true; btn.style.opacity = '0.6';
   fb.textContent = '⏳ Guardando y actualizando calendario…'; fb.style.color='#6b7280'; fb.style.display='block';
 
@@ -1997,6 +2004,9 @@ function guardarRetiro() {
           : '❌ ' + (data.error||'Error.');
         fb.style.color='#dc2626'; return;
       }
+      _auditLog(pedidoActual.norden, 'retiro.quien',  _retiroAntes.quien, quien);
+      _auditLog(pedidoActual.norden, 'retiro.fecha',  _retiroAntes.fecha, fechaRetiro);
+      _auditLog(pedidoActual.norden, 'retiro.lugar',  _retiroAntes.lugar, lugar);
       pedidoActual.quien       = quien;
       pedidoActual.fechaRetiro = fechaRetiro;
       pedidoActual.lugarRetiro = lugar;
@@ -2179,6 +2189,7 @@ function guardarProveedor() {
     fb.textContent = '⚠️ El nombre del proveedor es obligatorio.'; fb.style.color = '#b45309'; fb.style.display = 'block';
     return;
   }
+  var _provAntes = pedidoActual ? (pedidoActual.proveedor || '') : '';
   var fb  = document.getElementById('d-proveedor-feedback');
   var btn = document.querySelector('#d-proveedor-edit button[onclick*="guardarProveedor"]');
   fb.textContent = '⏳ Guardando…'; fb.style.color = '#6b7280'; fb.style.display = 'block';
@@ -2193,6 +2204,7 @@ function guardarProveedor() {
   .then(function(data){
     btn.disabled = false; btn.style.opacity = '';
     if (!data.ok) { fb.textContent = '❌ ' + (data.error||'Error.'); fb.style.color='#dc2626'; return; }
+    _auditLog(pedidoActual.norden, 'proveedor', _provAntes, nombre);
     pedidoActual.proveedor = nombre;
     pedidoActual.tel = tel;
     if (tel) guardarTelLocal(nombre, tel); // persistir en localStorage
@@ -2264,6 +2276,7 @@ function guardarProductos() {
   var tbody = document.getElementById('det-tbody-productos');
   var productosStr = productosToStr(tbody);
   if (!productosStr) { mostrarProdFeedback('⚠️ Agregá al menos un producto.', '#b45309'); return; }
+  var _productosAntes = pedidoActual ? (pedidoActual.productos || '') : '';
 
   // Recalcular total desde los inputs
   var totalCalc = 0;
@@ -2285,6 +2298,7 @@ function guardarProductos() {
   .then(function(data){
     btnProds.disabled = false; btnProds.style.opacity = '';
     if (!data.ok) { mostrarProdFeedback('❌ ' + (data.error||'Error.'), '#dc2626'); return; }
+    _auditLog(pedidoActual.norden, 'productos', _productosAntes, productosStr);
     pedidoActual.productos = productosStr;
     if (totalCalc > 0) pedidoActual.total = String(totalCalc);
     var idx = todosLosPedidos.findIndex(function(p){ return p.norden===pedidoActual.norden; });
@@ -2542,7 +2556,7 @@ function guardarTotal() {
   var raw   = document.getElementById('input-total').value.trim().replace(/[^\d.,]/g,'');
   var valor = parseFloat(raw.replace(/\./g,'').replace(',','.')) || 0;
   if (!valor) { mostrarTotalFeedback('⚠️ Ingresá un monto válido.', '#b45309'); return; }
-
+  var _totalAntes = pedidoActual ? pedidoActual.total : '';
   var btnTotal = document.querySelector('#d-total-edit button[onclick*="guardarTotal"]');
   btnTotal.disabled = true; btnTotal.style.opacity = '0.6';
   mostrarTotalFeedback('⏳ Guardando…', '#6b7280');
@@ -2555,6 +2569,7 @@ function guardarTotal() {
   .then(function(data){
     btnTotal.disabled = false; btnTotal.style.opacity = '';
     if (!data.ok) { mostrarTotalFeedback('❌ ' + (data.error || 'Error al guardar.'), '#dc2626'); return; }
+    _auditLog(pedidoActual.norden, 'total', _totalAntes, valor);
     pedidoActual.total = String(valor);
     const idx = todosLosPedidos.findIndex(function(p){ return p.norden === pedidoActual.norden; });
     if (idx !== -1) todosLosPedidos[idx].total = String(valor);
@@ -2582,6 +2597,7 @@ function cancelarEditarEnvio() {
 function guardarCostoEnvio() {
   var raw   = document.getElementById('input-costo-envio').value.trim().replace(/[^\d.,]/g,'');
   var valor = parseFloat(raw.replace(/\./g,'').replace(',','.')) || 0;
+  var _envioAntes = pedidoActual ? (pedidoActual.costoEnvio || '0') : '0';
   var fb = document.getElementById('d-envio-feedback');
   fb.style.display = 'inline'; fb.style.color = '#6b7280'; fb.textContent = '⏳ Guardando…';
   fetch(SCRIPT_URL, {
@@ -2592,6 +2608,7 @@ function guardarCostoEnvio() {
   .then(function(r){ return r.json(); })
   .then(function(data){
     if (!data.ok) { fb.style.color='#dc2626'; fb.textContent='❌ ' + (data.error||'Error'); return; }
+    _auditLog(pedidoActual.norden, 'costoEnvio', _envioAntes, valor);
     pedidoActual.costoEnvio = String(valor);
     const idx = todosLosPedidos.findIndex(function(p){ return p.norden === pedidoActual.norden; });
     if (idx !== -1) todosLosPedidos[idx].costoEnvio = String(valor);
@@ -2625,6 +2642,7 @@ function editarNotas() {
 
 function guardarNotas() {
   var notas = document.getElementById('input-notas').value.trim();
+  var _notasAntes = pedidoActual ? (pedidoActual.notas || '') : '';
   var fb    = document.getElementById('d-notas-feedback');
   var btn   = document.querySelector('#d-notas-edit button[onclick*="guardarNotas"]');
   btn.disabled = true; btn.style.opacity = '0.6';
@@ -2636,6 +2654,7 @@ function guardarNotas() {
     .then(function(data){
       btn.disabled = false; btn.style.opacity = '';
       if (!data.ok) { fb.textContent = '❌ ' + (data.error||'Error.'); fb.style.color='#dc2626'; return; }
+      _auditLog(pedidoActual.norden, 'notas', _notasAntes, notas);
       pedidoActual.notas = notas;
       var idx = todosLosPedidos.findIndex(function(p){ return p.norden===pedidoActual.norden; });
       if (idx !== -1) todosLosPedidos[idx].notas = notas;
@@ -2780,6 +2799,8 @@ async function ejecutarSubida() {
       if (idx !== -1) {
         todosLosPedidos[idx].comprobante = data.comprobante || data.url || '';
         if (tipoPago === 'completo') {
+          _auditLog(uploadNorden, 'estadoPago', todosLosPedidos[idx].estadoPago || 'No pagado', 'Pagado');
+          _auditLog(uploadNorden, 'comprobante', '', data.comprobante || data.url || '');
           todosLosPedidos[idx].estadoPago = 'Pagado';
           todosLosPedidos[idx].fechaPago  = new Date().toLocaleDateString('es-AR');
         }
@@ -2856,6 +2877,8 @@ async function ejecutarAccion() {
 
       // Actualizar estado local — siempre en ambos: pedidoActual y todosLosPedidos
       const idx = todosLosPedidos.findIndex(p => p.norden === norden);
+      const _estadoAntes = idx !== -1 ? todosLosPedidos[idx].estado : (pedidoActual ? pedidoActual.estado : '');
+      _auditLog(norden, 'estado', _estadoAntes, nuevoEstado);
       if (idx !== -1) {
         todosLosPedidos[idx].estado      = nuevoEstado;
         todosLosPedidos[idx].fechaEstado = new Date().toLocaleDateString('es-AR');

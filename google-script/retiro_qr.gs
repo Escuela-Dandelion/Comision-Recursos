@@ -1,4 +1,4 @@
-// v2026-11-16d — CC en enviarContacto: FGP del proveedor, no quien está logueado
+// v2026-11-16e — AuditLog: registro async de cambios en Productos y Pedidos
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -398,6 +398,20 @@ function doGetInterno(e) {
       e.parameter.publicado === '1'
     );
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'auditLog') {
+    try {
+      registrarAuditLog(
+        e.parameter.email   || '',
+        e.parameter.recurso || '',
+        e.parameter.id      || '',
+        e.parameter.campo   || '',
+        e.parameter.antes   || '',
+        e.parameter.despues || ''
+      );
+    } catch(err) { Logger.log('auditLog error: ' + err); }
+    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
   }
 
   if (action === 'preview_informe') {
@@ -3501,4 +3515,25 @@ function _setMedidas(dryRun) {
     });
   });
   Logger.log('=== ' + (dryRun ? 'DRY RUN' : 'LISTO') + ': ' + total + ' variantes procesadas, ' + errores + ' errores ===');
+}
+
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+function registrarAuditLog(email, recurso, id, campo, antes, despues) {
+  var ss = SpreadsheetApp.openById(CONFIG.PEDIDOS_SHEET_ID);
+  var sh = ss.getSheetByName('AuditLog');
+  if (!sh) {
+    sh = ss.insertSheet('AuditLog');
+    sh.appendRow(['Timestamp', 'Email', 'Recurso', 'ID', 'Campo', 'Antes', 'Después']);
+    sh.setFrozenRows(1);
+    sh.getRange('A1:G1').setFontWeight('bold');
+  }
+  sh.appendRow([new Date(), email, recurso, String(id), campo,
+    String(antes).substring(0, 1000), String(despues).substring(0, 1000)]);
+  // Purgar filas con más de 30 días
+  var limite = new Date();
+  limite.setDate(limite.getDate() - 30);
+  var data = sh.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] instanceof Date && data[i][0] < limite) sh.deleteRow(i + 1);
+  }
 }
