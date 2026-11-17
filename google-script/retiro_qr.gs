@@ -1,4 +1,4 @@
-// v2026-11-16l — CONFIG.GAS_URL prod; fix registrarWebhook/Productos url dev→exec
+// v2026-11-16m — auditLog manda mail en cambios de precio/costo desde el admin
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -105,7 +105,14 @@ function doPost(e) {
     }
     if (action === 'auditLog') {
       try {
-        registrarAuditLog(body.email || '', body.recurso || '', body.id || '', body.campo || '', body.antes || '', body.despues || '');
+        var aEmail  = body.email  || '';
+        var aCampo  = body.campo  || '';
+        var aAntes  = body.antes  || '';
+        var aDespues = body.despues || '';
+        registrarAuditLog(aEmail, body.recurso || '', body.id || '', aCampo, aAntes, aDespues);
+        if (aCampo === 'precio' || aCampo === 'precio_promo' || aCampo === 'costo') {
+          _enviarMailCambioPrecioAudit(aEmail, body.recurso || '', body.id || '', aCampo, aAntes, aDespues);
+        }
       } catch(err) { Logger.log('auditLog doPost error: ' + err); }
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
@@ -2016,6 +2023,31 @@ function _enviarMailCambioPrecio(nombreProducto, cambios) {
     + '<p style="color:#bbb;font-size:11px;margin-top:12px;">Tienda Diente de Leon</p></div>';
   GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Cambio de precio — ' + nombreProducto,
     nombreProducto + ': cambio detectado. Ver el mail en HTML.', { htmlBody: html, name: 'Tienda Diente de Leon' });
+}
+
+function _enviarMailCambioPrecioAudit(email, recurso, id, campo, antes, despues) {
+  var labelCampo = campo === 'costo' ? 'Costo' : campo === 'precio_promo' ? 'Precio promo' : 'Precio';
+  var fila = '<tr style="border-bottom:1px solid #f0f0f0;">'
+    + '<td style="padding:5px 10px;color:#888;font-size:12px;">' + id + '</td>'
+    + '<td style="padding:5px 10px;">' + labelCampo + '</td>'
+    + '<td style="padding:5px 10px;color:#c0392b;">$' + antes + '</td>'
+    + '<td style="padding:5px 10px;color:#27ae60;">$' + despues + '</td>'
+    + '<td style="padding:5px 10px;color:#888;font-size:12px;">' + email + '</td>'
+    + '</tr>';
+  var html = '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;font-size:14px;color:#333;max-width:600px;">'
+    + '<h2 style="color:#2c3e50;margin:0 0 16px;">Cambio de ' + labelCampo.toLowerCase() + ' desde el admin</h2>'
+    + '<table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e8e8e8;">'
+    + '<tr style="background:#f7f7f7;">'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">SKU / ID</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Campo</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Antes</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Despues</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Por</th></tr>'
+    + fila + '</table>'
+    + '<p style="color:#bbb;font-size:11px;margin-top:12px;">Tienda Diente de Leon</p></div>';
+  GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Cambio de ' + labelCampo.toLowerCase() + ' — SKU ' + id,
+    'SKU ' + id + ': ' + labelCampo + ' ' + antes + ' → ' + despues + ' (por ' + email + ')',
+    { htmlBody: html, name: 'Tienda Diente de Leon' });
 }
 
 function registrarWebhookProductos() {
