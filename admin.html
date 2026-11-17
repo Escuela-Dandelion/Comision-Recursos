@@ -547,6 +547,14 @@
               <option value="">Todas</option>
             </select>
           </div>
+          <div><label>Envio</label>
+            <select id="vfilt-envio" onchange="aplicarFiltrosVentas()">
+              <option value="">Todos</option>
+              <option value="Retira por Primaria">Retira por Primaria</option>
+              <option value="Retira por Secundaria">Retira por Secundaria</option>
+              <option value="Envio a Domicilio">Envio a Domicilio</option>
+            </select>
+          </div>
           <div style="grid-column:1/-1;display:flex;gap:8px">
             <div style="flex:1"><label>Comprador</label>
               <input id="vfilt-comprador" oninput="aplicarFiltrosVentas()" placeholder="Buscar por nombre…" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
@@ -1477,7 +1485,8 @@ function aplicarFiltrosVentas() {
   var producto   = (document.getElementById('vfilt-producto') ? document.getElementById('vfilt-producto').value : '').toLowerCase();
   var proveedor  = document.getElementById('vfilt-proveedor') ? document.getElementById('vfilt-proveedor').value : '';
   var marca      = document.getElementById('vfilt-marca') ? document.getElementById('vfilt-marca').value : '';
-  var comprador  = (document.getElementById('vfilt-comprador') ? document.getElementById('vfilt-comprador').value : '').toLowerCase();
+  var envio      = document.getElementById('vfilt-envio') ? document.getElementById('vfilt-envio').value : '';
+  var comprador  =(document.getElementById('vfilt-comprador') ? document.getElementById('vfilt-comprador').value : '').toLowerCase();
   var orden      = (document.getElementById('vfilt-orden') ? document.getElementById('vfilt-orden').value : '').trim();
   var desde     = parseFechaVentas(document.getElementById('vfilt-desde') ? document.getElementById('vfilt-desde').value : '');
   var hasta     = parseFechaVentas(document.getElementById('vfilt-hasta') ? document.getElementById('vfilt-hasta').value : '');
@@ -1492,6 +1501,7 @@ function aplicarFiltrosVentas() {
     if (producto && v.productos.toLowerCase().indexOf(producto) === -1) return false;
     if (proveedor && (!v.proveedores || v.proveedores.indexOf(proveedor) === -1)) return false;
     if (marca && (!v.marcas || v.marcas.indexOf(marca) === -1)) return false;
+    if (envio && (v.envio || '') !== envio) return false;
     if (_currentImpersonation && _currentImpersonation.marcas && _currentImpersonation.marcas.length > 0 && _currentImpersonation.role !== 'ADMIN') {
       var proveedoresImp = _currentImpersonation.marcas.map(function(m) { return marcaAProveedor(m) || m; });
       if (!v.proveedores || !v.proveedores.some(function(p) { return proveedoresImp.indexOf(p) !== -1; })) return false;
