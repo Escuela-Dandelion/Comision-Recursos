@@ -1512,8 +1512,10 @@ function eliminarImagen(imagenId, varianteId) {
   if (!confirm('¿Eliminar esta imagen?')) return;
   setSt('foto', 'Eliminando...');
   var params = new URLSearchParams({ action: 'delete_imagen', email: currentUser.email, producto_id: _productoActual.id, imagen_id: imagenId });
+  var _imgEliminadaUrl = ((_productoActual.imagenes || []).find(function(i) { return i.id === imagenId; }) || {}).src || imagenId;
   fetch(GAS_URL + '?' + params).then(function(r) { return r.json(); }).then(function(d) {
     if (d.ok) {
+      _auditLog('Producto', _productoActual.nombre, 'imagen', _imgEliminadaUrl, 'eliminada');
       _productoActual.imagenes = (_productoActual.imagenes || []).filter(function(i) { return i.id !== imagenId; });
       (_productoActual.variantes || []).forEach(function(v) { if (v.image_id === imagenId) v.image_id = null; });
       renderGaleria(_productoActual);
@@ -1553,6 +1555,8 @@ function guardarFoto() {
   .then(function(d) {
     btn.disabled = false;
     if (d.ok) {
+      var _urlAnterior = _fotoTargetImagenId ? (((_productoActual.imagenes || []).find(function(i) { return i.id === _fotoTargetImagenId; }) || {}).src || _fotoTargetImagenId) : '';
+      _auditLog('Producto', _productoActual.nombre, 'imagen', _urlAnterior || 'nueva', d.imagen ? d.imagen.src : 'subida');
       setSt('foto', '✓ Imagen actualizada', true);
       if (d.imagen) {
         var newImg = { id: d.imagen.id, src: d.imagen.src };
