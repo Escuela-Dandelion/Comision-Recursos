@@ -1,4 +1,4 @@
-// v2026-11-16m — auditLog manda mail en cambios de precio/costo desde el admin
+// v2026-11-16n — fix subject mail cambio precio: espacio extra antes del SKU
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2045,7 +2045,7 @@ function _enviarMailCambioPrecioAudit(email, recurso, id, campo, antes, despues)
     + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Por</th></tr>'
     + fila + '</table>'
     + '<p style="color:#bbb;font-size:11px;margin-top:12px;">Tienda Diente de Leon</p></div>';
-  GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Cambio de ' + labelCampo.toLowerCase() + ' — SKU ' + id,
+  GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Diente de Leon: Cambio de ' + labelCampo.toLowerCase() + ' — ' + id,
     'SKU ' + id + ': ' + labelCampo + ' ' + antes + ' → ' + despues + ' (por ' + email + ')',
     { htmlBody: html, name: 'Tienda Diente de Leon' });
 }
