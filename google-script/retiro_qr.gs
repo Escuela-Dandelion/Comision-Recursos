@@ -1,4 +1,4 @@
-// v2026-11-16h — AuditLog: descripcion sin truncado (5000 chars), otros campos 500
+// v2026-11-16j — GATEWAY_FEES: agrega credit_card (2.97% + IVA)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -18,7 +18,8 @@ var CONFIG = {
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
   GATEWAY_FEES: {
-    'wire_transfer': 0.01815,  // Transferencia bancaria vía Pago Nube: 1.815%
+    'wire_transfer': 0.01815,  // Transferencia bancaria vía Pago Nube: 1.5% + IVA
+    'credit_card':   0.035937, // Tarjeta de crédito Pago Nube 1 cuota/30d: 2.97% + IVA
   },
 
   // Datos de pago por proveedor (alias/CBU para transferencia)
@@ -110,6 +111,12 @@ function doPost(e) {
     var orderId = String(body.id);
     if (evento === 'order/paid' || evento === 'order/updated') {
       var order = fetchOrder(orderId);
+      if (order && order.payment_status === 'paid') {
+        if (_esEnvioADomicilio(order) && !_envioYaNotificado(orderId)) {
+          _marcarEnvioNotificado(orderId);
+          procesarOrdenConEnvio(order);
+        }
+      }
       if (order && order.payment_status === 'paid' && !yaFueEnviado(orderId)) {
         var partes = separarProductos(order);
         if (partes.digitales.length > 0) {
@@ -123,6 +130,9 @@ function doPost(e) {
           Logger.log('Orden #' + order.number + ' es solo digital — sin QR.');
         }
       }
+    }
+    if (evento === 'product/updated') {
+      procesarWebhookProducto(String(body.id));
     }
     return ContentService.createTextOutput('OK');
   } catch(err) {
@@ -1832,6 +1842,239 @@ function registrarWebhook() {
     muteHttpExceptions: true
   });
   Logger.log(resp.getResponseCode() + ' → ' + resp.getContentText());
+}
+
+// ──────────────────────────────────────────────────────────
+// PRECIO SNAPSHOT — alerta por mail cuando cambia precio/costo en TiendaNube
+
+var AUDITLOG_SHEET_ID    = '1rmhUy8dMrV48aCe4BJoayCavSlPtj36oW909m_FWGsY';
+var PRECIO_SNAPSHOT_TAB  = 'PrecioSnapshot';
+var PRECIO_ALERT_EMAIL   = 'robertson.ine@gmail.com';
+
+function _getPrecioSnapshot() {
+  var ss = SpreadsheetApp.openById(AUDITLOG_SHEET_ID);
+  var sh = ss.getSheetByName(PRECIO_SNAPSHOT_TAB);
+  if (!sh) return { snap: {}, sh: null, ss: ss };
+  var data = sh.getDataRange().getValues();
+  var snap = {};
+  for (var i = 1; i < data.length; i++) {
+    var vid = String(data[i][1]);
+    snap[vid] = { productoId: String(data[i][0]), sku: data[i][2], nombre: data[i][3],
+                  precio: data[i][4], promo: data[i][5], costo: data[i][6], row: i + 1 };
+  }
+  return { snap: snap, sh: sh, ss: ss };
+}
+
+function _ensurePrecioSnapshotTab(ss) {
+  var sh = ss.getSheetByName(PRECIO_SNAPSHOT_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(PRECIO_SNAPSHOT_TAB);
+    sh.appendRow(['ProductoID', 'VarianteID', 'SKU', 'Producto', 'Precio', 'PrecioPromo', 'Costo', 'Actualizado']);
+    sh.setFrozenRows(1);
+    sh.getRange('A1:H1').setFontWeight('bold');
+  }
+  return sh;
+}
+
+function procesarWebhookProducto(productoId) {
+  try {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
+    var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) return;
+    var producto  = JSON.parse(resp.getContentText());
+    var nombre    = (producto.name && producto.name.es) ? producto.name.es : String(productoId);
+    var variantes = producto.variants || [];
+    var ctx       = _getPrecioSnapshot();
+    var snap      = ctx.snap;
+    var ss        = ctx.ss || SpreadsheetApp.openById(AUDITLOG_SHEET_ID);
+    var sh        = ctx.sh || _ensurePrecioSnapshotTab(ss);
+    var cambios   = [];
+    variantes.forEach(function(v) {
+      var vid        = String(v.id);
+      var sku        = v.sku || '';
+      var varNombre  = nombre + (v.values && v.values.length
+        ? ' - ' + v.values.map(function(x) { return x.es || String(x); }).join(' / ') : '');
+      var precioN    = parseFloat(v.price)               || 0;
+      var promoN     = parseFloat(v.promotional_price)   || 0;
+      var costoN     = parseFloat(v.cost)                || 0;
+      if (snap[vid]) {
+        var ant = snap[vid];
+        var diffs = [];
+        if (Number(ant.precio) !== precioN) diffs.push({ campo: 'Precio',       antes: ant.precio, despues: precioN });
+        if (Number(ant.promo)  !== promoN)  diffs.push({ campo: 'Precio promo', antes: ant.promo,  despues: promoN  });
+        if (Number(ant.costo)  !== costoN)  diffs.push({ campo: 'Costo',        antes: ant.costo,  despues: costoN  });
+        if (diffs.length) cambios.push({ sku: sku, variante: varNombre, diffs: diffs });
+        sh.getRange(ant.row, 1, 1, 8).setValues([[String(productoId), vid, sku, varNombre, precioN, promoN, costoN, new Date()]]);
+      } else {
+        sh.appendRow([String(productoId), vid, sku, varNombre, precioN, promoN, costoN, new Date()]);
+      }
+    });
+    if (cambios.length) _enviarMailCambioPrecio(nombre, cambios);
+  } catch(err) {
+    Logger.log('procesarWebhookProducto error: ' + err);
+  }
+}
+
+function _enviarMailCambioPrecio(nombreProducto, cambios) {
+  var filas = '';
+  cambios.forEach(function(c) {
+    c.diffs.forEach(function(d) {
+      var skuCell    = '<td style="padding:5px 10px;color:#888;font-size:12px;">' + (c.sku || '') + '</td>';
+      var varCell    = '<td style="padding:5px 10px;">' + c.variante + '</td>';
+      var campoCell  = '<td style="padding:5px 10px;">' + d.campo + '</td>';
+      var antesCell  = '<td style="padding:5px 10px;color:#c0392b;">$' + Number(d.antes).toLocaleString('es-AR') + '</td>';
+      var despuesCell= '<td style="padding:5px 10px;color:#27ae60;">$' + Number(d.despues).toLocaleString('es-AR') + '</td>';
+      filas += '<tr style="border-bottom:1px solid #f0f0f0;">' + skuCell + varCell + campoCell + antesCell + despuesCell + '</tr>';
+    });
+  });
+  var html = '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;font-size:14px;color:#333;max-width:600px;">'
+    + '<h2 style="color:#2c3e50;margin:0 0 4px;">Cambio de precio detectado</h2>'
+    + '<p style="color:#888;margin:0 0 16px;font-size:13px;">' + nombreProducto + '</p>'
+    + '<table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e8e8e8;">'
+    + '<tr style="background:#f7f7f7;"><th style="padding:6px 10px;text-align:left;font-weight:600;">SKU</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Variante</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Campo</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Antes</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-weight:600;">Despues</th></tr>'
+    + filas + '</table>'
+    + '<p style="color:#bbb;font-size:11px;margin-top:12px;">Tienda Diente de Leon</p></div>';
+  GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Cambio de precio — ' + nombreProducto,
+    nombreProducto + ': cambio detectado. Ver el mail en HTML.', { htmlBody: html, name: 'Tienda Diente de Leon' });
+}
+
+function registrarWebhookProductos() {
+  var url      = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/webhooks';
+  var resp     = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  var webhooks = JSON.parse(resp.getContentText());
+  var gasUrl   = ScriptApp.getService().getUrl();
+  var yaExiste = Array.isArray(webhooks) && webhooks.some(function(w) {
+    return w.event === 'product/updated' && w.url_endpoint === gasUrl;
+  });
+  if (!yaExiste) {
+    var r = UrlFetchApp.fetch(url, { method: 'post', headers: _tnHeaders(),
+      payload: JSON.stringify({ event: 'product/updated', url_endpoint: gasUrl }),
+      muteHttpExceptions: true });
+    Logger.log('Webhook registrado: ' + r.getResponseCode() + ' ' + r.getContentText());
+  } else {
+    Logger.log('Webhook product/updated ya existe.');
+  }
+}
+
+function inicializarPrecioSnapshot() {
+  var ss = SpreadsheetApp.openById(AUDITLOG_SHEET_ID);
+  var sh = _ensurePrecioSnapshotTab(ss);
+  var lastRow = sh.getLastRow();
+  if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, 8).clearContent();
+  var page = 1;
+  var rows = [];
+  while (true) {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page;
+    var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+    var productos = JSON.parse(resp.getContentText());
+    if (!Array.isArray(productos) || !productos.length) break;
+    productos.forEach(function(p) {
+      var nombre = (p.name && p.name.es) ? p.name.es : String(p.id);
+      (p.variants || []).forEach(function(v) {
+        var varNombre = nombre + (v.values && v.values.length
+          ? ' - ' + v.values.map(function(x) { return x.es || String(x); }).join(' / ') : '');
+        rows.push([String(p.id), String(v.id), v.sku || '', varNombre,
+                   parseFloat(v.price)||0, parseFloat(v.promotional_price)||0, parseFloat(v.cost)||0, new Date()]);
+      });
+    });
+    if (productos.length < 200) break;
+    page++;
+  }
+  if (rows.length) sh.getRange(2, 1, rows.length, 8).setValues(rows);
+  Logger.log('PrecioSnapshot inicializado: ' + rows.length + ' variantes.');
+}
+
+// ──────────────────────────────────────────────────────────
+// ALERTA ENVIO — mail cuando un pedido es con envio a domicilio
+
+function _esEnvioADomicilio(order) {
+  var carrier = (order.shipping_carrier_name || '').toLowerCase();
+  if (carrier.indexOf('retiro') !== -1 || carrier.indexOf('pickup') !== -1) return false;
+  if (order.shipping_min_days > 0) return true;
+  if (carrier && carrier !== '') return true;
+  // fallback: tiene dirección de entrega con calle
+  var addr = order.shipping_address;
+  return !!(addr && addr.address && String(addr.address).trim() !== '');
+}
+
+function _envioYaNotificado(orderId) {
+  return CacheService.getScriptCache().get('envio_' + orderId) !== null;
+}
+function _marcarEnvioNotificado(orderId) {
+  CacheService.getScriptCache().put('envio_' + orderId, '1', 60 * 60 * 72);
+}
+
+function _fgpParaMarca(brand) {
+  var brandUp = (brand || '').toUpperCase();
+  var vistos  = {};
+  var result  = [];
+  Object.keys(AUTH_EMAILS).forEach(function(email) {
+    var u = AUTH_EMAILS[email];
+    if (u.role !== 'FGP' || !u.proveedores || !u.proveedores.length) return;
+    var coincide = u.proveedores.some(function(p) { return p.toUpperCase() === brandUp; });
+    if (coincide && !vistos[u.name]) { vistos[u.name] = true; result.push({ email: email, name: u.name }); }
+  });
+  return result;
+}
+
+function procesarOrdenConEnvio(order) {
+  try {
+    var items = order.products || [];
+    var marcasVistas = {};
+    var fgpsCC = {};
+    items.forEach(function(item) {
+      var marca = fetchMarcaDeProducto(String(item.product_id));
+      if (marca && !marcasVistas[marca]) {
+        marcasVistas[marca] = true;
+        _fgpParaMarca(marca).forEach(function(f) { fgpsCC[f.email] = f.name; });
+      }
+    });
+    var ccEmails = Object.keys(fgpsCC);
+    _enviarMailOrdenConEnvio(order, ccEmails);
+  } catch(err) {
+    Logger.log('procesarOrdenConEnvio error: ' + err);
+  }
+}
+
+function _enviarMailOrdenConEnvio(order, ccEmails) {
+  var num     = order.number || order.id;
+  var cliente = order.contact_name || order.customer && (order.customer.first_name + ' ' + order.customer.last_name) || 'Sin nombre';
+  var email   = order.contact_email || '';
+  var addr    = order.shipping_address || {};
+  var linea1  = [addr.name, addr.address, addr.floor].filter(Boolean).join(' ');
+  var linea2  = [addr.city, addr.province, addr.zipcode].filter(Boolean).join(', ');
+  var carrier = order.shipping_carrier_name || 'Correo';
+  var items   = order.products || [];
+  var filasProd = items.map(function(p) {
+    return '<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:5px 10px;">' + (p.name || '') + '</td>'
+      + '<td style="padding:5px 10px;text-align:center;">' + (p.quantity || 1) + '</td>'
+      + '<td style="padding:5px 10px;text-align:right;">$' + Number(p.price || 0).toLocaleString('es-AR') + '</td></tr>';
+  }).join('');
+  var total = items.reduce(function(s, p) { return s + (parseFloat(p.price) || 0) * (p.quantity || 1); }, 0);
+
+  var html = '<div style="font-family:-apple-system,\'Segoe UI\',sans-serif;font-size:14px;color:#333;max-width:600px;">'
+    + '<h2 style="color:#2c3e50;margin:0 0 4px;">Pedido con envio a domicilio</h2>'
+    + '<p style="color:#888;margin:0 0 16px;font-size:13px;">Orden #' + num + ' — ' + carrier + '</p>'
+    + '<table style="border-collapse:collapse;width:100%;margin-bottom:16px;background:#f9f9f9;border:1px solid #e8e8e8;">'
+    + '<tr><td style="padding:6px 12px;font-weight:600;width:120px;">Cliente</td><td style="padding:6px 12px;">' + cliente + (email ? ' &lt;' + email + '&gt;' : '') + '</td></tr>'
+    + '<tr><td style="padding:6px 12px;font-weight:600;">Direccion</td><td style="padding:6px 12px;">' + linea1 + (linea2 ? '<br>' + linea2 : '') + '</td></tr>'
+    + '<tr><td style="padding:6px 12px;font-weight:600;">Correo</td><td style="padding:6px 12px;">' + carrier + '</td></tr>'
+    + '</table>'
+    + '<table style="border-collapse:collapse;width:100%;border:1px solid #e8e8e8;">'
+    + '<tr style="background:#f7f7f7;"><th style="padding:6px 10px;text-align:left;">Producto</th><th style="padding:6px 10px;">Cant.</th><th style="padding:6px 10px;text-align:right;">Precio</th></tr>'
+    + filasProd
+    + '<tr><td colspan="2" style="padding:6px 10px;font-weight:600;text-align:right;">Total</td><td style="padding:6px 10px;font-weight:600;text-align:right;">$' + total.toLocaleString('es-AR') + '</td></tr>'
+    + '</table>'
+    + '<p style="color:#bbb;font-size:11px;margin-top:12px;">Tienda Diente de Leon</p></div>';
+
+  var opts = { htmlBody: html, name: 'Tienda Diente de Leon' };
+  if (ccEmails.length) opts.cc = ccEmails.join(',');
+  GmailApp.sendEmail(PRECIO_ALERT_EMAIL, 'Envio a domicilio — Orden #' + num,
+    'Orden #' + num + ' de ' + cliente + ' requiere despacho por ' + carrier + '. Ver HTML para detalles.', opts);
 }
 
 // ──────────────────────────────────────────────────────────
