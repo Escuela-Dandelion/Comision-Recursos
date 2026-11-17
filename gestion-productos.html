@@ -1163,25 +1163,26 @@ function guardarInfo() {
   if (!nombre) { setSt('info', 'El nombre no puede estar vacío.', false); return; }
   var btn = document.getElementById('btn-guardar-info');
   btn.disabled = true; setSt('info', 'Guardando...');
-  var _nombreAntes = _productoActual.nombre;
+  var _pRef        = _productoActual;
+  var _nombreAntes = _pRef.nombre;
   var _descAntes   = _descAntesQuill;
   fetch(GAS_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: String(_productoActual.id), nombre: nombre, descripcion: desc }) })
+    body: JSON.stringify({ action: 'update_producto', email: currentUser.email, producto_id: String(_pRef.id), nombre: nombre, descripcion: desc }) })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     btn.disabled = false;
     if (d.ok) {
-      _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
-      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes), _stripHtml(desc)); }
+      _auditLog('Producto', _pRef.id, 'nombre', _nombreAntes, nombre);
+      if (_descAntes !== desc) { _auditLog('Producto', _pRef.id, 'descripcion', _stripHtml(_descAntes), _stripHtml(desc)); }
       setSt('info', '✓ Guardado', true);
-      _productoActual.nombre      = nombre;
-      _productoActual.descripcion = desc;
-      _descAntesQuill = desc;
+      _pRef.nombre      = nombre;
+      _pRef.descripcion = desc;
+      if (_productoActual === _pRef) _descAntesQuill = desc;
       document.getElementById('panel-titulo').textContent = nombre;
-      var row = document.getElementById('row-' + _productoActual.id);
+      var row = document.getElementById('row-' + _pRef.id);
       if (row) {
-        var semClass = _productoActual.semaforo || 'verde';
-        var badgeHtml = !_productoActual.publicado ? '<span class="badge-nopub">No listado</span>' : '';
+        var semClass = _pRef.semaforo || 'verde';
+        var badgeHtml = !_pRef.publicado ? '<span class="badge-nopub">No listado</span>' : '';
         row.querySelector('.prod-nombre').innerHTML = '<span class="prod-sem ' + semClass + '"></span>' + esc(nombre) + badgeHtml;
       }
     } else { setSt('info', d.error || 'Error', false); }
@@ -1391,13 +1392,14 @@ function togglePublicado() {
   if (!_productoActual) return;
   var togEl   = document.getElementById('toggle-publicado');
   var checked = togEl.checked;
-  var _pubAntes = _productoActual.publicado;
+  var _pRefPub  = _productoActual;
+  var _pubAntes = _pRefPub.publicado;
   togEl.disabled = true;
   setSt('publicado', 'Guardando...');
   var params = new URLSearchParams({
     action: 'toggle_publicado',
     email: currentUser.email,
-    producto_id: String(_productoActual.id),
+    producto_id: String(_pRefPub.id),
     publicado: checked ? '1' : '0'
   });
   fetch(GAS_URL + '?' + params.toString(), { redirect: 'follow' })
@@ -1405,19 +1407,19 @@ function togglePublicado() {
     .then(function(d) {
       togEl.disabled = false;
       if (d.ok) {
-        _auditLog('Producto', _productoActual.id, 'publicado', _pubAntes ? 'Publicado' : 'No listado', checked ? 'Publicado' : 'No listado');
-        _productoActual.publicado = checked;
+        _auditLog('Producto', _pRefPub.id, 'publicado', _pubAntes ? 'Publicado' : 'No listado', checked ? 'Publicado' : 'No listado');
+        _pRefPub.publicado = checked;
         document.getElementById('publicado-label').textContent = checked ? 'Publicado' : 'No listado';
         document.getElementById('badge-oculto').style.display = checked ? 'none' : '';
         setSt('publicado', checked ? '✓ Ahora visible en la tienda' : '✓ Ocultado de la tienda', true);
-        var row = document.getElementById('row-' + _productoActual.id);
+        var row = document.getElementById('row-' + _pRefPub.id);
         if (row) {
           var nombreEl = row.querySelector('.prod-nombre');
           if (nombreEl) {
-            var semClass = _productoActual.semaforo || 'verde';
+            var semClass = _pRefPub.semaforo || 'verde';
             var extra = !checked ? '<span class="badge-nopub">No listado</span>' : '';
-            if (_productoActual.esDigital) extra += '<span class="badge-digital">Producto digital</span>';
-            nombreEl.innerHTML = '<span class="prod-sem ' + semClass + '"></span>' + esc(_productoActual.nombre) + extra;
+            if (_pRefPub.esDigital) extra += '<span class="badge-digital">Producto digital</span>';
+            nombreEl.innerHTML = '<span class="prod-sem ' + semClass + '"></span>' + esc(_pRefPub.nombre) + extra;
           }
         }
       } else {
