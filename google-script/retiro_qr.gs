@@ -2628,6 +2628,20 @@ function getRetirosData(estadoFiltro, diasFiltro) {
 // ─────────────────────────────────────────────────────────────
 function backfillEnvioRetirosDryRun() { backfillEnvioRetiros(true); }
 
+// Diagnosticar una orden específica: ver qué campos de envío devuelve TiendaNube
+// Uso: cambiar el número al ID interno de la orden en col A del sheet Retiros
+function diagnosticarEnvioOrden() {
+  var ORDEN_ID = '794'; // ← cambiar por el ID interno (col A del sheet Retiros, no el número de pedido)
+  var order = fetchOrder(ORDEN_ID);
+  if (!order) { Logger.log('No se pudo obtener la orden ' + ORDEN_ID); return; }
+  Logger.log('carrier_name: "' + order.shipping_carrier_name + '"');
+  Logger.log('shipping_option: "' + order.shipping_option + '"');
+  Logger.log('min_days: ' + order.shipping_min_days);
+  Logger.log('max_days: ' + order.shipping_max_days);
+  Logger.log('esEnvioADomicilio: ' + _esEnvioADomicilio(order));
+  Logger.log('normalizarEnvio: "' + _normalizarEnvio(order) + '"');
+}
+
 function backfillEnvioRetiros(dryRun) {
   var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
   var sheet = ss.getSheetByName('Retiros');
