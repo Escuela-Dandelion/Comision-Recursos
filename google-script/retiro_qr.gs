@@ -1,4 +1,4 @@
-// v2026-11-16n — fix subject mail cambio precio: espacio extra antes del SKU
+// v2026-11-16o — _esEnvioADomicilio: chequea carrier+option para "retiro", saca fallbacks
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2112,13 +2112,13 @@ function inicializarPrecioSnapshot() {
 // ALERTA ENVIO — mail cuando un pedido es con envio a domicilio
 
 function _esEnvioADomicilio(order) {
+  // Para envíos personalizados (retiro en tienda), shipping_carrier_name puede venir vacío
+  // y el nombre real ("Retiro por Tienda Escuela Primaria") llega en shipping_option
   var carrier = (order.shipping_carrier_name || '').toLowerCase();
-  if (carrier.indexOf('retiro') !== -1 || carrier.indexOf('pickup') !== -1) return false;
-  if (order.shipping_min_days > 0) return true;
-  if (carrier && carrier !== '') return true;
-  // fallback: tiene dirección de entrega con calle
-  var addr = order.shipping_address;
-  return !!(addr && addr.address && String(addr.address).trim() !== '');
+  var option  = (order.shipping_option || '').toLowerCase();
+  var texto   = carrier + ' ' + option;
+  if (texto.indexOf('retiro') !== -1 || texto.indexOf('pickup') !== -1) return false;
+  return (order.shipping_min_days || 0) > 0;
 }
 
 function _envioYaNotificado(orderId) {
