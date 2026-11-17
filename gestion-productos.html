@@ -506,7 +506,9 @@ function _stripHtml(html) { var d = document.createElement('div'); d.innerHTML =
 function _auditLog(recurso, id, campo, antes, despues) {
   if (String(antes) === String(despues)) return;
   var email = (currentUser && currentUser.email) ? currentUser.email : 'desconocido';
-  fetch(GAS_URL + '?' + new URLSearchParams({ action:'auditLog', email:email, recurso:recurso, id:String(id), campo:campo, antes:String(antes).substring(0,500), despues:String(despues).substring(0,500) }).toString(), { redirect:'follow' }).catch(function(){});
+  fetch(GAS_URL, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({ action:'auditLog', email:email, recurso:recurso, id:String(id), campo:campo, antes:String(antes), despues:String(despues) })
+  }).catch(function(){});
 }
 var _productos  = [];
 var _productoActual = null;

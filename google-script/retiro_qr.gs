@@ -1,4 +1,4 @@
-// v2026-11-16f — AuditLog: spreadsheet dedicado (1rmhUy8dMrV48aCe4BJoayCavSlPtj36oW909m_FWGsY)
+// v2026-11-16g — AuditLog: doPost para textos largos (descripcion, fotos)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -97,6 +97,12 @@ function doPost(e) {
     if (action === 'update_imagen_variante') {
       var res = apiUpdateImagenVariante(body.email || '', body.producto_id || '', body.variante_id || '', body.imagen_id_antiguo || '', body.base64 || '', body.mime_type || 'image/jpeg');
       return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'auditLog') {
+      try {
+        registrarAuditLog(body.email || '', body.recurso || '', body.id || '', body.campo || '', body.antes || '', body.despues || '');
+      } catch(err) { Logger.log('auditLog doPost error: ' + err); }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // Webhook de TiendaNube

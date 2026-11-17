@@ -765,7 +765,9 @@ const AUDIT_URL    = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0
 function _auditLog(norden, campo, antes, despues) {
   if (String(antes) === String(despues)) return;
   var email = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:'desconocido'; } catch(e){ return 'desconocido'; } })();
-  fetch(AUDIT_URL + '?' + new URLSearchParams({ action:'auditLog', email:email, recurso:'Pedido', id:String(norden), campo:campo, antes:String(antes).substring(0,500), despues:String(despues).substring(0,500) }).toString(), { redirect:'follow' }).catch(function(){});
+  fetch(AUDIT_URL, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({ action:'auditLog', email:email, recurso:'Pedido', id:String(norden), campo:campo, antes:String(antes), despues:String(despues) })
+  }).catch(function(){});
 }
 
 // PINs autorizados para vista lista
