@@ -2117,6 +2117,7 @@ function _esEnvioADomicilio(order) {
   var carrier = (order.shipping_carrier_name || '').toLowerCase();
   var option  = (order.shipping_option || '').toLowerCase();
   var texto   = carrier + ' ' + option;
+  Logger.log('[envio] orden #' + order.number + ' carrier="' + carrier + '" option="' + option + '" min_days=' + order.shipping_min_days);
   if (texto.indexOf('retiro') !== -1 || texto.indexOf('pickup') !== -1) return false;
   return (order.shipping_min_days || 0) > 0;
 }
