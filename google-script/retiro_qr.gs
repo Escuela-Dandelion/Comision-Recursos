@@ -1,4 +1,4 @@
-// v2026-11-16e — AuditLog: registro async de cambios en Productos y Pedidos
+// v2026-11-16f — AuditLog: spreadsheet dedicado (1rmhUy8dMrV48aCe4BJoayCavSlPtj36oW909m_FWGsY)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -3519,7 +3519,7 @@ function _setMedidas(dryRun) {
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
 function registrarAuditLog(email, recurso, id, campo, antes, despues) {
-  var ss = SpreadsheetApp.openById(CONFIG.PEDIDOS_SHEET_ID);
+  var ss = SpreadsheetApp.openById('1rmhUy8dMrV48aCe4BJoayCavSlPtj36oW909m_FWGsY');
   var sh = ss.getSheetByName('AuditLog');
   if (!sh) {
     sh = ss.insertSheet('AuditLog');

@@ -502,6 +502,7 @@ textarea.field { min-height: 90px; resize: vertical; }
 var GAS_URL     = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var CLIENT_ID   = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googleusercontent.com';
 var currentUser = null;
+function _stripHtml(html) { var d = document.createElement('div'); d.innerHTML = html; return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim(); }
 function _auditLog(recurso, id, campo, antes, despues) {
   if (String(antes) === String(despues)) return;
   var email = (currentUser && currentUser.email) ? currentUser.email : 'desconocido';
@@ -1167,7 +1168,7 @@ function guardarInfo() {
     btn.disabled = false;
     if (d.ok) {
       _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
-      _auditLog('Producto', _productoActual.id, 'descripcion', _descAntes, desc);
+      _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes), _stripHtml(desc));
       setSt('info', '✓ Guardado', true);
       _productoActual.nombre      = nombre;
       _productoActual.descripcion = desc;
@@ -1189,7 +1190,7 @@ function guardarPrecios() {
   btn.disabled = true; setSt('precios', 'Guardando...');
   var _preciosAntes = {};
   _productoActual.variantes.forEach(function(v) {
-    _preciosAntes[v.id] = { precio: v.precio, promo: v.precio_promo || 0, costo: v.costo || 0 };
+    _preciosAntes[v.id] = { precio: v.precio, promo: v.precio_promo > 0 ? String(v.precio_promo) : '', costo: v.costo || 0 };
   });
   var promesas = _productoActual.variantes.map(function(v) {
     var precio = document.getElementById('precio-' + v.id).value;
@@ -1205,11 +1206,11 @@ function guardarPrecios() {
     if (errores.length) { setSt('precios', errores[0].d.error || 'Error', false); }
     else {
       resultados.forEach(function(r) {
-        var label = r.v.nombre || r.v.sku || String(r.v.id);
+        var label = r.v.sku || r.v.nombre || String(r.v.id);
         var ant = _preciosAntes[r.v.id];
-        _auditLog('Producto', _productoActual.id, 'precio[' + label + ']', ant.precio, r.precio);
-        _auditLog('Producto', _productoActual.id, 'precio_promo[' + label + ']', ant.promo, r.promo);
-        _auditLog('Producto', _productoActual.id, 'costo[' + label + ']', ant.costo, r.costo);
+        _auditLog('Producto', label, 'precio', ant.precio, r.precio);
+        _auditLog('Producto', label, 'precio_promo', ant.promo, r.promo);
+        _auditLog('Producto', label, 'costo', ant.costo, r.costo);
       });
       setSt('precios', '✓ Guardado', true); actualizarVariantesLocales('precios');
     }
@@ -1263,7 +1264,14 @@ function _ejecutarGuardarStock() {
   var _stockAntes = {};
   _productoActual.variantes.forEach(function(v) {
     var pEl = document.getElementById('stockP-' + v.id);
-    _stockAntes[v.id] = { esInf: v.stock === null, total: v.stock, ant: pEl ? pEl.dataset.totalOriginal : v.stock };
+    var sEl = document.getElementById('stockS-' + v.id);
+    _stockAntes[v.id] = {
+      esInf: v.stock === null,
+      ant: pEl ? pEl.dataset.totalOriginal : v.stock,
+      stockP: v.stockP != null ? String(v.stockP) : '0',
+      stockS: v.stockS != null ? String(v.stockS) : '0',
+      alarma: v.alarmaActivada !== false
+    };
   });
 
   var promesas = _productoActual.variantes.map(function(v) {
@@ -1310,13 +1318,21 @@ function _ejecutarGuardarStock() {
     if (errores.length) { setSt('stock', errores[0].error || 'Error', false); }
     else {
       _productoActual.variantes.forEach(function(v) {
-        var label  = v.nombre || v.sku || String(v.id);
+        var label  = v.sku || v.nombre || String(v.id);
         var esInfN = document.getElementById('inf-' + v.id).checked;
         var pEl    = document.getElementById('stockP-' + v.id);
         var sEl    = document.getElementById('stockS-' + v.id);
         var nuevoTotal = esInfN ? '∞' : String((pEl ? (parseInt(pEl.value)||0) : 0) + (sEl ? (parseInt(sEl.value)||0) : 0));
         var antesVal   = _stockAntes[v.id] ? (_stockAntes[v.id].esInf ? '∞' : String(_stockAntes[v.id].ant)) : '?';
-        _auditLog('Producto', _productoActual.id, 'stock[' + label + ']', antesVal, nuevoTotal);
+        _auditLog('Producto', label, 'stock_total', antesVal, nuevoTotal);
+        if (!esInfN) {
+          _auditLog('Producto', label, 'stock_primario', _stockAntes[v.id] ? _stockAntes[v.id].stockP : '?', pEl ? String(parseInt(pEl.value)||0) : '0');
+          _auditLog('Producto', label, 'stock_secundario', _stockAntes[v.id] ? _stockAntes[v.id].stockS : '?', sEl ? String(parseInt(sEl.value)||0) : '0');
+        }
+        var alarmaChkN = document.getElementById('alarma-' + v.id);
+        var alarmaAntes = _stockAntes[v.id] ? _stockAntes[v.id].alarma : true;
+        var alarmaAhora = alarmaChkN ? alarmaChkN.checked : true;
+        _auditLog('Producto', label, 'alarma_stock', alarmaAntes ? 'Activa' : 'Pausada', alarmaAhora ? 'Activa' : 'Pausada');
       });
       setSt('stock', '✓ Guardado', true);
       actualizarVariantesLocales('stock');
