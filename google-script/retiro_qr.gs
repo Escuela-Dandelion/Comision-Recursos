@@ -1,4 +1,4 @@
-// v2026-11-16p — Ventas col Z: punto de retiro / opción de envío elegida por el comprador
+// v2026-11-16p — Envio en Retiros (col 14) y Ventas (col Z); backfillEnvioRetiros()
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -798,7 +798,7 @@ function getSheet() {
   var sheet = ss.getSheetByName('Retiros');
   if (!sheet) {
     sheet = ss.insertSheet('Retiros');
-    sheet.appendRow(['ID interno','Pedido #','Nombre','Email','Productos','Total','Fecha','Estado','Staff','Notas','Grado','Descuento']);
+    sheet.appendRow(['ID interno','Pedido #','Nombre','Email','Productos','Total','Fecha','Estado','Staff','Notas','Grado','Descuento','Tipo Descuento','Envio']);
     sheet.setFrozenRows(1);
     sheet.getRange(1,1,1,11).setFontWeight('bold');
   }
@@ -824,7 +824,8 @@ function registrarEnSheet(order, token) {
     '',  // col 10: Notas (se completa al entregar)
     normalizarGradoGAS(order.note || order.notes || ''), // col 11: Grado (normalizado)
     getOrderDiscount(order),                             // col 12: Descuento total del pedido
-    getDiscountType(order)                               // col 13: Tipo de descuento (Cupón / DxC / Cupón+DxC)
+    getDiscountType(order),                              // col 13: Tipo de descuento (Cupón / DxC / Cupón+DxC)
+    _normalizarEnvio(order)                              // col 14: Punto de retiro / Envio a Domicilio
   ]);
   _invalidarCacheRetiros();
 }
@@ -1077,7 +1078,7 @@ function registrarEnVentas(order) {
     var orderTotal      = parseFloat(order.total || 0);
     var paymentMethod   = (order.payment_details && order.payment_details.method) || '';
     var gatewayFee      = CONFIG.GATEWAY_FEES[paymentMethod] || 0;
-    var puntoRetiro     = order.shipping_option || order.shipping_carrier_name || '';
+    var puntoRetiro     = _normalizarEnvio(order);
     var gatewayCost     = orderTotal * gatewayFee;
     var orderNeto       = orderTotal - gatewayCost;
 
@@ -2114,6 +2115,14 @@ function inicializarPrecioSnapshot() {
 // ──────────────────────────────────────────────────────────
 // ALERTA ENVIO — mail cuando un pedido es con envio a domicilio
 
+function _normalizarEnvio(order) {
+  if (_esEnvioADomicilio(order)) return 'Envio a Domicilio';
+  var texto = ((order.shipping_option || '') + ' ' + (order.shipping_carrier_name || '')).toLowerCase();
+  if (texto.indexOf('primaria')   !== -1) return 'Retira por Primaria';
+  if (texto.indexOf('secundaria') !== -1) return 'Retira por Secundaria';
+  return order.shipping_option || order.shipping_carrier_name || '';
+}
+
 function _esEnvioADomicilio(order) {
   // Para envíos personalizados (retiro en tienda), shipping_carrier_name puede venir vacío
   // y el nombre real ("Retiro por Tienda Escuela Primaria") llega en shipping_option
@@ -2604,6 +2613,7 @@ function getRetirosData(estadoFiltro, diasFiltro) {
       notas:         String(row[9] || ''),
       discount:      parseFloat(row[11] || 0),
       discount_type: String(row[12] || ''),
+      envio:         String(row[13] || ''),
       proveedores:   Object.keys(proveedoresMap[String(row[1] || '')] || {}),
       phone:         phoneMapRet[String(row[3] || '').toLowerCase().trim()] || ''
     });
@@ -2611,6 +2621,37 @@ function getRetirosData(estadoFiltro, diasFiltro) {
   var result = rows.reverse();
   try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 180); } catch(e) {}
   return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BACKFILL ENVIO — rellena col 14 (Envio) en filas históricas de Retiros
+// ─────────────────────────────────────────────────────────────
+function backfillEnvioRetirosDryRun() { backfillEnvioRetiros(true); }
+
+function backfillEnvioRetiros(dryRun) {
+  var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet = ss.getSheetByName('Retiros');
+  if (!sheet) { Logger.log('No existe el sheet Retiros'); return; }
+  var data  = sheet.getDataRange().getValues();
+  var count = 0;
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[0]) continue;
+    if (String(row[13] || '').trim() !== '') continue; // ya tiene valor
+    var orderId = String(row[0]);
+    try {
+      var order = fetchOrder(orderId);
+      if (!order) { Logger.log('No se pudo obtener orden ' + orderId); continue; }
+      var envio = _normalizarEnvio(order);
+      Logger.log((dryRun ? '[DRY] ' : '') + 'fila ' + (i+1) + ' pedido#' + row[1] + ' → "' + envio + '"');
+      if (!dryRun) sheet.getRange(i + 1, 14).setValue(envio);
+      count++;
+      Utilities.sleep(400); // evitar 429
+    } catch(err) {
+      Logger.log('Error fila ' + (i+1) + ': ' + err);
+    }
+  }
+  Logger.log('backfillEnvioRetiros: ' + count + ' fila(s) ' + (dryRun ? '(dry run)' : 'actualizadas'));
 }
 
 // ─────────────────────────────────────────────────────────────
