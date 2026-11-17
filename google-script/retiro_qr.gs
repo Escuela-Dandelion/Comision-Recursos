@@ -1,4 +1,4 @@
-// v2026-11-16j — GATEWAY_FEES: agrega credit_card (2.97% + IVA)
+// v2026-11-16j — GATEWAY_FEES: credit_card/debit_card/modo (2.97%+IVA); aporte escuela usa neto; reprocesarVentasTarjeta
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -18,8 +18,10 @@ var CONFIG = {
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
   GATEWAY_FEES: {
-    'wire_transfer': 0.01815,  // Transferencia bancaria vía Pago Nube: 1.5% + IVA
-    'credit_card':   0.035937, // Tarjeta de crédito Pago Nube 1 cuota/30d: 2.97% + IVA
+    'wire_transfer': 0.01815,  // Transferencia bancaria Pago Nube: 1.5% + IVA
+    'credit_card':   0.035937, // Tarjeta crédito/débito/MODO Pago Nube 30d: 2.97% + IVA
+    'debit_card':    0.035937, // mismo costo que crédito (plan 30d)
+    'modo':          0.035937, // mismo costo que crédito (plan 30d)
   },
 
   // Datos de pago por proveedor (alias/CBU para transferencia)
@@ -1105,8 +1107,9 @@ function registrarEnVentas(order) {
         if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
           aporteEscuelaLinea = Math.round(totalPagadoLinea * regla.pctEscuela);
         } else {
+          // Usa netoLinea (ya descontado el fee de procesamiento) como base del margen
           var costoTotal = (datos.costo || 0) * qty;
-          aporteEscuelaLinea = Math.max(0, Math.round(totalPagadoLinea - costoTotal - aporteLinea));
+          aporteEscuelaLinea = Math.max(0, Math.round(netoLinea - costoTotal - aporteLinea));
         }
       }
 
@@ -1144,6 +1147,77 @@ function registrarEnVentas(order) {
   } catch(err) {
     Logger.log('Error registrarEnVentas: ' + err);
   }
+}
+
+// ── Backfill fees tarjeta ────────────────────────────────────────────────────
+// Corrige filas de Ventas con credit_card/debit_card/modo que se registraron
+// antes de que esos métodos estuvieran en GATEWAY_FEES (fee quedó en 0).
+// Recalcula Fee (col Q), Neto (col P) y Aporte Escuela (col W) para filas de Ventas
+// con credit_card/debit_card/modo que se registraron sin fee (fee=0).
+// DryRun: solo loguea, no escribe.
+function reprocesarVentasTarjetaDryRun() { reprocesarVentasTarjeta(true); }
+
+function reprocesarVentasTarjeta(dryRun) {
+  var METODOS_TARJETA = { 'credit_card': true, 'debit_card': true, 'modo': true };
+  var sheet  = getVentasSheet();
+  var data   = sheet.getDataRange().getValues();
+  var config = leerConfigProductos();
+  var filas  = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    var metodo = String(row[17] || '').trim().toLowerCase();
+    if (!METODOS_TARJETA[metodo]) continue;
+
+    var feeActual = parseFloat(row[16]) || 0;
+    if (Math.abs(feeActual) > 0.01) continue; // ya tiene fee → saltar
+
+    var FEE              = CONFIG.GATEWAY_FEES[metodo];
+    var fecha            = row[0] instanceof Date ? row[0] : new Date();
+    var sku              = String(row[6]  || '').trim().toUpperCase();
+    var marca            = String(row[24] || row[12] || '').trim().toUpperCase();
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    var costoUnitario    = parseFloat(row[13]) || 0;
+    var qty              = parseFloat(row[7])  || 1;
+    var costoTotal       = costoUnitario * qty;
+    var aporteGrado      = parseFloat(row[20]) || 0;
+    var aporteEscActual  = parseFloat(row[22]) || 0;
+
+    var fee  = totalPagadoLinea * FEE;
+    var neto = totalPagadoLinea - fee;
+
+    // Mismo lookup que registrarEnVentas: pctEscuela fijo (ej. Sol de Papel) no cambia;
+    // fórmula default recalcula sobre netoLinea.
+    var regla = buscarRegla(config, sku, fecha)
+             || buscarRegla(config, 'MARCA:' + marca, fecha)
+             || buscarRegla(config, 'DEFAULT', fecha)
+             || null;
+
+    var aporteEscNuevo;
+    if (regla && regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+      aporteEscNuevo = aporteEscActual;
+    } else {
+      aporteEscNuevo = Math.max(0, Math.round(neto - costoTotal - aporteGrado));
+    }
+
+    filas++;
+    Logger.log(
+      '[' + (dryRun ? 'DRY' : 'WRITE') + '] fila ' + (i + 1) +
+      ' pedido#' + row[1] + ' ' + metodo +
+      ' totalPagado=' + Math.round(totalPagadoLinea) +
+      ' fee=' + Math.round(fee) +
+      ' neto=' + Math.round(neto) +
+      ' aporteEsc ' + aporteEscActual + '→' + aporteEscNuevo
+    );
+
+    if (!dryRun) {
+      sheet.getRange(i + 1, 16).setValue(neto);
+      sheet.getRange(i + 1, 17).setValue(Math.round(fee * 100) / 100);
+      sheet.getRange(i + 1, 23).setValue(aporteEscNuevo);
+    }
+  }
+
+  Logger.log('reprocesarVentasTarjeta: ' + filas + ' fila(s) ' + (dryRun ? '(dry run, no se escribió nada)' : 'actualizadas'));
 }
 
 function yaFueEnviado(orderId) {
