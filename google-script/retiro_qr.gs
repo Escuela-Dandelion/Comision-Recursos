@@ -1,4 +1,4 @@
-// v2026-11-16k — fix registrarWebhookProductos: url_endpoint → url (TN espera "url")
+// v2026-11-16l — CONFIG.GAS_URL prod; fix registrarWebhook/Productos url dev→exec
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -14,6 +14,8 @@ var CONFIG = {
   VENTAS_SHEET_ID:       _P.getProperty('VENTAS_SHEET_ID'),
   BD_COMPRADORES_ID:     '1qsq48RpQbOYpbMp_qZRClrlJrMQ7JkgCEo_I5LS5hWk',
   PEDIDOS_SHEET_ID:      '1NmjnYWllrXrFpJI8GYJOjkGz90lPtvvDi0IQEYZl7-I',
+  // URL de producción del deployment — ScriptApp.getService().getUrl() devuelve /dev desde el editor
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec',
 
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
@@ -1903,7 +1905,7 @@ function registrarWebhook() {
   var url = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/webhooks';
   var payload = JSON.stringify({
     event: 'order/paid',
-    url: ScriptApp.getService().getUrl()
+    url: CONFIG.GAS_URL
   });
   var resp = UrlFetchApp.fetch(url, {
     method: 'post',
@@ -2020,8 +2022,20 @@ function registrarWebhookProductos() {
   var url      = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/webhooks';
   var resp     = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
   var webhooks = JSON.parse(resp.getContentText());
-  var gasUrl   = ScriptApp.getService().getUrl();
-  var yaExiste = Array.isArray(webhooks) && webhooks.some(function(w) {
+  var gasUrl   = CONFIG.GAS_URL;
+  // Borra webhooks de product/updated que apunten a /dev (registrados por error desde el editor)
+  if (Array.isArray(webhooks)) {
+    webhooks.forEach(function(w) {
+      if (w.event === 'product/updated' && w.url && w.url.indexOf('/dev') !== -1) {
+        UrlFetchApp.fetch(url + '/' + w.id, { method: 'delete', headers: _tnHeaders(), muteHttpExceptions: true });
+        Logger.log('Webhook /dev borrado: ' + w.id);
+      }
+    });
+  }
+  // Volver a consultar después del borrado
+  var resp2    = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  var webhooks2 = JSON.parse(resp2.getContentText());
+  var yaExiste = Array.isArray(webhooks2) && webhooks2.some(function(w) {
     return w.event === 'product/updated' && w.url === gasUrl;
   });
   if (!yaExiste) {
@@ -2030,7 +2044,7 @@ function registrarWebhookProductos() {
       muteHttpExceptions: true });
     Logger.log('Webhook registrado: ' + r.getResponseCode() + ' ' + r.getContentText());
   } else {
-    Logger.log('Webhook product/updated ya existe.');
+    Logger.log('Webhook product/updated ya existe con URL correcta.');
   }
 }
 
