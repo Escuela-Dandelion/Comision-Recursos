@@ -1,4 +1,4 @@
-// v2026-11-16j — GATEWAY_FEES: credit_card/debit_card/modo (2.97%+IVA); aporte escuela usa neto; reprocesarVentasTarjeta
+// v2026-11-16k — fix registrarWebhookProductos: url_endpoint → url (TN espera "url")
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -2022,11 +2022,11 @@ function registrarWebhookProductos() {
   var webhooks = JSON.parse(resp.getContentText());
   var gasUrl   = ScriptApp.getService().getUrl();
   var yaExiste = Array.isArray(webhooks) && webhooks.some(function(w) {
-    return w.event === 'product/updated' && w.url_endpoint === gasUrl;
+    return w.event === 'product/updated' && w.url === gasUrl;
   });
   if (!yaExiste) {
     var r = UrlFetchApp.fetch(url, { method: 'post', headers: _tnHeaders(),
-      payload: JSON.stringify({ event: 'product/updated', url_endpoint: gasUrl }),
+      payload: JSON.stringify({ event: 'product/updated', url: gasUrl }),
       muteHttpExceptions: true });
     Logger.log('Webhook registrado: ' + r.getResponseCode() + ' ' + r.getContentText());
   } else {
