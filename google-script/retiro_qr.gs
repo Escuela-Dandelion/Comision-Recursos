@@ -1,4 +1,4 @@
-// v2026-11-16o — _esEnvioADomicilio: chequea carrier+option para "retiro", saca fallbacks
+// v2026-11-16p — Ventas col Z: punto de retiro / opción de envío elegida por el comprador
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
@@ -1077,6 +1077,7 @@ function registrarEnVentas(order) {
     var orderTotal      = parseFloat(order.total || 0);
     var paymentMethod   = (order.payment_details && order.payment_details.method) || '';
     var gatewayFee      = CONFIG.GATEWAY_FEES[paymentMethod] || 0;
+    var puntoRetiro     = order.shipping_option || order.shipping_carrier_name || '';
     var gatewayCost     = orderTotal * gatewayFee;
     var orderNeto       = orderTotal - gatewayCost;
 
@@ -1148,8 +1149,10 @@ function registrarEnVentas(order) {
         aporteEscuelaLinea                   // col W (índice 22): aporte a la escuela de esta línea
         // col X (índice 23): share de aportes — manejado manualmente, no tocar
       ]);
-      // Escribir Marca en col Y (25) sin pisar col X
-      sheet.getRange(sheet.getLastRow(), 25).setValue(datos.marca);
+      // Escribir Marca (Y/25) y Punto de Retiro (Z/26) sin pisar col X
+      var lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 25).setValue(datos.marca);
+      sheet.getRange(lastRow, 26).setValue(puntoRetiro);
     });
     upsertComprador(order.contact_email, order.contact_name, order.contact_phone || '', gradoValido || '');
     Logger.log('Ventas: ' + order.products.length + ' fila(s) para pedido #' + order.number);
