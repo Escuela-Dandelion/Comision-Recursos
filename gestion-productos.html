@@ -1041,7 +1041,7 @@ function renderEditPrecios(variantes) {
       '</div>' +
       '<div class="field-row">' +
         '<div><label class="field-label">Costo</label>' +
-          (currentUser.role === 'ADMIN'
+          (currentUser.role === 'ADMIN' || currentUser.role === 'FGP'
             ? '<div class="input-precio"><span>$</span>' +
               '<input class="field" id="costo-' + v.id + '" type="number" step="1" value="' + v.costo + '" oninput="actualizarMargen(\'' + v.id + '\')"></div>'
             : '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151">' + (v.costo > 0 ? pesos(v.costo) : '—') + '</div>') +
