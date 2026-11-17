@@ -1168,7 +1168,7 @@ function guardarInfo() {
     btn.disabled = false;
     if (d.ok) {
       _auditLog('Producto', _productoActual.id, 'nombre', _nombreAntes, nombre);
-      _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes), _stripHtml(desc));
+      if (_descAntes !== desc) { _auditLog('Producto', _productoActual.id, 'descripcion', _stripHtml(_descAntes).substring(0,400), _stripHtml(desc).substring(0,400)); }
       setSt('info', '✓ Guardado', true);
       _productoActual.nombre      = nombre;
       _productoActual.descripcion = desc;
@@ -1513,7 +1513,7 @@ function eliminarImagen(imagenId, varianteId) {
   setSt('foto', 'Eliminando...');
   var params = new URLSearchParams({ action: 'delete_imagen', email: currentUser.email, producto_id: _productoActual.id, imagen_id: imagenId });
   var _imgEliminadaUrl = ((_productoActual.imagenes || []).find(function(i) { return i.id === imagenId; }) || {}).src || imagenId;
-  fetch(GAS_URL + '?' + params).then(function(r) { return r.json(); }).then(function(d) {
+  fetch(GAS_URL + '?' + params, { redirect: 'follow' }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.ok) {
       _auditLog('Producto', _productoActual.nombre, 'imagen', _imgEliminadaUrl, 'eliminada');
       _productoActual.imagenes = (_productoActual.imagenes || []).filter(function(i) { return i.id !== imagenId; });
