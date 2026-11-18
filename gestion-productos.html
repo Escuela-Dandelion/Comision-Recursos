@@ -494,6 +494,14 @@ textarea.field { min-height: 90px; resize: vertical; }
         <button class="btn-guardar" id="btn-guardar-stock" onclick="guardarStock()">Guardar stock</button>
         <span class="save-status" id="st-stock"></span>
       </div>
+
+      <!-- Variantes: peso y medidas -->
+      <div class="panel-section">
+        <h3>Peso y medidas</h3>
+        <div id="edit-envio"></div>
+        <button class="btn-guardar" id="btn-guardar-envio" onclick="guardarEnvio()">Guardar envío</button>
+        <span class="save-status" id="st-envio"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -715,7 +723,7 @@ function recargarProductos() {
       filtrar();
       if (idActual) {
         var p = _productos.find(function(x) { return x.id === idActual; });
-        if (p) { _productoActual = p; renderEditStock(p.variantes); renderEditPrecios(p.variantes); }
+        if (p) { _productoActual = p; renderEditStock(p.variantes); renderEditPrecios(p.variantes); renderEditEnvio(p.variantes); }
       }
     })
     .catch(function() {});
@@ -990,6 +998,8 @@ function abrirEditor(productoId) {
   renderEditPrecios(p.variantes);
   // Stock
   renderEditStock(p.variantes);
+  // Envío
+  renderEditEnvio(p.variantes);
 
   // Publicado
   var togEl = document.getElementById('toggle-publicado');
@@ -1115,6 +1125,69 @@ function renderEditStock(variantes) {
     '</div>';
   }).join('');
   document.getElementById('edit-stock').innerHTML = html;
+}
+
+function renderEditEnvio(variantes) {
+  var html = variantes.map(function(v) {
+    var w = v.weight > 0 ? v.weight : '';
+    var wd = v.width  > 0 ? v.width  : '';
+    var ht = v.height > 0 ? v.height : '';
+    var dp = v.depth  > 0 ? v.depth  : '';
+    return '<div class="variante-editor">' +
+      '<div class="variante-nombre">' + esc(v.nombre || v.sku || 'Variante') + '</div>' +
+      '<div class="field-row">' +
+        '<div><label class="field-label">Peso <span style="color:var(--muted);font-weight:400">(kg)</span></label>' +
+          '<input class="field" id="envio-weight-' + v.id + '" type="number" step="0.001" min="0" value="' + w + '" placeholder="0.000" style="max-width:110px"></div>' +
+        '<div><label class="field-label">Profundidad <span style="color:var(--muted);font-weight:400">(cm)</span></label>' +
+          '<input class="field" id="envio-depth-' + v.id + '" type="number" step="0.1" min="0" value="' + dp + '" placeholder="0.0" style="max-width:110px"></div>' +
+        '<div><label class="field-label">Ancho <span style="color:var(--muted);font-weight:400">(cm)</span></label>' +
+          '<input class="field" id="envio-width-' + v.id + '" type="number" step="0.1" min="0" value="' + wd + '" placeholder="0.0" style="max-width:110px"></div>' +
+        '<div><label class="field-label">Alto <span style="color:var(--muted);font-weight:400">(cm)</span></label>' +
+          '<input class="field" id="envio-height-' + v.id + '" type="number" step="0.1" min="0" value="' + ht + '" placeholder="0.0" style="max-width:110px"></div>' +
+      '</div>' +
+      (v.weight === 0 ? '<div style="font-size:11px;color:#b45309;margin-top:4px">Peso 0 = se clasifica como digital (sin QR ni retiro fisico).</div>' : '') +
+    '</div>';
+  }).join('');
+  document.getElementById('edit-envio').innerHTML = html;
+}
+
+function guardarEnvio() {
+  if (!_productoActual) return;
+  var btn = document.getElementById('btn-guardar-envio');
+  btn.disabled = true; setSt('envio', 'Guardando...');
+  var _antes = {};
+  _productoActual.variantes.forEach(function(v) {
+    _antes[v.id] = { weight: v.weight, width: v.width, height: v.height, depth: v.depth };
+  });
+  var promesas = _productoActual.variantes.map(function(v) {
+    var weight = document.getElementById('envio-weight-' + v.id).value;
+    var depth  = document.getElementById('envio-depth-'  + v.id).value;
+    var width  = document.getElementById('envio-width-'  + v.id).value;
+    var height = document.getElementById('envio-height-' + v.id).value;
+    var _pRef = _productoActual;
+    var params = new URLSearchParams({ action: 'update_variante', email: currentUser.email, producto_id: String(_pRef.id), variante_id: String(v.id), weight: weight, width: width, height: height, depth: depth });
+    return fetch(GAS_URL + '?' + params.toString(), { redirect: 'follow' })
+      .then(function(r) { return r.json().then(function(d) { return { d: d, v: v, weight: weight, width: width, height: height, depth: depth }; }); });
+  });
+  Promise.all(promesas).then(function(resultados) {
+    btn.disabled = false;
+    var errores = resultados.filter(function(r) { return !r.d.ok; });
+    if (errores.length) { setSt('envio', errores[0].d.error || 'Error', false); return; }
+    resultados.forEach(function(r) {
+      var label = r.v.sku || r.v.nombre || String(r.v.id);
+      var ant = _antes[r.v.id];
+      _auditLog('Producto', label, 'weight', ant.weight, r.weight);
+      _auditLog('Producto', label, 'width',  ant.width,  r.width);
+      _auditLog('Producto', label, 'height', ant.height, r.height);
+      _auditLog('Producto', label, 'depth',  ant.depth,  r.depth);
+      r.v.weight = parseFloat(r.weight) || 0;
+      r.v.width  = parseFloat(r.width)  || 0;
+      r.v.height = parseFloat(r.height) || 0;
+      r.v.depth  = parseFloat(r.depth)  || 0;
+    });
+    setSt('envio', '✓ Guardado', true);
+    renderEditEnvio(_productoActual.variantes);
+  }).catch(function(err) { btn.disabled = false; setSt('envio', 'Error: ' + (err && err.message ? err.message : 'no se pudo conectar'), false); });
 }
 
 function toggleInfinito(varianteId) {

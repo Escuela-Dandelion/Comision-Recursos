@@ -1,8 +1,12 @@
-// v2026-11-16p — Envio en Retiros/Ventas; backfill renormaliza valores no reconocidos
+// v2026-11-18c — apiProductos expone weight/width/height/depth; apiUpdateVariante los acepta para guardar en TN
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
+//   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
+//   TN_CLIENT_SECRET → Client Secret de la app en partners.tiendanube.com
 //   QR_SECRET        → secret para firma de QRs (cualquier texto largo)
 //   VENTAS_SHEET_ID  → ID del Google Sheet de Ventas
+//   ENVIA_TOKEN      → Bearer token de Envia.com (sandbox o produccion)
+//   ENVIA_ORIGEN     → JSON con direccion de origen: {"name":"...","street":"...","number":"...","city":"...","state":"Córdoba","country":"AR","postalCode":"5000","phone":"..."}
 //   PEDIDOS_SHEET_ID → ID del Google Sheet de Pedidos/ConfigStock
 var _P = PropertiesService.getScriptProperties();
 var CONFIG = {
@@ -92,7 +96,7 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
     }
     if (action === 'update_variante') {
-      var res = apiUpdateVariante(body.email || '', body.producto_id || '', body.variante_id || '', body.precio, body.precio_promo, body.costo, body.stock);
+      var res = apiUpdateVariante(body.email || '', body.producto_id || '', body.variante_id || '', body.precio, body.precio_promo, body.costo, body.stock, body.weight, body.width, body.height, body.depth);
       return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
     }
     if (action === 'update_imagen') {
@@ -115,6 +119,14 @@ function doPost(e) {
         }
       } catch(err) { Logger.log('auditLog doPost error: ' + err); }
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'generarEtiquetaEnvia') {
+      try {
+        var resultado = generarEtiquetaEnvia(body);
+        return ContentService.createTextOutput(JSON.stringify(resultado)).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     // Webhook de TiendaNube
@@ -251,6 +263,8 @@ function doGet(e) {
 }
 
 function doGetInterno(e) {
+  if (e.parameter.code) return _handleTiendaNubeOAuth(e.parameter.code);
+
   var action    = e.parameter.action    || '';
   var orderId   = e.parameter.id        || '';
   var token     = e.parameter.token     || '';
@@ -368,7 +382,7 @@ function doGetInterno(e) {
   }
 
   if (action === 'update_variante') {
-    var res = apiUpdateVariante(e.parameter.email || '', e.parameter.producto_id || '', e.parameter.variante_id || '', e.parameter.precio, e.parameter.precio_promo, e.parameter.costo, e.parameter.stock);
+    var res = apiUpdateVariante(e.parameter.email || '', e.parameter.producto_id || '', e.parameter.variante_id || '', e.parameter.precio, e.parameter.precio_promo, e.parameter.costo, e.parameter.stock, e.parameter.weight, e.parameter.width, e.parameter.height, e.parameter.depth);
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -2483,10 +2497,12 @@ var AUTH_EMAILS = {
   'ariasgibertsabina@gmail.com':     { role: 'referente', name: 'Sabi' },
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
   'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', proveedores: ['Nazareno'] },
-  'maximiliano.contreras@dandelion.edu.ar': { role: 'referente', name: 'Maximiliano' },
+  'maximiliano.contreras@dandelion.edu.ar': { role: 'DESPACHANTE', name: 'Maximiliano' },
   'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' },
   'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', proveedores: ['Tienda Limón'] },
   'dominguez.dolo@gmail.com':               { role: 'FGP',       name: 'Dolo',    proveedores: ['Sol de Oro'] }
+  // DESPACHANTE: accede a Ventas → Envio a Domicilio y puede generar etiquetas Envia.com
+  // Agregar aqui: 'email@ejemplo.com': { role: 'DESPACHANTE', name: 'Nombre' }
 };
 
 // Verificar Google Sign-In — devuelve {ok, role, name, proveedores}
@@ -3288,6 +3304,10 @@ function apiProductos(email) {
           activo:         v.visible !== false,
           image_id:       v.image_id ? String(v.image_id) : null,
           alarmaActivada: ov.alarmaActivada !== false,
+          weight:         parseFloat(v.weight || 0),
+          width:          parseFloat(v.width  || 0),
+          height:         parseFloat(v.height || 0),
+          depth:          parseFloat(v.depth  || 0),
           _dbg_clave_vel: sku
         };
       });
@@ -3374,7 +3394,7 @@ function apiUpdateProducto(email, productoId, nombre, descripcion) {
   return { ok: true };
 }
 
-function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, costo, stock) {
+function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, costo, stock, weight, width, height, depth) {
   var user = _authGestion(email);
   if (!user) return { ok: false, error: 'Sin permiso.' };
   if (user.role !== 'ADMIN') {
@@ -3394,6 +3414,10 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
       body.stock = parseInt(stock);
     }
   }
+  if (weight !== undefined && weight !== null && weight !== '') body.weight = parseFloat(weight);
+  if (width  !== undefined && width  !== null && width  !== '') body.width  = parseFloat(width);
+  if (height !== undefined && height !== null && height !== '') body.height = parseFloat(height);
+  if (depth  !== undefined && depth  !== null && depth  !== '') body.depth  = parseFloat(depth);
   if (!Object.keys(body).length) return { ok: false, error: 'Sin datos para actualizar.' };
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
   var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
@@ -3844,9 +3868,9 @@ function _quitarPromoAporteEscuela(dryRun) {
 
 // ─── DIAGNÓSTICO: PESOS Y MEDIDAS ────────────────────────────────────────────
 // Verifica que todas las variantes activas tengan peso > 0 y dimensiones > 0.
-// Las variantes con weight=0 se clasifican como digitales en TiendaNube (no generan envío).
+// Las variantes con weight=0 se listan para revisar si son realmente digitales o físicas sin configurar.
 function checkPesosYMedidas() {
-  var sinPeso = [], sinMedidas = [], ok = 0, digitales = 0;
+  var sinPeso = [], sinMedidas = [], ok = 0;
 
   for (var page = 1; page <= 20; page++) {
     var resp = UrlFetchApp.fetch(
@@ -3869,8 +3893,8 @@ function checkPesosYMedidas() {
         var label = nombre + ' | SKU: ' + sku + ' | variante id: ' + v.id;
 
         if (peso === 0) {
-          digitales++;
-          return; // weight=0 → digital, no necesita envío
+          sinPeso.push(label);
+          return;
         }
         var faltaMedida = (ancho === 0 || alto === 0 || prof === 0);
         if (faltaMedida) sinMedidas.push(label + ' | peso: ' + peso + ' kg | medidas: ' + ancho + 'x' + alto + 'x' + prof);
@@ -3883,7 +3907,8 @@ function checkPesosYMedidas() {
 
   Logger.log('=== checkPesosYMedidas ===');
   Logger.log('OK (peso + medidas completos): ' + ok);
-  Logger.log('Digitales (weight=0, se omiten): ' + digitales);
+  Logger.log('Sin peso (weight=0 — revisar si son digitales o físicos sin configurar): ' + sinPeso.length);
+  sinPeso.forEach(function(l) { Logger.log('  SIN PESO: ' + l); });
   Logger.log('Sin medidas (tienen peso pero faltan dimensiones): ' + sinMedidas.length);
   sinMedidas.forEach(function(l) { Logger.log('  SIN MEDIDAS: ' + l); });
   Logger.log('=========================');
@@ -3947,6 +3972,140 @@ function _setMedidas(dryRun) {
 }
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+// ── ENVIA.COM ETIQUETAS ──────────────────────────────────────────────────────
+
+var _ENVIA_API = 'https://api-test.envia.com'; // cambiar a 'https://api.envia.com' en produccion
+
+function _enviaHeaders() {
+  return {
+    'Authorization': 'Bearer ' + _P.getProperty('ENVIA_TOKEN'),
+    'Content-Type':  'application/json'
+  };
+}
+
+function _enviaOrigen() {
+  var json = _P.getProperty('ENVIA_ORIGEN');
+  if (!json) throw new Error('Falta ENVIA_ORIGEN en PropertiesService');
+  return JSON.parse(json);
+}
+
+function _enviaDestino(order) {
+  var addr = order.shipping_address || {};
+  return {
+    name:       order.contact_name  || addr.name  || '',
+    phone:      order.contact_phone || addr.phone || '0',
+    email:      order.contact_email || '',
+    street:     addr.address  || '',
+    number:     addr.number   || 'S/N',
+    district:   addr.floor    || '',
+    city:       addr.city     || '',
+    state:      addr.province || '',
+    country:    'AR',
+    postalCode: addr.zipcode  || ''
+  };
+}
+
+function generarEtiquetaEnvia(body) {
+  var order = fetchOrder(String(body.orderId || ''));
+  if (!order || !order.id) return { ok: false, error: 'No se pudo obtener la orden ' + body.orderId };
+
+  var origen  = _enviaOrigen();
+  var destino = _enviaDestino(order);
+  var paquete = [{
+    type:          'box',
+    content:       String(body.contenido || 'Productos agroecologicos'),
+    amount:        1,
+    declaredValue: parseFloat(order.total || 0) || 1000,
+    weight:        parseFloat(body.peso  || 1),
+    weightUnit:    'KG',
+    lengthUnit:    'CM',
+    dimensions: {
+      length: parseFloat(body.largo || 20),
+      width:  parseFloat(body.ancho || 15),
+      height: parseFloat(body.alto  || 10)
+    }
+  }];
+
+  var ratePayload = {
+    origin:      origen,
+    destination: destino,
+    packages:    paquete,
+    shipment:    { type: 1 }
+  };
+  var rateResp = UrlFetchApp.fetch(_ENVIA_API + '/ship/rate/', {
+    method:             'post',
+    contentType:        'application/json',
+    headers:            _enviaHeaders(),
+    payload:            JSON.stringify(ratePayload),
+    muteHttpExceptions: true
+  });
+  Logger.log('[envia] rate status: ' + rateResp.getResponseCode() + ' body: ' + rateResp.getContentText().substring(0, 400));
+  var rateBody = JSON.parse(rateResp.getContentText());
+  var opciones = Array.isArray(rateBody) ? rateBody : (rateBody.data || []);
+  if (!opciones.length) return { ok: false, error: 'Sin tarifas disponibles', raw: rateBody };
+
+  opciones.sort(function(a, b) { return (a.totalPrice || 999999) - (b.totalPrice || 999999); });
+  var mejor = opciones[0];
+
+  var genPayload = {
+    origin:      origen,
+    destination: destino,
+    packages:    paquete,
+    shipment: {
+      carrier: mejor.carrier,
+      service: mejor.service,
+      type:    1
+    },
+    settings: {
+      printFormat: 'PDF',
+      printSize:   'PAPER_4X6',
+      comments:    'Tienda Diente de Leon — Orden #' + (order.number || body.orderId)
+    }
+  };
+  var genResp = UrlFetchApp.fetch(_ENVIA_API + '/ship/generate/', {
+    method:             'post',
+    contentType:        'application/json',
+    headers:            _enviaHeaders(),
+    payload:            JSON.stringify(genPayload),
+    muteHttpExceptions: true
+  });
+  Logger.log('[envia] generate status: ' + genResp.getResponseCode() + ' body: ' + genResp.getContentText().substring(0, 400));
+  var genResult = JSON.parse(genResp.getContentText());
+
+  var d = genResult.data && genResult.data[0];
+  if (!d) return { ok: false, error: 'Error al generar etiqueta', raw: genResult };
+
+  _guardarTrackingRetiro(String(body.orderId), d.trackingNumber, d.label);
+
+  return {
+    ok:           true,
+    label:        d.label,
+    trackingNumber: d.trackingNumber,
+    carrier:      mejor.carrier,
+    carrierLabel: mejor.carrierLabel || mejor.carrier,
+    totalPrice:   d.totalPrice || mejor.totalPrice
+  };
+}
+
+function _guardarTrackingRetiro(orderId, tracking, labelUrl) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+    var sheet = ss.getSheetByName('Retiros');
+    if (!sheet) return;
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(orderId)) {
+        sheet.getRange(i + 1, 15).setValue(tracking);
+        sheet.getRange(i + 1, 16).setValue(labelUrl);
+        _invalidarCacheRetiros();
+        return;
+      }
+    }
+  } catch(e) { Logger.log('_guardarTrackingRetiro error: ' + e); }
+}
+
+// ── FIN ENVIA.COM ────────────────────────────────────────────────────────────
+
 function registrarAuditLog(email, recurso, id, campo, antes, despues) {
   var ss = SpreadsheetApp.openById('1rmhUy8dMrV48aCe4BJoayCavSlPtj36oW909m_FWGsY');
   var sh = ss.getSheetByName('AuditLog');
@@ -3966,4 +4125,33 @@ function registrarAuditLog(email, recurso, id, campo, antes, despues) {
   for (var i = data.length - 1; i >= 1; i--) {
     if (data[i][0] instanceof Date && data[i][0] < limite) sh.deleteRow(i + 1);
   }
+}
+
+function _handleTiendaNubeOAuth(code) {
+  var ps           = PropertiesService.getScriptProperties();
+  var clientId     = ps.getProperty('TN_CLIENT_ID');
+  var clientSecret = ps.getProperty('TN_CLIENT_SECRET');
+  if (!clientId || !clientSecret) {
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:24px;color:red">Faltan TN_CLIENT_ID o TN_CLIENT_SECRET en Script Properties.</p>');
+  }
+  var resp = UrlFetchApp.fetch('https://www.tiendanube.com/apps/authorize/token', {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code: code }),
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() !== 200) {
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:24px;color:red">Error TiendaNube: ' + resp.getContentText() + '</p>');
+  }
+  var data = JSON.parse(resp.getContentText());
+  if (!data.access_token) {
+    return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:24px;color:red">Respuesta inesperada: ' + resp.getContentText() + '</p>');
+  }
+  ps.setProperty('TN_API_TOKEN', data.access_token);
+  return HtmlService.createHtmlOutput(
+    '<p style="font-family:sans-serif;padding:24px;color:#3a7d44">' +
+    '<strong>Token actualizado correctamente.</strong><br>' +
+    'Store ID: ' + (data.user_id || '-') + '<br>' +
+    'Ya podes cerrar esta ventana.</p>'
+  );
 }
