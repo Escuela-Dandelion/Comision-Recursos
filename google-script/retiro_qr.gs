@@ -1,4 +1,4 @@
-// v2026-11-18e — Remito: actualizarStockRemito endpoint + _actualizarStockRemito agrega delta al stock por tienda
+// v2026-11-18f — checkPedidosPendientesHoy: identifica pedidos pagados en TN que no llegaron a procesarse
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -4244,4 +4244,105 @@ function _handleTiendaNubeOAuth(code) {
     'Store ID: ' + (data.user_id || '-') + '<br>' +
     'Ya podes cerrar esta ventana.</p>'
   );
+}
+
+// ──────────────────────────────────────────────────────────
+// DIAGNÓSTICO: Pedidos pagados en TN que no fueron procesados
+// Correr desde el editor GAS (sin parámetros = revisa hoy + ayer)
+// ──────────────────────────────────────────────────────────
+function checkPedidosPendientesHoy() {
+  // Busca pedidos de las últimas 48h para cubrir el ventana del token revocado
+  var desde = new Date();
+  desde.setDate(desde.getDate() - 2);
+  var desdeStr = Utilities.formatDate(desde, 'America/Argentina/Cordoba', "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+  var pendientes = [];
+  var yaEnRetiros = 0;
+
+  for (var page = 1; page <= 10; page++) {
+    var url = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders'
+      + '?payment_status=paid'
+      + '&per_page=50'
+      + '&page=' + page
+      + '&created_at_min=' + encodeURIComponent(desdeStr);
+
+    var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('Error TN API p' + page + ': ' + resp.getResponseCode() + ' — ' + resp.getContentText().slice(0, 200));
+      break;
+    }
+    var orders = JSON.parse(resp.getContentText());
+    if (!orders || !orders.length) break;
+
+    orders.forEach(function(o) {
+      if (o.status === 'cancelled') return;
+      if (yaFueEnviado(o.id)) {
+        yaEnRetiros++;
+        return;
+      }
+      var prods = (o.products || []).map(function(p) {
+        return p.quantity + 'x ' + (p.name || p.product_id);
+      }).join(' | ');
+      pendientes.push({
+        id:      o.id,
+        numero:  o.number,
+        nombre:  o.contact_name,
+        email:   o.contact_email,
+        total:   o.total,
+        fecha:   Utilities.formatDate(new Date(o.created_at), 'America/Argentina/Cordoba', 'dd/MM HH:mm'),
+        productos: prods
+      });
+    });
+
+    if (orders.length < 50) break;
+  }
+
+  Logger.log('=================================================');
+  Logger.log('PEDIDOS PAGADOS (últimas 48h): procesados=' + yaEnRetiros + ' | PENDIENTES=' + pendientes.length);
+  Logger.log('=================================================');
+  if (pendientes.length === 0) {
+    Logger.log('No hay pedidos pendientes de procesar.');
+  } else {
+    pendientes.forEach(function(p, i) {
+      Logger.log((i + 1) + '. #' + p.numero + ' — ' + p.nombre + ' <' + p.email + '>  $' + p.total + '  [' + p.fecha + ']');
+      Logger.log('   Productos: ' + p.productos);
+    });
+  }
+  Logger.log('=================================================');
+  Logger.log('Para reprocesar: llamá reprocesarPedidosPendientes()');
+  return pendientes;
+}
+
+// Reprocesa los pedidos identificados por checkPedidosPendientesHoy().
+// IMPORTANTE: revisa el log de checkPedidosPendientesHoy antes de correr esto.
+function reprocesarPedidosPendientes() {
+  var pendientes = checkPedidosPendientesHoy();
+  if (!pendientes || pendientes.length === 0) {
+    Logger.log('Nada para reprocesar.');
+    return;
+  }
+  Logger.log('Reprocesando ' + pendientes.length + ' pedidos...');
+  pendientes.forEach(function(p) {
+    try {
+      var order = fetchOrder(p.id);
+      if (!order || order.payment_status !== 'paid') {
+        Logger.log('  Saltando #' + p.numero + ' — estado no es paid o no encontrado');
+        return;
+      }
+      var partes = separarProductos(order);
+      if (partes.digitales.length > 0) registrarEnDigitales(order, partes.digitales);
+      if (partes.fisicos.length > 0) {
+        var ordenFisica = JSON.parse(JSON.stringify(order));
+        ordenFisica.products = partes.fisicos;
+        procesarPedido(ordenFisica);
+        Logger.log('  OK #' + p.numero + ' — ' + p.nombre);
+      } else {
+        Logger.log('  #' + p.numero + ' — solo digital, registrado en Digitales');
+      }
+    } catch(err) {
+      Logger.log('  ERROR #' + p.numero + ': ' + err);
+    }
+    Utilities.sleep(1000); // evitar rate limit
+  });
+  Logger.log('Reprocesamiento terminado.');
 }
