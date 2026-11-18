@@ -1,4 +1,4 @@
-// v2026-11-18c — apiProductos expone weight/width/height/depth; apiUpdateVariante los acepta para guardar en TN
+// v2026-11-18e — Remito: actualizarStockRemito endpoint + _actualizarStockRemito agrega delta al stock por tienda
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -119,6 +119,14 @@ function doPost(e) {
         }
       } catch(err) { Logger.log('auditLog doPost error: ' + err); }
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'actualizarStockRemito') {
+      try {
+        var res = _actualizarStockRemito(body.email || '', body.norden || '', body.items || []);
+        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+      }
     }
     if (action === 'generarEtiquetaEnvia') {
       try {
@@ -3414,14 +3422,41 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
       body.stock = parseInt(stock);
     }
   }
+  var hayEnvio = (weight !== undefined && weight !== null && weight !== '') ||
+                 (width  !== undefined && width  !== null && width  !== '') ||
+                 (height !== undefined && height !== null && height !== '') ||
+                 (depth  !== undefined && depth  !== null && depth  !== '');
   if (weight !== undefined && weight !== null && weight !== '') body.weight = parseFloat(weight);
   if (width  !== undefined && width  !== null && width  !== '') body.width  = parseFloat(width);
   if (height !== undefined && height !== null && height !== '') body.height = parseFloat(height);
   if (depth  !== undefined && depth  !== null && depth  !== '') body.depth  = parseFloat(depth);
   if (!Object.keys(body).length) return { ok: false, error: 'Sin datos para actualizar.' };
+
+  // Fetch valores actuales antes del PUT para poder auditar el antes/después
+  var varAntes = null;
+  if (hayEnvio) {
+    var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
+    var fetchAntes = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+    if (fetchAntes.getResponseCode() === 200) varAntes = JSON.parse(fetchAntes.getContentText());
+  }
+
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId + '/variants/' + varianteId;
   var resp = UrlFetchApp.fetch(url, { method: 'put', headers: _tnHeaders(), payload: JSON.stringify(body), muteHttpExceptions: true });
   if (resp.getResponseCode() !== 200) { Logger.log('apiUpdateVariante error: ' + resp.getContentText()); return { ok: false, error: 'Error al actualizar variante.' }; }
+
+  // Auditar cambios de envío
+  if (hayEnvio && varAntes) {
+    var auditId = varAntes.sku || (productoId + '_' + varianteId);
+    var envioFields = { weight: weight, width: width, height: height, depth: depth };
+    Object.keys(envioFields).forEach(function(campo) {
+      var nuevo = envioFields[campo];
+      if (nuevo === undefined || nuevo === null || nuevo === '') return;
+      var ant = parseFloat(varAntes[campo] || 0);
+      var nv  = parseFloat(nuevo);
+      if (ant !== nv) registrarAuditLog(email, 'Producto', auditId, campo, ant, nv);
+    });
+  }
+
   _invalidarCacheProductos(email);
   return { ok: true };
 }
@@ -3864,6 +3899,61 @@ function _quitarPromoAporteEscuela(dryRun) {
   });
 
   Logger.log('Promo quitada de ' + modificados + (dryRun ? ' productos (dry run).' : ' productos.'));
+}
+
+// ─── REMITO: actualizar stock desde distribución de remito ───────────────────
+function _actualizarStockRemito(email, norden, items) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+
+  // Mapa SKU → {productId, variantId, esInfinito} desde TiendaNube
+  var skuMap = {};
+  for (var page = 1; page <= 20; page++) {
+    var resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page + '&fields=id,name,variants',
+      { headers: _tnHeaders(), muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) break;
+    var prods = JSON.parse(resp.getContentText());
+    if (!prods || !prods.length) break;
+    prods.forEach(function(p) {
+      (p.variants || []).forEach(function(v) {
+        if (!v.sku) return;
+        skuMap[String(v.sku).trim()] = {
+          productId:  String(p.id),
+          variantId:  String(v.id),
+          nombre:     v.sku,
+          esInfinito: (v.stock === null || v.stock_management === false)
+        };
+      });
+    });
+    if (prods.length < 200) break;
+  }
+
+  var overrides = leerOverridesStock();
+  var resultados = [];
+
+  items.forEach(function(item) {
+    var sku  = String(item.sku || '').trim();
+    var info = skuMap[sku];
+    if (!info) { resultados.push({ sku: sku, ok: false, error: 'SKU no encontrado en TiendaNube' }); return; }
+    if (info.esInfinito) { resultados.push({ sku: sku, ok: true, omitido: true }); return; }
+
+    var clave     = info.productId + '_' + info.variantId;
+    var ov        = overrides[clave] || {};
+    var stockPAct = (ov.stockP !== null && ov.stockP !== undefined) ? ov.stockP : 0;
+    var stockSAct = (ov.stockS !== null && ov.stockS !== undefined) ? ov.stockS : 0;
+    var totalAct  = stockPAct + stockSAct;
+    var nuevaP    = stockPAct + (parseInt(item.cantP) || 0);
+    var nuevaS    = stockSAct + (parseInt(item.cantS) || 0);
+
+    var r = apiUpdateStockUbicaciones(email, info.productId, info.variantId, sku, String(nuevaP), String(nuevaS), String(totalAct));
+    if (r.ok) registrarAuditLog(email, 'StockRemito', norden, sku, totalAct, nuevaP + nuevaS);
+    resultados.push({ sku: sku, ok: r.ok, error: r.ok ? null : (r.error || 'Error') });
+  });
+
+  var errores = resultados.filter(function(r){ return !r.ok && !r.omitido; });
+  return { ok: errores.length === 0, resultados: resultados };
 }
 
 // ─── DIAGNÓSTICO: PESOS Y MEDIDAS ────────────────────────────────────────────

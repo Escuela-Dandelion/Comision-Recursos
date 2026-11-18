@@ -757,6 +757,39 @@
   </div>
 </div>
 
+<!-- ── MODAL REMITO ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalRemito" onclick="if(event.target===this)cerrarModalRemito()">
+  <div class="modal-dialog" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <div style="font-size:15px;font-weight:800;color:#111827">Distribución de Remito — <span id="remito-norden"></span></div>
+      <button class="modal-close" onclick="cerrarModalRemito()">✕</button>
+    </div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Indicá cuántas unidades de cada producto van a cada tienda.</div>
+    <div id="remito-table-wrap"></div>
+    <div id="remito-status" style="font-size:11px;color:#9ca3af;min-height:14px;margin-top:6px"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="cerrarModalRemito()">Cancelar</button>
+      <button class="btn-confirm" id="btn-generar-remito" onclick="generarRemito()">Generar Remito</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CONFIRMAR STOCK ─────────────────────────────────── -->
+<div class="modal-overlay" id="modalConfirmarStock" onclick="if(event.target===this)cerrarModalConfirmarStock()">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div style="font-size:15px;font-weight:800;color:#111827">¿Actualizar stock?</div>
+      <button class="modal-close" onclick="cerrarModalConfirmarStock()">✕</button>
+    </div>
+    <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">Se suma el stock recibido al stock actual de cada tienda. Los productos con stock infinito no se modifican.</div>
+    <div id="confirm-stock-items" style="max-height:220px;overflow-y:auto;font-size:12px"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="cerrarModalConfirmarStock()">Solo el remito</button>
+      <button class="btn-confirm" id="btn-confirmar-stock" onclick="ejecutarActualizarStock()">Sí, actualizar stock</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbz-SRI6_udFy4ktEoE4lABW8RbDNDZAQ8cfC6ZjGKonSI2BY6R_fQZMeVIAU5tEQlzGBQ/exec';
@@ -2424,6 +2457,9 @@ function renderDetalle(p) {
   if (p.estadoPago !== 'Pagado' && p.estado !== 'Cancelado') {
     botonesTop += `<button class="btn-accion-top" style="background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;" onclick="solicitarPago('${p.norden}')">💬 Solicitar pago</button>`;
   }
+  if (p.estado !== 'Cancelado') {
+    botonesTop += `<button class="btn-accion-top" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;" onclick="abrirModalRemito()">📄 Remito</button>`;
+  }
   document.getElementById('d-acciones-top').innerHTML = botonesTop;
 
   // CTA sticky al pie — acción principal (primera acción no Cancelar)
@@ -2932,6 +2968,186 @@ function mostrarFlashDetalle(msg, tipo) {
   el.style.display = 'block';
   if (tipo !== 'error') setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
+
+// ── REMITO ─────────────────────────────────────────────────────
+var _remitoItems   = []; // [{nombre, cantidad, cantP, cantS, sku, esInfinito}]
+var _remitoSkuMap  = {}; // sku → {productoId, varianteId, stockP, stockS, esInfinito}
+
+function _getEmailSession() {
+  try { var s = JSON.parse(localStorage.getItem('dl_admin_session') || 'null'); return s && s.email ? s.email : ''; } catch(e) { return ''; }
+}
+
+function abrirModalRemito() {
+  if (!pedidoActual) return;
+  document.getElementById('remito-norden').textContent = pedidoActual.norden;
+  var rows = parseProductos(pedidoActual.productos || '').filter(function(r){ return r.nombre; });
+  _remitoItems = rows.map(function(r) {
+    return { nombre: r.nombre, cantidad: parseInt(r.cantidad) || 1, cantP: parseInt(r.cantidad) || 1, cantS: 0, sku: r.sku, esInfinito: false };
+  });
+  _remitoSkuMap = {};
+  renderTablaRemito();
+  document.getElementById('modalRemito').classList.add('open');
+  _cargarStockInfoRemito();
+}
+
+function cerrarModalRemito() {
+  document.getElementById('modalRemito').classList.remove('open');
+}
+
+function renderTablaRemito() {
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    '<thead><tr>' +
+      '<th style="text-align:left;padding:7px 6px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#6b7280;font-weight:600">Producto</th>' +
+      '<th style="text-align:center;padding:7px 4px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#6b7280;font-weight:600;width:48px">Total</th>' +
+      '<th style="text-align:center;padding:7px 4px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#0369a1;font-weight:700;width:100px">Primario</th>' +
+      '<th style="text-align:center;padding:7px 4px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#7c3aed;font-weight:700;width:100px">Secundario</th>' +
+    '</tr></thead><tbody>';
+  _remitoItems.forEach(function(item, i) {
+    html += '<tr>' +
+      '<td style="padding:8px 6px;border-bottom:1px solid #f3f4f6">' +
+        '<div style="font-weight:600;color:#111827;font-size:13px">' + escHtml(item.nombre) + '</div>' +
+        (item.sku ? '<div style="font-size:10px;color:#9ca3af;margin-top:1px">' + escHtml(item.sku) + '</div>' : '') +
+        (item.esInfinito ? '<span style="font-size:10px;color:#6b7280;background:#f3f4f6;border-radius:4px;padding:1px 5px;margin-top:2px;display:inline-block">stock infinito</span>' : '') +
+      '</td>' +
+      '<td style="text-align:center;padding:8px 4px;border-bottom:1px solid #f3f4f6;font-weight:700;color:#374151">' + item.cantidad + '</td>' +
+      '<td style="text-align:center;padding:8px 4px;border-bottom:1px solid #f3f4f6">' +
+        '<input type="number" min="0" value="' + item.cantP + '" ' +
+          'style="width:72px;text-align:center;border:1px solid #bae6fd;border-radius:6px;padding:5px 4px;font-size:13px;font-weight:600;color:#0369a1" ' +
+          'oninput="_remitoItems[' + i + '].cantP=parseInt(this.value)||0">' +
+      '</td>' +
+      '<td style="text-align:center;padding:8px 4px;border-bottom:1px solid #f3f4f6">' +
+        '<input type="number" min="0" value="' + item.cantS + '" ' +
+          'style="width:72px;text-align:center;border:1px solid #ddd6fe;border-radius:6px;padding:5px 4px;font-size:13px;font-weight:600;color:#7c3aed" ' +
+          'oninput="_remitoItems[' + i + '].cantS=parseInt(this.value)||0">' +
+      '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('remito-table-wrap').innerHTML = html;
+}
+
+function _cargarStockInfoRemito() {
+  var email = _getEmailSession();
+  if (!email) return;
+  document.getElementById('remito-status').textContent = 'Cargando info de stock…';
+  fetch(AUDIT_URL + '?action=apiProductos&email=' + encodeURIComponent(email), { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data || !data.productos) { document.getElementById('remito-status').textContent = ''; return; }
+      var map = {};
+      data.productos.forEach(function(p) {
+        (p.variantes || []).forEach(function(v) {
+          if (!v.sku) return;
+          map[v.sku] = { productoId: p.id, varianteId: v.id, stockP: v.stockP || 0, stockS: v.stockS || 0, esInfinito: v.stock === null };
+        });
+      });
+      _remitoSkuMap = map;
+      _remitoItems.forEach(function(item) {
+        if (item.sku && map[item.sku]) item.esInfinito = map[item.sku].esInfinito;
+      });
+      renderTablaRemito();
+      document.getElementById('remito-status').textContent = '';
+    })
+    .catch(function(){ document.getElementById('remito-status').textContent = ''; });
+}
+
+function generarRemito() {
+  if (!pedidoActual || !_remitoItems.length) return;
+  var itemsP = _remitoItems.filter(function(i){ return i.cantP > 0; });
+  var itemsS = _remitoItems.filter(function(i){ return i.cantS > 0; });
+  var fecha  = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  function filas(items, campoQty) {
+    return items.length
+      ? items.map(function(i){ return '<tr><td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;font-size:13px">' + escHtml(i.nombre) + '</td><td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:13px">' + i[campoQty] + '</td></tr>'; }).join('')
+      : '<tr><td colspan="2" style="padding:12px;color:#9ca3af;text-align:center;font-size:12px">Sin productos asignados</td></tr>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito ' + pedidoActual.norden + '</title>' +
+    '<style>*{box-sizing:border-box}body{font-family:-apple-system,sans-serif;margin:0;padding:24px;color:#111;font-size:13px}' +
+    'h1{font-size:19px;font-weight:800;color:#2d5a27;margin:0}' +
+    'h2{font-size:13px;font-weight:700;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid currentColor;text-transform:uppercase;letter-spacing:.5px}' +
+    '.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:20px}' +
+    'table{width:100%;border-collapse:collapse}' +
+    'thead th{background:#f9fafb;padding:7px 10px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:2px solid #e5e7eb}' +
+    'thead th:last-child{text-align:right}' +
+    '.firma{margin-top:28px;border-top:1px solid #d1d5db;padding-top:8px;font-size:11px;color:#9ca3af}' +
+    '@media print{.no-print{display:none}}' +
+    '</style></head><body>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2d5a27;padding-bottom:14px;margin-bottom:4px">' +
+      '<div><h1>Remito de Ingreso</h1><div style="color:#6b7280;margin-top:4px;font-size:12px">Tienda Diente de León</div></div>' +
+      '<div style="text-align:right;font-size:12px;color:#374151;line-height:1.8">' +
+        '<div><strong>Orden:</strong> ' + escHtml(pedidoActual.norden) + '</div>' +
+        '<div><strong>Proveedor:</strong> ' + escHtml(pedidoActual.proveedor || '—') + '</div>' +
+        '<div><strong>Fecha:</strong> ' + fecha + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="grid">' +
+      '<div><h2 style="color:#0369a1">Tienda Primaria — Claudio</h2>' +
+        '<table><thead><tr><th>Producto</th><th style="text-align:right">Cant.</th></tr></thead><tbody>' + filas(itemsP, 'cantP') + '</tbody></table>' +
+        '<div class="firma">Recibido por: _____________________ Fecha: _______</div>' +
+      '</div>' +
+      '<div><h2 style="color:#7c3aed">Tienda Secundaria — Inés</h2>' +
+        '<table><thead><tr><th>Producto</th><th style="text-align:right">Cant.</th></tr></thead><tbody>' + filas(itemsS, 'cantS') + '</tbody></table>' +
+        '<div class="firma">Recibido por: _____________________ Fecha: _______</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="no-print" style="margin-top:20px;text-align:center">' +
+      '<button onclick="window.print()" style="padding:10px 28px;background:#2d5a27;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Imprimir</button>' +
+    '</div>' +
+    '<script>setTimeout(function(){window.print();},400);<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank', 'width=820,height=640');
+  if (w) { w.document.write(html); w.document.close(); }
+
+  cerrarModalRemito();
+  _mostrarConfirmarStock();
+}
+
+function _mostrarConfirmarStock() {
+  var conStock = _remitoItems.filter(function(i){ return i.sku && !i.esInfinito && (i.cantP > 0 || i.cantS > 0); });
+  var html = conStock.length
+    ? conStock.map(function(i){
+        return '<div style="padding:5px 0;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;gap:8px">' +
+          '<span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(i.nombre) + '</span>' +
+          '<span style="color:#6b7280;white-space:nowrap;flex-shrink:0">+' + i.cantP + ' prim, +' + i.cantS + ' sec</span></div>';
+      }).join('')
+    : '<div style="color:#9ca3af;padding:8px 0">No hay productos con stock finito para actualizar.</div>';
+  document.getElementById('confirm-stock-items').innerHTML = html;
+  var btn = document.getElementById('btn-confirmar-stock');
+  btn.disabled = conStock.length === 0;
+  btn.textContent = 'Sí, actualizar stock';
+  document.getElementById('modalConfirmarStock').classList.add('open');
+}
+
+function cerrarModalConfirmarStock() {
+  document.getElementById('modalConfirmarStock').classList.remove('open');
+}
+
+function ejecutarActualizarStock() {
+  var btn = document.getElementById('btn-confirmar-stock');
+  btn.disabled = true;
+  btn.textContent = 'Actualizando…';
+  var email = _getEmailSession();
+  var items = _remitoItems
+    .filter(function(i){ return i.sku && !i.esInfinito && (i.cantP > 0 || i.cantS > 0); })
+    .map(function(i){ return { sku: i.sku, cantP: i.cantP, cantS: i.cantS }; });
+  fetch(AUDIT_URL, {
+    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'actualizarStockRemito', email: email, norden: pedidoActual.norden, items: items })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    cerrarModalConfirmarStock();
+    mostrarFlashDetalle(data.ok ? '✅ Stock actualizado correctamente.' : '❌ Error: ' + (data.error || 'Error al actualizar'), data.ok ? 'success' : 'error');
+  })
+  .catch(function(){
+    cerrarModalConfirmarStock();
+    mostrarFlashDetalle('❌ Error de conexión.', 'error');
+  });
+}
+
 </script>
 </body>
 </html>
