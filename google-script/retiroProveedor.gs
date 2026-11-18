@@ -1,4 +1,4 @@
-// v2026-11-14 — getVentasSinStock: agrega email + phone (lookup BD Compradores) por comprador
+// v2026-11-18a — subirComprobanteEnDrive: tipoPago 'remito' guarda prefijo REMITO: en la columna
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -938,9 +938,11 @@ function subirComprobanteEnDrive(data) {
   folder = iter.hasNext() ? iter.next() : DriveApp.createFolder(CARPETA);
 
   // Crear archivo
-  const bytes = Utilities.base64Decode(base64);
-  const blob  = Utilities.newBlob(bytes, mimeType || 'application/octet-stream', norden + '_' + filename);
-  const file  = folder.createFile(blob);
+  const bytes    = Utilities.base64Decode(base64);
+  const esRemito = (tipoPago === 'remito');
+  const nombre   = esRemito ? filename : (norden + '_' + filename);
+  const blob     = Utilities.newBlob(bytes, mimeType || 'application/octet-stream', nombre);
+  const file     = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const url = file.getUrl();
 
@@ -951,8 +953,9 @@ function subirComprobanteEnDrive(data) {
   const fila  = encontrado.fila;
   const hoy   = Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy');
 
-  const existing = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
-  const newVal   = existing ? existing + '|' + url : url;
+  const storedUrl = esRemito ? ('REMITO:' + url) : url;
+  const existing  = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
+  const newVal    = existing ? existing + '|' + storedUrl : storedUrl;
   sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(newVal);
   if (!tipoPago || tipoPago === 'completo') {
     sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');

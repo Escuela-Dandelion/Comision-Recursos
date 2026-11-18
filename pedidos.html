@@ -1422,7 +1422,7 @@ function renderLista(pedidos) {
             ${p.estadoPago === 'Pagado'
               ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>`
               : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
-            ${p.comprobante ? `<a href="${p.comprobante.split('|')[0]}" target="_blank" title="Ver comprobante" style="font-size:14px;line-height:1;text-decoration:none;opacity:0.6;" onclick="event.stopPropagation()">📎</a>` : ''}
+            ${p.comprobante ? (() => { const all = p.comprobante.split('|'); const comp = all.find(u => !u.startsWith('REMITO:')); const rem = all.find(u => u.startsWith('REMITO:')); const url = comp || (rem ? rem.slice(7) : null); return url ? `<a href="${url}" target="_blank" title="Ver comprobante" style="font-size:14px;line-height:1;text-decoration:none;opacity:0.6;" onclick="event.stopPropagation()">${comp ? '📎' : '📄'}</a>` : ''; })() : ''}
           </div>
         </td>
         <td class="col-accion">
@@ -1435,9 +1435,14 @@ function renderLista(pedidos) {
               ).join('')}
               ${p.comprobante ? `
               <div class="dots-menu-sep"></div>
-              ${p.comprobante.split('|').map((url, i) =>
-                `<a class="dots-menu-item" href="${url}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">📎 Comprobante${p.comprobante.split('|').length > 1 ? ' ' + (i+1) : ''}</a>`
-              ).join('')}` : ''}
+              ${p.comprobante.split('|').map((raw, i) => {
+                const c = _comprobanteParse(raw);
+                const isRemito = c.label === 'Remito';
+                const icon = isRemito ? '📄' : '📎';
+                const compOnly = p.comprobante.split('|').filter(u => !u.startsWith('REMITO:'));
+                const label = isRemito ? 'Remito' : ('Comprobante' + (compOnly.length > 1 ? ' ' + (i+1) : ''));
+                return `<a class="dots-menu-item" href="${c.url}" target="_blank" onclick="closeMenus()" style="text-decoration:none;color:inherit;">${icon} ${label}</a>`;
+              }).join('')}` : ''}
               ${p.estadoPago !== 'Pagado' && p.estado !== 'Cancelado' ? `
               <div class="dots-menu-sep"></div>
               <button class="dots-menu-item" onclick="closeMenus(); solicitarPago('${p.norden}')">💬 Solicitar pago</button>` : ''}
@@ -2404,9 +2409,16 @@ function renderDetalle(p) {
   if (compWrap && compList) {
     if (p.comprobante) {
       const urls = p.comprobante.split('|').filter(Boolean);
-      compList.innerHTML = urls.map((url, i) =>
-        `<a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Ver Comprobante${urls.length > 1 ? ' ' + (i+1) : ''}</a>`
-      ).join('');
+      compList.innerHTML = urls.map((raw, i) => {
+        const c = _comprobanteParse(raw);
+        const isRemito = c.label === 'Remito';
+        const style = isRemito
+          ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;'
+          : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
+        const icon = isRemito ? '📄' : '📎';
+        const label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(u=>!u.startsWith('REMITO:')).length > 1 ? ' ' + (i+1) : ''));
+        return `<a href="${c.url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;${style}border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">${icon} ${label}</a>`;
+      }).join('');
       compWrap.style.display = '';
     } else {
       compWrap.style.display = 'none';
@@ -2855,8 +2867,13 @@ async function ejecutarSubida() {
           const compList = document.getElementById('d-comprobantes-list');
           if (compWrap && compList) {
             const urls = pedidoActual.comprobante.split('|').filter(Boolean);
-            compList.innerHTML = urls.map(function(url, i){
-              return '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">📎 Comprobante' + (urls.length > 1 ? ' ' + (i+1) : '') + '</a>';
+            compList.innerHTML = urls.map(function(raw, i) {
+              var c = _comprobanteParse(raw);
+              var isRemito = c.label === 'Remito';
+              var style = isRemito ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;' : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
+              var icon  = isRemito ? '📄' : '📎';
+              var label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(function(u){return !u.startsWith('REMITO:');}).length > 1 ? ' ' + (i+1) : ''));
+              return '<a href="' + c.url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;' + style + 'border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">' + icon + ' ' + label + '</a>';
             }).join('');
             compWrap.style.display = '';
           }
@@ -2876,6 +2893,12 @@ async function ejecutarSubida() {
     btn.disabled  = false;
     btn.textContent = 'Reintentar';
   }
+}
+
+// Parsea una entrada de la columna comprobante — puede tener prefijo REMITO:
+function _comprobanteParse(raw) {
+  if (typeof raw === 'string' && raw.startsWith('REMITO:')) return { label: 'Remito', url: raw.slice(7) };
+  return { label: 'Comprobante', url: raw };
 }
 
 function fileToBase64(file) {
@@ -3149,6 +3172,44 @@ function generarRemito() {
 
   cerrarModalRemito();
   _mostrarConfirmarStock();
+  _guardarRemitoComoComprobante(html);
+}
+
+async function _guardarRemitoComoComprobante(html) {
+  if (!pedidoActual) return;
+  try {
+    var provSlug = (pedidoActual.proveedor || 'SinProveedor').trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    var filename = 'Remito_' + provSlug + '_' + pedidoActual.norden + '.html';
+    var b64 = btoa(unescape(encodeURIComponent(html)));
+    var resp = await fetch(SCRIPT_URL, {
+      method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'subirComprobante', norden: pedidoActual.norden, filename: filename, mimeType: 'text/html', base64: b64, tipoPago: 'remito' })
+    });
+    var data = await resp.json();
+    if (data.ok || data.comprobante || data.url) {
+      var newComp = data.comprobante || data.url || '';
+      var idx = todosLosPedidos.findIndex(function(p){ return p.norden === pedidoActual.norden; });
+      if (idx !== -1) todosLosPedidos[idx].comprobante = newComp;
+      pedidoActual.comprobante = newComp;
+      var compWrap = document.getElementById('d-comprobantes-wrap');
+      var compList = document.getElementById('d-comprobantes-list');
+      if (compWrap && compList && newComp) {
+        var urls = newComp.split('|').filter(Boolean);
+        compList.innerHTML = urls.map(function(raw, i) {
+          var c = _comprobanteParse(raw);
+          var isRemito = c.label === 'Remito';
+          var style = isRemito ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;' : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
+          var icon  = isRemito ? '📄' : '📎';
+          var label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(function(u){return !u.startsWith('REMITO:');}).length > 1 ? ' ' + (i+1) : ''));
+          return '<a href="' + c.url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;' + style + 'border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">' + icon + ' ' + label + '</a>';
+        }).join('');
+        compWrap.style.display = '';
+      }
+      mostrarFlashDetalle('📄 Remito guardado en comprobantes.', 'success');
+    }
+  } catch(e) {
+    mostrarFlashDetalle('No se pudo guardar el remito como comprobante.', 'error');
+  }
 }
 
 function _mostrarConfirmarStock() {
