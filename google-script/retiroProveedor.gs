@@ -1,4 +1,4 @@
-// v2026-11-18a — subirComprobanteEnDrive: tipoPago 'remito' guarda prefijo REMITO: en la columna
+// v2026-11-18b — eliminarRemito: nueva acción para quitar un remito de la columna comprobante
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -70,6 +70,8 @@ function doPost(e) {
       resultado = registrarPedidoEnSheet(data);
     } else if (action === 'subirComprobante') {
       resultado = subirComprobanteEnDrive(data);
+    } else if (action === 'eliminarRemito') {
+      resultado = eliminarRemitoDeSheet(data);
     } else if (action === 'eliminarPedido') {
       resultado = eliminarPedidoDeSheet(data);
     } else if (action === 'updateTotal') {
@@ -964,6 +966,21 @@ function subirComprobanteEnDrive(data) {
 
   Logger.log('Comprobante subido: ' + norden + ' → ' + newVal + ' (tipoPago: ' + (tipoPago||'completo') + ')');
   return { url: url, comprobante: newVal };
+}
+
+// data: { norden, remito } — remito es el valor crudo 'REMITO:url'
+function eliminarRemitoDeSheet(data) {
+  const { norden, remito } = data;
+  if (!norden || !remito) throw new Error('Faltan datos: norden y remito son requeridos');
+  if (!remito.startsWith('REMITO:')) throw new Error('Solo se pueden eliminar entradas de tipo REMITO');
+  const encontrado = leerPedidoPorId(norden);
+  if (!encontrado) throw new Error('Pedido no encontrado: ' + norden);
+  const sheet    = getPedidosSheet();
+  const existing = sheet.getRange(encontrado.fila, COL.COMPROBANTE + 1).getValue() || '';
+  const newVal   = existing.split('|').filter(function(u){ return u !== remito; }).join('|');
+  sheet.getRange(encontrado.fila, COL.COMPROBANTE + 1).setValue(newVal);
+  Logger.log('Remito eliminado: ' + norden + ' → quitado: ' + remito);
+  return { comprobante: newVal };
 }
 
 // ── TESTING ─────────────────────────────────────────────────

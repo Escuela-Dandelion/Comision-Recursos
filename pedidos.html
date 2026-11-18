@@ -2409,16 +2409,7 @@ function renderDetalle(p) {
   if (compWrap && compList) {
     if (p.comprobante) {
       const urls = p.comprobante.split('|').filter(Boolean);
-      compList.innerHTML = urls.map((raw, i) => {
-        const c = _comprobanteParse(raw);
-        const isRemito = c.label === 'Remito';
-        const style = isRemito
-          ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;'
-          : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
-        const icon = isRemito ? '📄' : '📎';
-        const label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(u=>!u.startsWith('REMITO:')).length > 1 ? ' ' + (i+1) : ''));
-        return `<a href="${c.url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;${style}border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">${icon} ${label}</a>`;
-      }).join('');
+      compList.innerHTML = _renderComprobantesHtml(urls);
       compWrap.style.display = '';
     } else {
       compWrap.style.display = 'none';
@@ -2867,14 +2858,7 @@ async function ejecutarSubida() {
           const compList = document.getElementById('d-comprobantes-list');
           if (compWrap && compList) {
             const urls = pedidoActual.comprobante.split('|').filter(Boolean);
-            compList.innerHTML = urls.map(function(raw, i) {
-              var c = _comprobanteParse(raw);
-              var isRemito = c.label === 'Remito';
-              var style = isRemito ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;' : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
-              var icon  = isRemito ? '📄' : '📎';
-              var label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(function(u){return !u.startsWith('REMITO:');}).length > 1 ? ' ' + (i+1) : ''));
-              return '<a href="' + c.url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;' + style + 'border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">' + icon + ' ' + label + '</a>';
-            }).join('');
+            compList.innerHTML = _renderComprobantesHtml(urls);
             compWrap.style.display = '';
           }
           if (tipoPago === 'completo') {
@@ -2899,6 +2883,35 @@ async function ejecutarSubida() {
 function _comprobanteParse(raw) {
   if (typeof raw === 'string' && raw.startsWith('REMITO:')) return { label: 'Remito', url: raw.slice(7) };
   return { label: 'Comprobante', url: raw };
+}
+
+function _renderComprobantesHtml(urls) {
+  var compOnly = urls.filter(function(u){ return !u.startsWith('REMITO:'); });
+  return urls.map(function(raw) {
+    var c = _comprobanteParse(raw);
+    var isRemito = c.label === 'Remito';
+    var style = isRemito
+      ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;'
+      : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
+    var icon  = isRemito ? '📄' : '📎';
+    var label = isRemito ? 'Remito' : ('Comprobante' + (compOnly.length > 1 ? ' ' + (compOnly.indexOf(raw) + 1) : ''));
+    var br    = isRemito ? 'border-radius:8px 0 0 8px;border-right:none;' : 'border-radius:8px;';
+    var link  = '<a href="' + c.url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;' + style + br + 'padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">' + icon + ' ' + label + '</a>';
+    var del   = isRemito
+      ? '<button onclick="eliminarRemito(\'' + raw.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')" title="Eliminar remito" style="display:inline-flex;align-items:center;padding:7px 9px;background:#eff6ff;color:#9ca3af;border:1px solid #bae6fd;border-left:none;border-radius:0 8px 8px 0;cursor:pointer;font-size:11px;line-height:1;">✕</button>'
+      : '';
+    return '<span style="display:inline-flex;align-items:stretch;margin-right:6px;margin-bottom:4px;">' + link + del + '</span>';
+  }).join('');
+}
+
+function _actualizarDisplayComprobantes(compStr) {
+  var compWrap = document.getElementById('d-comprobantes-wrap');
+  var compList  = document.getElementById('d-comprobantes-list');
+  if (!compWrap || !compList) return;
+  if (!compStr) { compWrap.style.display = 'none'; return; }
+  var urls = compStr.split('|').filter(Boolean);
+  compList.innerHTML = _renderComprobantesHtml(urls);
+  compWrap.style.display = '';
 }
 
 function fileToBase64(file) {
@@ -3177,38 +3190,79 @@ function generarRemito() {
 
 async function _guardarRemitoComoComprobante(html) {
   if (!pedidoActual) return;
+  var _norden    = pedidoActual.norden;
+  var _proveedor = pedidoActual.proveedor;
   try {
-    var provSlug = (pedidoActual.proveedor || 'SinProveedor').trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    var filename = 'Remito_' + provSlug + '_' + pedidoActual.norden + '.html';
-    var b64 = btoa(unescape(encodeURIComponent(html)));
+    var provSlug = (_proveedor || 'SinProveedor').trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    var filename = 'Remito_' + provSlug + '_' + _norden + '.pdf';
+
+    // Limpiar no-print y scripts, extraer estilos + contenido
+    var clean  = html.replace(/<div class="no-print"[\s\S]*?<\/div>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+    var styleM = clean.match(/<style>([\s\S]*?)<\/style>/i);
+    var bodyM  = clean.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    var inner  = (styleM ? '<style>' + styleM[1] + '</style>' : '') + (bodyM ? bodyM[1] : clean);
+
+    var container = document.createElement('div');
+    container.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;';
+    container.innerHTML = inner;
+    document.body.appendChild(container);
+
+    var pdfBlob = await html2pdf().set({
+      margin: 0,
+      filename: filename,
+      image:       { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 1.5, useCORS: true, logging: false },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:   { mode: 'css', avoid: 'img' }
+    }).from(container).outputPdf('blob');
+
+    document.body.removeChild(container);
+
+    var b64 = await new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+      reader.readAsDataURL(pdfBlob);
+    });
+
     var resp = await fetch(SCRIPT_URL, {
       method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'subirComprobante', norden: pedidoActual.norden, filename: filename, mimeType: 'text/html', base64: b64, tipoPago: 'remito' })
+      body: JSON.stringify({ action: 'subirComprobante', norden: _norden, filename: filename, mimeType: 'application/pdf', base64: b64, tipoPago: 'remito' })
     });
     var data = await resp.json();
-    if (data.ok || data.comprobante || data.url) {
-      var newComp = data.comprobante || data.url || '';
-      var idx = todosLosPedidos.findIndex(function(p){ return p.norden === pedidoActual.norden; });
-      if (idx !== -1) todosLosPedidos[idx].comprobante = newComp;
-      pedidoActual.comprobante = newComp;
-      var compWrap = document.getElementById('d-comprobantes-wrap');
-      var compList = document.getElementById('d-comprobantes-list');
-      if (compWrap && compList && newComp) {
-        var urls = newComp.split('|').filter(Boolean);
-        compList.innerHTML = urls.map(function(raw, i) {
-          var c = _comprobanteParse(raw);
-          var isRemito = c.label === 'Remito';
-          var style = isRemito ? 'background:#eff6ff;color:#0369a1;border:1px solid #bae6fd;' : 'background:#f0fdf4;color:#15803d;border:1px solid #4ade80;';
-          var icon  = isRemito ? '📄' : '📎';
-          var label = isRemito ? 'Remito' : ('Comprobante' + (urls.filter(function(u){return !u.startsWith('REMITO:');}).length > 1 ? ' ' + (i+1) : ''));
-          return '<a href="' + c.url + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;' + style + 'border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;text-decoration:none;">' + icon + ' ' + label + '</a>';
-        }).join('');
-        compWrap.style.display = '';
+    if (data.ok) {
+      var newComp = data.comprobante || '';
+      var idx = todosLosPedidos.findIndex(function(p){ return p.norden === _norden; });
+      if (idx !== -1) {
+        todosLosPedidos[idx].comprobante = newComp;
+        if (pedidoActual && pedidoActual.norden === _norden) _actualizarDisplayComprobantes(newComp);
       }
       mostrarFlashDetalle('📄 Remito guardado en comprobantes.', 'success');
     }
   } catch(e) {
+    console.error('_guardarRemitoComoComprobante:', e);
     mostrarFlashDetalle('No se pudo guardar el remito como comprobante.', 'error');
+  }
+}
+
+async function eliminarRemito(raw) {
+  if (!confirm('¿Eliminar este remito de los comprobantes?')) return;
+  var _n = pedidoActual && pedidoActual.norden;
+  if (!_n) return;
+  try {
+    var resp = await fetch(SCRIPT_URL, {
+      method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'eliminarRemito', norden: _n, remito: raw })
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      var newComp = data.comprobante || '';
+      var idx = todosLosPedidos.findIndex(function(p){ return p.norden === _n; });
+      if (idx !== -1) todosLosPedidos[idx].comprobante = newComp;
+      if (pedidoActual && pedidoActual.norden === _n) _actualizarDisplayComprobantes(newComp);
+      mostrarFlashDetalle('Remito eliminado.', 'success');
+    }
+  } catch(e) {
+    mostrarFlashDetalle('No se pudo eliminar el remito.', 'error');
   }
 }
 
@@ -3255,5 +3309,6 @@ function ejecutarActualizarStock() {
 }
 
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
