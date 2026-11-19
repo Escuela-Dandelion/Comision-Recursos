@@ -469,6 +469,12 @@
     };
   }
 
+  var _pendingRegistrar = null;
+  function _registrarPedidoForzado() {
+    document.getElementById('feedback-registro').style.display = 'none';
+    if (_pendingRegistrar) { _ejecutarRegistro(_pendingRegistrar); _pendingRegistrar = null; }
+  }
+
   // ── 1. REGISTRAR EN SHEET ──────────────────────────────────────────────────
   function registrarPedido() {
     var f = leerFormulario();
@@ -485,7 +491,18 @@
     var sinSku = f.filasValidas.filter(function(r) { return !r._sku && !_skuMap[r.nombre.toUpperCase().trim()]; });
     if (sinSku.length) {
       var nombresInvalidos = sinSku.map(function(r) { return '"' + r.nombre + '"'; }).join(', ');
-      if (!confirm('⚠️ Los siguientes productos no existen en TiendaNube:\n\n' + nombresInvalidos + '\n\nVerificá que el nombre sea exacto. ¿Querés registrar el pedido igual?')) return;
+      var fb = document.getElementById('feedback-registro');
+      fb.innerHTML = '⚠️ Los siguientes productos no existen en TiendaNube: ' + nombresInvalidos +
+        '. Verificá que el nombre sea exacto.' +
+        ' <span style="display:inline-flex;gap:8px;margin-left:8px">' +
+        '<button onclick="document.getElementById(\'feedback-registro\').style.display=\'none\'" style="padding:5px 12px;border:1px solid currentColor;border-radius:7px;background:transparent;font-size:12px;font-weight:600;cursor:pointer">Corregir</button>' +
+        '<button onclick="_registrarPedidoForzado()" style="padding:5px 12px;border:none;border-radius:7px;background:currentColor;font-size:12px;font-weight:600;cursor:pointer;color:#fff">Registrar igual</button>' +
+        '</span>';
+      fb.style.background = '#fff8e1'; fb.style.color = '#b45309'; fb.style.border = '1px solid #fcd34d';
+      fb.style.display = 'block';
+      fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      _pendingRegistrar = f;
+      return;
     }
 
     if (!f.norden || f.norden.includes('???') || f.norden === 'Generando…') {
@@ -493,6 +510,10 @@
       return;
     }
 
+    _ejecutarRegistro(f);
+  }
+
+  function _ejecutarRegistro(f) {
     var productosStr = f.filasValidas.map(function(r) {
       var s = r.nombre + (r.cantidad ? ' x' + r.cantidad : '') + (r.unidad ? ' ' + r.unidad : '') + (r.precio !== '0' ? ' ($' + r.precio + ')' : '');
       var sku = r._sku || _skuMap[r.nombre.toUpperCase().trim()];

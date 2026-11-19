@@ -1588,8 +1588,23 @@ function onFotoSeleccionada(event) {
   reader.readAsDataURL(file);
 }
 
+var _confirmGenGpCallback = null;
+function _mostrarConfirmGenGp(titulo, mensaje, labelOk, onConfirm) {
+  document.getElementById('confirm-gen-gp-title').textContent   = titulo;
+  document.getElementById('confirm-gen-gp-body').textContent    = mensaje;
+  document.getElementById('confirm-gen-gp-btn-ok').textContent  = labelOk || 'Confirmar';
+  _confirmGenGpCallback = onConfirm;
+  document.getElementById('modal-confirm-gen').classList.add('open');
+}
+function _confirmGenGpOk()     { document.getElementById('modal-confirm-gen').classList.remove('open'); if (_confirmGenGpCallback) { _confirmGenGpCallback(); _confirmGenGpCallback = null; } }
+function _confirmGenGpCancel() { document.getElementById('modal-confirm-gen').classList.remove('open'); _confirmGenGpCallback = null; }
+
 function eliminarImagen(imagenId, varianteId) {
-  if (!confirm('¿Eliminar esta imagen?')) return;
+  _mostrarConfirmGenGp('Eliminar imagen', '¿Eliminar esta imagen del producto?', 'Eliminar', function() {
+    _doEliminarImagen(imagenId, varianteId);
+  });
+}
+function _doEliminarImagen(imagenId, varianteId) {
   setSt('foto', 'Eliminando...');
   var params = new URLSearchParams({ action: 'delete_imagen', email: currentUser.email, producto_id: _productoActual.id, imagen_id: imagenId });
   var _imgEliminadaUrl = ((_productoActual.imagenes || []).find(function(i) { return i.id === imagenId; }) || {}).src || imagenId;
@@ -1687,6 +1702,17 @@ var quill = new Quill('#edit-descripcion-editor', {
 </script>
 
 <!-- Modal confirmación stock -->
+<div class="modal-backdrop" id="modal-confirm-gen">
+  <div class="modal-box">
+    <h3 id="confirm-gen-gp-title">Confirmar</h3>
+    <p id="confirm-gen-gp-body"></p>
+    <div class="modal-actions">
+      <button class="modal-btn secundario" onclick="_confirmGenGpCancel()">Cancelar</button>
+      <button class="modal-btn primario"   id="confirm-gen-gp-btn-ok" onclick="_confirmGenGpOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-auditoria">
   <div class="modal-box wide">
     <h3>Auditoría de costos</h3>

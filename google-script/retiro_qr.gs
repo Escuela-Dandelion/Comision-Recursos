@@ -1,4 +1,4 @@
-// v2026-11-18f — checkPedidosPendientesHoy: identifica pedidos pagados en TN que no llegaron a procesarse
+// v2026-11-19a — establecerStockConsesion: convierte producto infinito a stock fijo (prim+sec) en TiendaNube
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -123,6 +123,14 @@ function doPost(e) {
     if (action === 'actualizarStockRemito') {
       try {
         var res = _actualizarStockRemito(body.email || '', body.norden || '', body.items || []);
+        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    if (action === 'establecerStockConsesion') {
+      try {
+        var res = _establecerStockConsesion(body.email || '', body.norden || '', body.items || []);
         return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
       } catch(err) {
         return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
@@ -3953,6 +3961,55 @@ function _actualizarStockRemito(email, norden, items) {
   });
 
   var errores = resultados.filter(function(r){ return !r.ok && !r.omitido; });
+  return { ok: errores.length === 0, resultados: resultados };
+}
+
+// ─── CONSESIÓN: convertir stock infinito → stock fijo ────────────────────────
+// A diferencia de _actualizarStockRemito (que suma al stock existente),
+// esta función procesa SOLO los items con stock infinito y los convierte
+// a stock fijo estableciendo los valores de prim y sec desde cero.
+function _establecerStockConsesion(email, norden, items) {
+  var user = _authGestion(email);
+  if (!user) return { ok: false, error: 'Sin permiso.' };
+
+  var skuMap = {};
+  for (var page = 1; page <= 20; page++) {
+    var resp = UrlFetchApp.fetch(
+      'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&page=' + page + '&fields=id,name,variants',
+      { headers: _tnHeaders(), muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) break;
+    var prods = JSON.parse(resp.getContentText());
+    if (!prods || !prods.length) break;
+    prods.forEach(function(p) {
+      (p.variants || []).forEach(function(v) {
+        if (!v.sku) return;
+        skuMap[String(v.sku).trim()] = {
+          productId:  String(p.id),
+          variantId:  String(v.id),
+          esInfinito: (v.stock === null || v.stock_management === false)
+        };
+      });
+    });
+    if (prods.length < 200) break;
+  }
+
+  var resultados = [];
+  items.forEach(function(item) {
+    var sku  = String(item.sku || '').trim();
+    var info = skuMap[sku];
+    if (!info) { resultados.push({ sku: sku, ok: false, error: 'SKU no encontrado en TiendaNube' }); return; }
+    if (!info.esInfinito) { resultados.push({ sku: sku, ok: false, error: 'El producto no es stock infinito — usá Actualizar Stock.' }); return; }
+
+    // Para infinito: el stock actual es 0 (nunca hubo stock fijo), establecemos directo
+    var cantP = parseInt(item.cantP) || 0;
+    var cantS = parseInt(item.cantS) || 0;
+    var r = apiUpdateStockUbicaciones(email, info.productId, info.variantId, sku, String(cantP), String(cantS), '0');
+    if (r.ok) registrarAuditLog(email, 'StockConsesion', norden, sku, 'infinito', cantP + cantS);
+    resultados.push({ sku: sku, ok: r.ok, error: r.ok ? null : (r.error || 'Error') });
+  });
+
+  var errores = resultados.filter(function(r){ return !r.ok; });
   return { ok: errores.length === 0, resultados: resultados };
 }
 

@@ -781,11 +781,48 @@
       <div style="font-size:15px;font-weight:800;color:#111827">¿Actualizar stock?</div>
       <button class="modal-close" onclick="cerrarModalConfirmarStock()">✕</button>
     </div>
-    <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">Se suma el stock recibido al stock actual de cada tienda. Los productos con stock infinito no se modifican.</div>
+    <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">Se suma el stock recibido al stock actual de cada tienda.</div>
     <div id="confirm-stock-items" style="max-height:220px;overflow-y:auto;font-size:12px"></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="cerrarModalConfirmarStock()">Solo el remito</button>
       <button class="btn-confirm" id="btn-confirmar-stock" onclick="ejecutarActualizarStock()">Sí, actualizar stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CONFIRM GENÉRICO ─────────────────────────────────── -->
+<div class="modal-overlay" id="modalConfirmGen" onclick="if(event.target===this)_confirmGenCancel()">
+  <div class="modal-dialog" style="max-width:380px">
+    <div class="modal-header">
+      <div style="font-size:15px;font-weight:800;color:#111827" id="confirm-gen-title">Confirmar</div>
+      <button class="modal-close" onclick="_confirmGenCancel()">✕</button>
+    </div>
+    <div id="confirm-gen-body" style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:16px"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="_confirmGenCancel()" id="confirm-gen-btn-cancel">Cancelar</button>
+      <button class="btn-confirm" id="confirm-gen-btn-ok" onclick="_confirmGenOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CONSESIÓN STOCK ─────────────────────────────────── -->
+<div class="modal-overlay" id="modalConsesionStock" onclick="if(event.target===this)cerrarModalConsesionStock()">
+  <div class="modal-dialog" style="max-width:480px">
+    <div class="modal-header">
+      <div style="font-size:15px;font-weight:800;color:#111827">Stock a Consesión</div>
+      <button class="modal-close" onclick="cerrarModalConsesionStock()">✕</button>
+    </div>
+    <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:4px">
+      Este producto está configurado como <strong>Pedido a Demanda</strong> (stock infinito).
+    </div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:12px;line-height:1.5">
+      Si dejás stock, el producto pasará a tener stock en TiendaNube y dejará de aparecer en Ventas a Pedido. Si el stock llega a 0, los compradores no podrán pedirlo hasta que se cargue más.
+    </div>
+    <div id="consesion-stock-items" style="max-height:240px;overflow-y:auto;font-size:13px;margin-bottom:12px"></div>
+    <div id="consesion-stock-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btn-confirmar-consesion" onclick="ejecutarConsesionStock()">Dejar stock</button>
+      <button class="btn-confirm" onclick="cerrarModalConsesionStock()">Solo el remito</button>
     </div>
   </div>
 </div>
@@ -3101,6 +3138,11 @@ function generarRemito() {
   if (!pedidoActual || !_remitoItems.length) return;
   var itemsP = _remitoItems.filter(function(i){ return i.cantP > 0; });
   var itemsS = _remitoItems.filter(function(i){ return i.cantS > 0; });
+  if (!itemsP.length && !itemsS.length) {
+    document.getElementById('remito-status').style.color = '#dc2626';
+    document.getElementById('remito-status').textContent = 'Ingresa al menos una cantidad antes de generar el remito.';
+    return;
+  }
   var fecha  = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   function filas(items, campoQty) {
@@ -3245,7 +3287,11 @@ async function _guardarRemitoComoComprobante(html) {
 }
 
 async function eliminarRemito(raw) {
-  if (!confirm('¿Eliminar este remito de los comprobantes?')) return;
+  _mostrarConfirmGen('Eliminar remito', '¿Eliminar este remito de los comprobantes?', 'Eliminar', async function() {
+    await _doEliminarRemito(raw);
+  });
+}
+async function _doEliminarRemito(raw) {
   var _n = pedidoActual && pedidoActual.norden;
   if (!_n) return;
   try {
@@ -3260,25 +3306,36 @@ async function eliminarRemito(raw) {
       if (idx !== -1) todosLosPedidos[idx].comprobante = newComp;
       if (pedidoActual && pedidoActual.norden === _n) _actualizarDisplayComprobantes(newComp);
       mostrarFlashDetalle('Remito eliminado.', 'success');
+    } else {
+      mostrarFlashDetalle('❌ ' + (data.error || 'No se pudo eliminar el remito. Verificá que el GAS esté redesplegado.'), 'error');
     }
   } catch(e) {
-    mostrarFlashDetalle('No se pudo eliminar el remito.', 'error');
+    mostrarFlashDetalle('❌ Error de conexión al eliminar remito.', 'error');
   }
 }
 
 function _mostrarConfirmarStock() {
-  var conStock = _remitoItems.filter(function(i){ return i.sku && !i.esInfinito && (i.cantP > 0 || i.cantS > 0); });
-  if (conStock.length === 0) return;
-  var html = conStock.map(function(i){
-    return '<div style="padding:5px 0;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;gap:8px">' +
-      '<span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(i.nombre) + '</span>' +
-      '<span style="color:#6b7280;white-space:nowrap;flex-shrink:0">+' + i.cantP + ' prim, +' + i.cantS + ' sec</span></div>';
-  }).join('');
-  document.getElementById('confirm-stock-items').innerHTML = html;
-  var btn = document.getElementById('btn-confirmar-stock');
-  btn.disabled = false;
-  btn.textContent = 'Sí, actualizar stock';
-  document.getElementById('modalConfirmarStock').classList.add('open');
+  var conStock  = _remitoItems.filter(function(i){ return i.sku && !i.esInfinito && (i.cantP > 0 || i.cantS > 0); });
+  var infinitos = _remitoItems.filter(function(i){ return i.sku &&  i.esInfinito && (i.cantP > 0 || i.cantS > 0); });
+
+  // Productos normales: modal de actualizar stock (sumando al stock actual)
+  if (conStock.length > 0) {
+    var html = conStock.map(function(i){
+      return '<div style="padding:5px 0;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;gap:8px">' +
+        '<span style="color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(i.nombre) + '</span>' +
+        '<span style="color:#6b7280;white-space:nowrap;flex-shrink:0">+' + i.cantP + ' prim, +' + i.cantS + ' sec</span></div>';
+    }).join('');
+    document.getElementById('confirm-stock-items').innerHTML = html;
+    var btn = document.getElementById('btn-confirmar-stock');
+    btn.disabled = false;
+    btn.textContent = 'Sí, actualizar stock';
+    document.getElementById('modalConfirmarStock').classList.add('open');
+  }
+
+  // Productos con stock infinito: modal de consesión (solo si NO hay también normales)
+  if (infinitos.length > 0 && conStock.length === 0) {
+    _mostrarConsesionStock(infinitos);
+  }
 }
 
 function cerrarModalConfirmarStock() {
@@ -3304,6 +3361,92 @@ function ejecutarActualizarStock() {
   })
   .catch(function(){
     cerrarModalConfirmarStock();
+    mostrarFlashDetalle('❌ Error de conexión.', 'error');
+  });
+}
+
+// ── MODAL CONSESIÓN STOCK ─────────────────────────────────────
+// ── CONFIRM GENÉRICO (reemplaza confirm() del browser) ─────────
+var _confirmGenCallback = null;
+function _mostrarConfirmGen(titulo, mensaje, labelOk, onConfirm) {
+  document.getElementById('confirm-gen-title').textContent = titulo;
+  document.getElementById('confirm-gen-body').textContent  = mensaje;
+  document.getElementById('confirm-gen-btn-ok').textContent = labelOk || 'Confirmar';
+  _confirmGenCallback = onConfirm;
+  document.getElementById('modalConfirmGen').classList.add('open');
+}
+function _confirmGenOk()     { document.getElementById('modalConfirmGen').classList.remove('open'); if (_confirmGenCallback) { _confirmGenCallback(); _confirmGenCallback = null; } }
+function _confirmGenCancel() { document.getElementById('modalConfirmGen').classList.remove('open'); _confirmGenCallback = null; }
+
+var _consesionItems = []; // [{nombre, sku, cantP, cantS}]
+
+function _mostrarConsesionStock(infinitos) {
+  _consesionItems = infinitos.map(function(i){ return { nombre: i.nombre, sku: i.sku, cantP: i.cantP, cantS: i.cantS }; });
+  var html = '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr>' +
+      '<th style="text-align:left;padding:5px 6px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#6b7280;font-weight:600">Producto</th>' +
+      '<th style="text-align:center;padding:5px 4px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#0369a1;font-weight:700;width:90px">Primario</th>' +
+      '<th style="text-align:center;padding:5px 4px;border-bottom:2px solid #e5e7eb;font-size:11px;color:#7c3aed;font-weight:700;width:90px">Secundario</th>' +
+    '</tr></thead><tbody>';
+  _consesionItems.forEach(function(item, i) {
+    html += '<tr>' +
+      '<td style="padding:7px 6px;border-bottom:1px solid #f3f4f6">' +
+        '<div style="font-size:13px;font-weight:600;color:#111827">' + escHtml(item.nombre) + '</div>' +
+        (item.sku ? '<div style="font-size:10px;color:#9ca3af">' + escHtml(item.sku) + '</div>' : '') +
+      '</td>' +
+      '<td style="text-align:center;padding:7px 4px;border-bottom:1px solid #f3f4f6">' +
+        '<input type="number" min="0" value="' + item.cantP + '" ' +
+          'style="width:68px;text-align:center;border:1px solid #bae6fd;border-radius:6px;padding:5px 4px;font-size:13px;font-weight:600;color:#0369a1" ' +
+          'oninput="_consesionItems[' + i + '].cantP=parseInt(this.value)||0">' +
+      '</td>' +
+      '<td style="text-align:center;padding:7px 4px;border-bottom:1px solid #f3f4f6">' +
+        '<input type="number" min="0" value="' + item.cantS + '" ' +
+          'style="width:68px;text-align:center;border:1px solid #ddd6fe;border-radius:6px;padding:5px 4px;font-size:13px;font-weight:600;color:#7c3aed" ' +
+          'oninput="_consesionItems[' + i + '].cantS=parseInt(this.value)||0">' +
+      '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('consesion-stock-items').innerHTML = html;
+  document.getElementById('consesion-stock-feedback').style.display = 'none';
+  var btn = document.getElementById('btn-confirmar-consesion');
+  btn.disabled = false;
+  btn.textContent = 'Dejar stock';
+  document.getElementById('modalConsesionStock').classList.add('open');
+}
+
+function cerrarModalConsesionStock() {
+  document.getElementById('modalConsesionStock').classList.remove('open');
+}
+
+function ejecutarConsesionStock() {
+  var btnDejar = document.getElementById('btn-confirmar-consesion');
+  var fb  = document.getElementById('consesion-stock-feedback');
+  var items = _consesionItems.filter(function(i){ return (i.cantP > 0 || i.cantS > 0); });
+  if (!items.length) {
+    fb.textContent = 'Ingresá al menos una cantidad.';
+    fb.style.display = 'block';
+    return;
+  }
+  btnDejar.disabled = true;
+  btnDejar.textContent = 'Guardando…';
+  fb.style.display = 'none';
+  var email = _getEmailSession();
+  fetch(AUDIT_URL, {
+    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'establecerStockConsesion', email: email, norden: pedidoActual.norden, items: items.map(function(i){ return { sku: i.sku, cantP: i.cantP, cantS: i.cantS }; }) })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    document.getElementById('btn-confirmar-consesion').disabled = false;
+    document.getElementById('btn-confirmar-consesion').textContent = 'Dejar stock';
+    cerrarModalConsesionStock();
+    mostrarFlashDetalle(data.ok ? '✅ Stock a consesión guardado. El producto ahora tiene stock en TiendaNube.' : '❌ Error: ' + (data.error || 'Error al guardar'), data.ok ? 'success' : 'error');
+  })
+  .catch(function(){
+    document.getElementById('btn-confirmar-consesion').disabled = false;
+    document.getElementById('btn-confirmar-consesion').textContent = 'Dejar stock';
+    cerrarModalConsesionStock();
     mostrarFlashDetalle('❌ Error de conexión.', 'error');
   });
 }
