@@ -1,4 +1,4 @@
-// v2026-11-19a — establecerStockConsesion: convierte producto infinito a stock fijo (prim+sec) en TiendaNube
+// v2026-11-19b — reprocesarAporteManual: recalcula aportes grado/escuela en Ventas para pedidos sin grado asignado
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -123,6 +123,14 @@ function doPost(e) {
     if (action === 'actualizarStockRemito') {
       try {
         var res = _actualizarStockRemito(body.email || '', body.norden || '', body.items || []);
+        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    if (action === 'reprocesarAporte') {
+      try {
+        var res = apiReprocesarAporte(body.email || '', body.ordenes || []);
         return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
       } catch(err) {
         return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
@@ -3961,6 +3969,97 @@ function _actualizarStockRemito(email, norden, items) {
   });
 
   var errores = resultados.filter(function(r){ return !r.ok && !r.omitido; });
+  return { ok: errores.length === 0, resultados: resultados };
+}
+
+// ─── REPROCESAR APORTE MANUAL ────────────────────────────────────────────────
+// Recalcula cols U (aporte grado), V (grado destino) y W (aporte escuela)
+// en la hoja Ventas para los pedidos indicados, aplicando el grado pasado manualmente.
+// body.ordenes: [{norden: '12345', grado: '2do'}, ...]
+// Columnas Ventas (1-based): B=2 nro pedido, G=7 SKU, H=8 qty, N=14 costo,
+//   O=15 totalPagadoLinea, P=16 netoLinea, U=21 aporteGrado, V=22 gradoDestino, W=23 aporteEscuela
+function apiReprocesarAporte(email, ordenes) {
+  var user = _authGestion(email);
+  if (!user || user.role !== 'ADMIN') return { ok: false, error: 'Solo admins pueden reprocesar aportes.' };
+  if (!ordenes || !ordenes.length)    return { ok: false, error: 'No se recibieron órdenes.' };
+
+  var ss        = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+  var sheet     = ss.getSheetByName('Ventas');
+  var data      = sheet.getDataRange().getValues();
+  var config    = leerConfigProductos();
+  var resultados = [];
+
+  ordenes.forEach(function(item) {
+    var norden = String(item.norden || '').trim();
+    var grado  = normalizarGradoGAS(String(item.grado || '').trim());
+    if (!norden || !grado || grado === '(Sin observaciones)') {
+      resultados.push({ norden: norden, ok: false, error: 'Nro de pedido o grado inválido.' });
+      return;
+    }
+
+    var filasActualizadas = [];
+    for (var i = 1; i < data.length; i++) {
+      var rowNorden = String(data[i][1] || '').trim(); // col B (índice 1)
+      if (rowNorden !== norden) continue;
+
+      var sku             = String(data[i][6]  || '').trim().toUpperCase(); // col G
+      var qty             = parseFloat(data[i][7]  || 0);                   // col H
+      var costoUnit       = parseFloat(data[i][13] || 0);                   // col N
+      var totalPagado     = parseFloat(data[i][14] || 0);                   // col O
+      var netoLinea       = parseFloat(data[i][15] || 0);                   // col P
+      var aporteGradoAnt  = parseFloat(data[i][20] || 0);                   // col U (antes)
+      var gradoAnt        = String(data[i][21]  || '');                      // col V (antes)
+
+      // Fecha del pedido para buscar la regla vigente
+      var fechaRaw = data[i][0];
+      var fechaOrden = (fechaRaw instanceof Date) ? fechaRaw : new Date(fechaRaw);
+
+      var marcaRaw = String(data[i][24] || '').trim().toUpperCase(); // col Y (marca)
+      var regla = buscarRegla(config, sku, fechaOrden)
+               || buscarRegla(config, 'MARCA:' + marcaRaw, fechaOrden)
+               || buscarRegla(config, 'DEFAULT', fechaOrden);
+
+      if (!regla) {
+        resultados.push({ norden: norden, fila: i + 1, ok: false, error: 'Sin regla de aporte para SKU ' + sku });
+        continue;
+      }
+
+      var nuevoAporteGrado = Math.round(totalPagado * regla.pctGrado);
+      var nuevoAporteEscuela;
+      if (regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+        nuevoAporteEscuela = Math.round(totalPagado * regla.pctEscuela);
+      } else {
+        nuevoAporteEscuela = Math.max(0, Math.round(netoLinea - costoUnit * qty - nuevoAporteGrado));
+      }
+
+      // Actualizar cols U (21), V (22), W (23) — índices 1-based
+      sheet.getRange(i + 1, 21).setValue(nuevoAporteGrado);
+      sheet.getRange(i + 1, 22).setValue(grado);
+      sheet.getRange(i + 1, 23).setValue(nuevoAporteEscuela);
+
+      registrarAuditLog(email, 'ReprocesarAporte', norden, 'fila' + (i + 1),
+        'grado:' + (gradoAnt || 'vacío') + ' aporte:' + aporteGradoAnt,
+        'grado:' + grado + ' aporte:' + nuevoAporteGrado);
+
+      filasActualizadas.push({
+        fila:              i + 1,
+        sku:               sku,
+        gradoAntes:        gradoAnt || '(sin grado)',
+        gradoDespues:      grado,
+        aporteGradoAntes:  aporteGradoAnt,
+        aporteGradoDespues: nuevoAporteGrado,
+        aporteEscuelaDespues: nuevoAporteEscuela
+      });
+    }
+
+    if (!filasActualizadas.length) {
+      resultados.push({ norden: norden, ok: false, error: 'No se encontraron filas en Ventas para este pedido.' });
+    } else {
+      resultados.push({ norden: norden, ok: true, filas: filasActualizadas });
+    }
+  });
+
+  var errores = resultados.filter(function(r){ return !r.ok; });
   return { ok: errores.length === 0, resultados: resultados };
 }
 
