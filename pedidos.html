@@ -378,6 +378,7 @@
       <div class="filtros" style="margin-top:6px" id="filtros-pago">
         <button class="filtro-btn active" data-pago="Todos" onclick="filtrarPago(this)">💳 Todos</button>
         <button class="filtro-btn" data-pago="Pagado" onclick="filtrarPago(this)">✅ Pagados</button>
+        <button class="filtro-btn" data-pago="Parcialmente pagado" onclick="filtrarPago(this)">🔶 Parciales</button>
         <button class="filtro-btn" data-pago="No pagado" onclick="filtrarPago(this)">💳 No Pagados</button>
       </div>
     </div>
@@ -590,6 +591,17 @@
             <div class="det-info-item">
               <div class="det-info-label">Estado de pago</div>
               <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
+              <div id="d-saldo-pago" style="font-size:11px;margin-top:3px;"></div>
+              <select id="d-estado-pago-select" onchange="cambiarEstadoPagoManual(this.value)"
+                style="display:none;margin-top:6px;font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                <option value="Pagado">✅ Pagado</option>
+                <option value="Parcialmente pagado">🔶 Parcialmente pagado</option>
+                <option value="No pagado">❌ No pagado</option>
+              </select>
+              <button onclick="toggleEstadoPagoEdit()" id="btn-toggle-estado-pago"
+                style="display:none;margin-top:4px;font-size:11px;color:#6b7280;background:none;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;cursor:pointer;">
+                ✏ cambiar
+              </button>
             </div>
           </div>
           <div style="margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
@@ -744,10 +756,18 @@
     </div>
     <div id="upload-tipo-pago-wrap" style="margin-top:14px;">
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">¿Qué cubre este comprobante?</label>
-      <select id="upload-tipo-pago" style="width:100%;padding:9px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;">
+      <select id="upload-tipo-pago" style="width:100%;padding:9px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;" onchange="onTipoPagoChange()">
         <option value="completo">Pago completo del pedido</option>
         <option value="parcial">Pago parcial</option>
       </select>
+    </div>
+    <div id="upload-monto-wrap" style="margin-top:14px;display:none">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Monto pagado</label>
+      <div id="upload-total-ref" style="font-size:11px;color:#9ca3af;margin-bottom:6px;"></div>
+      <input type="number" id="upload-monto" min="0" step="1" placeholder="0"
+        style="width:100%;padding:9px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-weight:700;color:#374151;box-sizing:border-box"
+        oninput="actualizarSaldoUpload()">
+      <div id="upload-saldo-info" style="margin-top:8px;font-size:12px;min-height:18px;"></div>
     </div>
     <div id="upload-feedback" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;"></div>
     <div class="modal-btns">
@@ -1458,6 +1478,8 @@ function renderLista(pedidos) {
           <div style="display:inline-flex;align-items:center;gap:4px;">
             ${p.estadoPago === 'Pagado'
               ? `<span style="display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">💳 Pagado</span>`
+              : p.estadoPago === 'Parcialmente pagado'
+              ? `<span style="display:inline-block;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">🔶 Parcial</span>`
               : `<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:100px;font-size:10px;font-weight:700;padding:2px 8px;">No pagado</span>`}
             ${p.comprobante ? (() => { const all = p.comprobante.split('|'); const comp = all.find(u => !u.startsWith('REMITO:')); const rem = all.find(u => u.startsWith('REMITO:')); const url = comp || (rem ? rem.slice(7) : null); return url ? `<a href="${url}" target="_blank" title="Ver comprobante" style="font-size:14px;line-height:1;text-decoration:none;opacity:0.6;" onclick="event.stopPropagation()">${comp ? '📎' : '📄'}</a>` : ''; })() : ''}
           </div>
@@ -1652,7 +1674,9 @@ function _aplicarFiltrosSync() {
   }
 
   // Filtro pago
-  if (pagoFiltro !== 'Todos') {
+  if (pagoFiltro === 'No pagado') {
+    resultado = resultado.filter(p => !p.estadoPago || p.estadoPago === 'No pagado');
+  } else if (pagoFiltro !== 'Todos') {
     resultado = resultado.filter(p => p.estadoPago === pagoFiltro);
   }
 
@@ -2435,23 +2459,7 @@ function renderDetalle(p) {
   if (p.quien) { document.getElementById('d-quien').textContent = p.quien; document.getElementById('d-quien-wrap').style.display = ''; }
   else { document.getElementById('d-quien-wrap').style.display = 'none'; }
 
-  var pagoEl = document.getElementById('d-estado-pago');
-  if (pagoEl) {
-    pagoEl.textContent = p.estadoPago || '—';
-    pagoEl.style.color = p.estadoPago === 'Pagado' ? '#15803d' : '#dc2626';
-  }
-  // Comprobantes (múltiples, separados por |)
-  var compWrap = document.getElementById('d-comprobantes-wrap');
-  var compList = document.getElementById('d-comprobantes-list');
-  if (compWrap && compList) {
-    if (p.comprobante) {
-      const urls = p.comprobante.split('|').filter(Boolean);
-      compList.innerHTML = _renderComprobantesHtml(urls);
-      compWrap.style.display = '';
-    } else {
-      compWrap.style.display = 'none';
-    }
-  }
+  _actualizarDetallePago(p);
   var btnAdjDet = document.getElementById('btn-adjuntar-comprobante-det');
   if (btnAdjDet) btnAdjDet.style.display = p.estado !== 'Cancelado' ? '' : 'none';
 
@@ -2822,6 +2830,9 @@ function abrirModalComprobante(norden) {
   sel.innerHTML = '<option value="completo">Pago completo del pedido</option>'
     + (tieneEnvio ? '<option value="envio">Solo envío</option>' : '')
     + '<option value="parcial">Pago parcial</option>';
+  document.getElementById('upload-monto').value = '';
+  document.getElementById('upload-saldo-info').textContent = '';
+  onTipoPagoChange();
   document.getElementById('uploadOverlay').classList.add('open');
 }
 
@@ -2829,6 +2840,98 @@ function cerrarUpload() {
   document.getElementById('uploadOverlay').classList.remove('open');
   uploadNorden = null;
   uploadFile   = null;
+}
+function _actualizarDetallePago(p) {
+  var pagoEl = document.getElementById('d-estado-pago');
+  var saldoEl = document.getElementById('d-saldo-pago');
+  var selEl   = document.getElementById('d-estado-pago-select');
+  var btnEdit = document.getElementById('btn-toggle-estado-pago');
+  if (!pagoEl) return;
+  var ep = p.estadoPago || 'No pagado';
+  pagoEl.textContent = ep;
+  pagoEl.style.color = ep === 'Pagado' ? '#15803d' : (ep === 'Parcialmente pagado' ? '#b45309' : '#dc2626');
+  if (selEl) { selEl.value = ep; selEl.style.display = 'none'; }
+  if (btnEdit && p.estado !== 'Cancelado') btnEdit.style.display = '';
+
+  // Saldo
+  if (saldoEl) {
+    var totalPag = calcTotalPagado(p.comprobante || '');
+    var totalPed = parseFloat(String(p.total||'0').replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+    if (totalPag > 0 && totalPed > 0) {
+      var saldo = totalPed - totalPag;
+      saldoEl.innerHTML = saldo > 0.5
+        ? '<span style="color:#b45309">Pagado: ' + formatPesosConDec(totalPag) + ' · Saldo: ' + formatPesosConDec(saldo) + '</span>'
+        : '<span style="color:#15803d">Total pagado: ' + formatPesosConDec(totalPag) + '</span>';
+    } else {
+      saldoEl.textContent = '';
+    }
+  }
+  // Comprobantes
+  var compWrap = document.getElementById('d-comprobantes-wrap');
+  var compList = document.getElementById('d-comprobantes-list');
+  if (compWrap && compList) {
+    if (p.comprobante) {
+      const urls = p.comprobante.split('|').filter(Boolean);
+      compList.innerHTML = _renderComprobantesHtml(urls);
+      compWrap.style.display = '';
+    } else {
+      compWrap.style.display = 'none';
+    }
+  }
+}
+function toggleEstadoPagoEdit() {
+  var sel = document.getElementById('d-estado-pago-select');
+  sel.style.display = sel.style.display === 'none' ? '' : 'none';
+}
+async function cambiarEstadoPagoManual(nuevoEstado) {
+  if (!pedidoActual) return;
+  try {
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'actualizarEstadoPago', norden: pedidoActual.norden, estadoPago: nuevoEstado })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      _auditLog(pedidoActual.norden, 'estadoPago', pedidoActual.estadoPago || 'No pagado', nuevoEstado);
+      pedidoActual.estadoPago = nuevoEstado;
+      const idx = todosLosPedidos.findIndex(p => p.norden === pedidoActual.norden);
+      if (idx !== -1) todosLosPedidos[idx].estadoPago = nuevoEstado;
+      _actualizarDetallePago(pedidoActual);
+      document.getElementById('d-estado-pago-select').style.display = 'none';
+      aplicarFiltros();
+    }
+  } catch(e) { console.error('cambiarEstadoPago:', e); }
+}
+function onTipoPagoChange() {
+  const tipo = document.getElementById('upload-tipo-pago').value;
+  const wrap = document.getElementById('upload-monto-wrap');
+  if (tipo === 'completo' || tipo === 'parcial') {
+    wrap.style.display = '';
+    const pedido = uploadNorden ? (todosLosPedidos.find(function(p){ return p.norden === uploadNorden; }) || pedidoActual) : null;
+    const totalPed = pedido ? (parseFloat(String(pedido.total||'0').replace(/[^\d.,]/g,'').replace(',','.')) || 0) : 0;
+    document.getElementById('upload-total-ref').textContent = totalPed > 0 ? 'Total del pedido: ' + formatPesosConDec(totalPed) : '';
+    if (tipo === 'completo' && totalPed > 0) {
+      document.getElementById('upload-monto').value = totalPed;
+      actualizarSaldoUpload();
+    } else {
+      actualizarSaldoUpload();
+    }
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+function actualizarSaldoUpload() {
+  const monto = parseFloat(document.getElementById('upload-monto').value) || 0;
+  const pedido = uploadNorden ? (todosLosPedidos.find(function(p){ return p.norden === uploadNorden; }) || pedidoActual) : null;
+  const totalPed = pedido ? (parseFloat(String(pedido.total||'0').replace(/[^\d.,]/g,'').replace(',','.')) || 0) : 0;
+  const infoEl = document.getElementById('upload-saldo-info');
+  if (!totalPed || !monto) { infoEl.textContent = ''; return; }
+  const saldo = totalPed - monto;
+  if (saldo <= 0) {
+    infoEl.innerHTML = '<span style="color:#15803d;font-weight:700">✅ Pago completo</span>';
+  } else {
+    infoEl.innerHTML = '<span style="color:#b45309;font-weight:700">🔶 Saldo pendiente: ' + formatPesosConDec(saldo) + '</span>';
+  }
 }
 
 function onFileSelected(input) {
@@ -2857,6 +2960,7 @@ async function ejecutarSubida() {
   btn.textContent = 'Subiendo…';
   mostrarUploadFeedback('⏳ Subiendo comprobante…', 'info');
 
+  const montoVal = parseFloat(document.getElementById('upload-monto').value) || 0;
   try {
     const base64 = await fileToBase64(uploadFile);
     const resp   = await fetch(SCRIPT_URL, {
@@ -2868,7 +2972,8 @@ async function ejecutarSubida() {
         filename: uploadFile.name,
         mimeType: uploadFile.type,
         base64:   base64,
-        tipoPago: tipoPago
+        tipoPago: tipoPago,
+        monto:    montoVal || null
       })
     });
     const data = await resp.json();
@@ -2879,29 +2984,17 @@ async function ejecutarSubida() {
       const idx = todosLosPedidos.findIndex(function(p){ return p.norden === uploadNorden; });
       if (idx !== -1) {
         todosLosPedidos[idx].comprobante = data.comprobante || data.url || '';
-        if (tipoPago === 'completo') {
-          _auditLog(uploadNorden, 'estadoPago', todosLosPedidos[idx].estadoPago || 'No pagado', 'Pagado');
-          _auditLog(uploadNorden, 'comprobante', '', data.comprobante || data.url || '');
-          todosLosPedidos[idx].estadoPago = 'Pagado';
-          todosLosPedidos[idx].fechaPago  = new Date().toLocaleDateString('es-AR');
+        const nuevoEstadoPago = data.estadoPago;
+        if (nuevoEstadoPago) {
+          _auditLog(uploadNorden, 'estadoPago', todosLosPedidos[idx].estadoPago || 'No pagado', nuevoEstadoPago);
+          todosLosPedidos[idx].estadoPago = nuevoEstadoPago;
+          if (nuevoEstadoPago === 'Pagado') todosLosPedidos[idx].fechaPago = new Date().toLocaleDateString('es-AR');
         }
+        _auditLog(uploadNorden, 'comprobante', '', data.comprobante || data.url || '');
         if (pedidoActual && pedidoActual.norden === uploadNorden) {
           pedidoActual.comprobante = todosLosPedidos[idx].comprobante;
-          if (tipoPago === 'completo') {
-            pedidoActual.estadoPago = 'Pagado';
-            pedidoActual.fechaPago  = todosLosPedidos[idx].fechaPago;
-          }
-          const compWrap = document.getElementById('d-comprobantes-wrap');
-          const compList = document.getElementById('d-comprobantes-list');
-          if (compWrap && compList) {
-            const urls = pedidoActual.comprobante.split('|').filter(Boolean);
-            compList.innerHTML = _renderComprobantesHtml(urls);
-            compWrap.style.display = '';
-          }
-          if (tipoPago === 'completo') {
-            const pagoEl = document.getElementById('d-estado-pago');
-            if (pagoEl) { pagoEl.textContent = 'Pagado'; pagoEl.style.color = '#15803d'; }
-          }
+          if (nuevoEstadoPago) { pedidoActual.estadoPago = nuevoEstadoPago; pedidoActual.fechaPago = todosLosPedidos[idx].fechaPago; }
+          _actualizarDetallePago(pedidoActual);
         }
         aplicarFiltros();
       }
@@ -2916,10 +3009,17 @@ async function ejecutarSubida() {
   }
 }
 
-// Parsea una entrada de la columna comprobante — puede tener prefijo REMITO:
+// Parsea una entrada de la columna comprobante — puede tener prefijo REMITO: o sufijo ::monto
 function _comprobanteParse(raw) {
-  if (typeof raw === 'string' && raw.startsWith('REMITO:')) return { label: 'Remito', url: raw.slice(7) };
-  return { label: 'Comprobante', url: raw };
+  if (typeof raw === 'string' && raw.startsWith('REMITO:')) return { label: 'Remito', url: raw.slice(7), monto: 0 };
+  const parts = raw.split('::');
+  return { label: 'Comprobante', url: parts[0], monto: parts.length > 1 ? parseFloat(parts[1]) || 0 : 0 };
+}
+function calcTotalPagado(comprobanteStr) {
+  if (!comprobanteStr) return 0;
+  return comprobanteStr.split('|').filter(Boolean).reduce(function(sum, raw) {
+    var c = _comprobanteParse(raw); return sum + (c.monto || 0);
+  }, 0);
 }
 
 function _renderComprobantesHtml(urls) {

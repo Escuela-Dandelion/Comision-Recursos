@@ -1,4 +1,4 @@
-// v2026-11-18b — eliminarRemito: nueva acción para quitar un remito de la columna comprobante
+// v2026-11-21b — subirComprobante parcial: escribe 'Parcialmente pagado' en estadoPago
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -70,6 +70,8 @@ function doPost(e) {
       resultado = registrarPedidoEnSheet(data);
     } else if (action === 'subirComprobante') {
       resultado = subirComprobanteEnDrive(data);
+    } else if (action === 'actualizarEstadoPago') {
+      resultado = actualizarEstadoPagoManual(data);
     } else if (action === 'eliminarRemito') {
       resultado = eliminarRemitoDeSheet(data);
     } else if (action === 'eliminarPedido') {
@@ -927,19 +929,18 @@ function eliminarPedidoDeSheet(data) {
   return 'Pedido eliminado: ' + norden;
 }
 
-// data: { action:'subirComprobante', norden, filename, mimeType, base64, tipoPago }
-// tipoPago: 'completo' → marca Pagado | 'envio'|'parcial' → solo guarda el link
+// data: { action:'subirComprobante', norden, filename, mimeType, base64, tipoPago, monto }
+// tipoPago: 'completo'→Pagado | 'parcial'→Parcialmente pagado | 'envio'/'remito'→solo link
+// monto: número (opcional) — se codifica como url::monto en la columna comprobante
 function subirComprobanteEnDrive(data) {
-  const { norden, filename, mimeType, base64, tipoPago } = data;
+  const { norden, filename, mimeType, base64, tipoPago, monto } = data;
   if (!norden || !base64) throw new Error('Faltan datos: norden y base64 son requeridos');
 
-  // Buscar o crear carpeta en Drive
   const CARPETA = 'Comprobantes DdL';
   let folder;
   const iter = DriveApp.getFoldersByName(CARPETA);
   folder = iter.hasNext() ? iter.next() : DriveApp.createFolder(CARPETA);
 
-  // Crear archivo
   const bytes    = Utilities.base64Decode(base64);
   const esRemito = (tipoPago === 'remito');
   const nombre   = esRemito ? filename : (norden + '_' + filename);
@@ -948,24 +949,81 @@ function subirComprobanteEnDrive(data) {
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const url = file.getUrl();
 
-  // Actualizar Sheet: link + estado Pagado
+  const montoNum = parseFloat(String(monto || '').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+  const storedUrl = esRemito ? ('REMITO:' + url) : (montoNum > 0 ? url + '::' + montoNum : url);
+
   const encontrado = leerPedidoPorId(norden);
   if (!encontrado) throw new Error('Pedido no encontrado: ' + norden);
   const sheet = getPedidosSheet();
   const fila  = encontrado.fila;
   const hoy   = Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy');
 
-  const storedUrl = esRemito ? ('REMITO:' + url) : url;
-  const existing  = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
-  const newVal    = existing ? existing + '|' + storedUrl : storedUrl;
+  const existing = sheet.getRange(fila, COL.COMPROBANTE + 1).getValue() || '';
+  const newVal   = existing ? existing + '|' + storedUrl : storedUrl;
   sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(newVal);
+
+  let estadoPagoNuevo = null;
   if (!tipoPago || tipoPago === 'completo') {
     sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Pagado');
     sheet.getRange(fila, COL.FECHA_PAGO + 1).setValue(hoy);
+    estadoPagoNuevo = 'Pagado';
+  } else if (tipoPago === 'parcial') {
+    const estadoActual = String(sheet.getRange(fila, COL.ESTADO_PAGO + 1).getValue() || '');
+    if (estadoActual !== 'Pagado') {
+      sheet.getRange(fila, COL.ESTADO_PAGO + 1).setValue('Parcialmente pagado');
+      estadoPagoNuevo = 'Parcialmente pagado';
+    }
   }
 
-  Logger.log('Comprobante subido: ' + norden + ' → ' + newVal + ' (tipoPago: ' + (tipoPago||'completo') + ')');
-  return { url: url, comprobante: newVal };
+  Logger.log('Comprobante subido: ' + norden + ' → ' + newVal + ' (tipoPago:' + (tipoPago||'completo') + ' monto:' + montoNum + ')');
+  return { url: url, comprobante: newVal, estadoPago: estadoPagoNuevo };
+}
+
+function actualizarEstadoPagoManual(data) {
+  const { norden, estadoPago } = data;
+  if (!norden || !estadoPago) throw new Error('Faltan norden o estadoPago');
+  const validos = ['Pagado', 'Parcialmente pagado', 'No pagado'];
+  if (validos.indexOf(estadoPago) === -1) throw new Error('Estado no válido: ' + estadoPago);
+  const encontrado = leerPedidoPorId(norden);
+  if (!encontrado) throw new Error('Pedido no encontrado: ' + norden);
+  const sheet = getPedidosSheet();
+  const hoy = Utilities.formatDate(new Date(), 'America/Argentina/Cordoba', 'dd/MM/yyyy');
+  sheet.getRange(encontrado.fila, COL.ESTADO_PAGO + 1).setValue(estadoPago === 'No pagado' ? '' : estadoPago);
+  if (estadoPago === 'Pagado') sheet.getRange(encontrado.fila, COL.FECHA_PAGO + 1).setValue(hoy);
+  Logger.log('actualizarEstadoPago: ' + norden + ' → ' + estadoPago);
+  return { norden: norden, estadoPago: estadoPago };
+}
+
+// Revisa todos los pedidos con comprobantes que tienen monto (url::monto)
+// y actualiza estadoPago según si la suma cubre el total del pedido.
+// Correr desde el editor de GAS.
+function reprocessComprobantes() {
+  const sheet = getPedidosSheet();
+  const data  = sheet.getDataRange().getValues();
+  const cambios = [];
+  for (let i = 1; i < data.length; i++) {
+    const norden   = String(data[i][COL.NORDEN] || '');
+    const compStr  = String(data[i][COL.COMPROBANTE] || '');
+    if (!norden || !compStr) continue;
+    let totalPagado = 0;
+    let tieneMonto  = false;
+    compStr.split('|').filter(Boolean).forEach(function(raw) {
+      if (raw.startsWith('REMITO:')) return;
+      const parts = raw.split('::');
+      if (parts.length > 1) { totalPagado += parseFloat(parts[1]) || 0; tieneMonto = true; }
+    });
+    if (!tieneMonto) continue;
+    const totalStr  = String(data[i][COL.TOTAL] || '0').replace(/[^\d.,]/g,'').replace('.','').replace(',','.');
+    const totalPed  = parseFloat(totalStr) || 0;
+    const estadoAct = String(data[i][COL.ESTADO_PAGO] || 'No pagado');
+    const estadoNvo = (totalPed > 0 && totalPagado >= totalPed * 0.99) ? 'Pagado' : 'Parcialmente pagado';
+    if (estadoAct !== estadoNvo) {
+      sheet.getRange(i + 1, COL.ESTADO_PAGO + 1).setValue(estadoNvo);
+      cambios.push({ norden: norden, antes: estadoAct, despues: estadoNvo, pagado: totalPagado, total: totalPed });
+    }
+  }
+  Logger.log('reprocessComprobantes: ' + cambios.length + ' cambios\n' + JSON.stringify(cambios, null, 2));
+  return cambios;
 }
 
 // data: { norden, remito } — remito es el valor crudo 'REMITO:url'
