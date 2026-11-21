@@ -477,7 +477,8 @@ function normProv(p){ return _PROV_ALIAS[(p||'').trim().toUpperCase()] || (p||''
 var ALL_ROWS  = [];
 var _ALL_ROWS_FULL = []; // copia sin filtro de rol — solo admin la usa
 var ALL_MESES = [];
-var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Pendiente'
+var ALL_RETIROS_MAP = {}; // pedido# → 'Entregado' | 'Parcial' | undefined
+var ALL_RETIROS_NOTAS_MAP = {}; // pedido# → notas (solo para Parcial)
 var DASH_CACHE_KEY  = 'dandelion_dash_v2';
 var currentMes      = '';
 var _userRole        = '';
@@ -777,7 +778,8 @@ function initDashboard(d){
   }
 
   ALL_MESES       = d.meses_todos||[];
-  ALL_RETIROS_MAP = d.retiros_map||{};
+  ALL_RETIROS_MAP       = d.retiros_map||{};
+  ALL_RETIROS_NOTAS_MAP = d.retiros_notas_map||{};
 
   // Mostrar filtro de estado solo si hay datos de entregas
   if(Object.keys(ALL_RETIROS_MAP).length>0){
@@ -1171,9 +1173,10 @@ function renderFamilias(rows){
       var _bg=_entr?'#f0fdf4':(_parc?'#fffbeb':'#fef9c3');
       var _label=_entr?'Entregado':(_parc?'Parcialmente entregado':'Pendiente de entrega');
       var _fechaHora=grupo[0].fechaHora||grupo[0].fecha||'';
+      var _notas=(_parc&&ALL_RETIROS_NOTAS_MAP[String(ped)])?' · <span style="font-weight:400;font-style:italic">'+esc(ALL_RETIROS_NOTAS_MAP[String(ped)])+'</span>':'';
       rowHtml+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
         '<td colspan="5" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
-          _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+_label+
+          _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+_label+_notas+
         '</td>'+
       '</tr>';
       grupo.forEach(function(p){

@@ -2386,7 +2386,7 @@ function apiDashboard(email) {
   }
 
   // Mapa pedido# → estado de entrega (leemos el mismo SS que ya abrimos)
-  var retirosMap = {};
+  var retirosMap = {}, retirosNotasMap = {};
   try {
     var rSheet = ss.getSheetByName('Retiros');
     if (rSheet) {
@@ -2396,7 +2396,11 @@ function apiDashboard(email) {
         var rEst = String(rData[ri][7] || '');
         if (rNum) {
           if (rEst.indexOf('ENTREGADO') !== -1) retirosMap[rNum] = 'Entregado';
-          else if (rEst.indexOf('ENTREGA PARCIAL') !== -1) retirosMap[rNum] = 'Parcial';
+          else if (rEst.indexOf('ENTREGA PARCIAL') !== -1) {
+            retirosMap[rNum] = 'Parcial';
+            var rNotas = String(rData[ri][9] || '');
+            if (rNotas) retirosNotasMap[rNum] = rNotas;
+          }
         }
       }
     }
@@ -2425,7 +2429,8 @@ function apiDashboard(email) {
     proveedores:   authUser.proveedores || [],
     fgp_list:      fgpList,
     rows:          rows,
-    retiros_map:   retirosMap,
+    retiros_map:       retirosMap,
+    retiros_notas_map: retirosNotasMap,
     meses_todos:   Object.keys(mesesSet).sort(),
     total_pedidos: Object.keys(pedidosSet).length,
     total_pesos:   Math.round(totalPesos * 100) / 100,
