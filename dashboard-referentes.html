@@ -439,6 +439,7 @@
       <select class="filter-select" id="filtro-estado" onchange="aplicarFiltros()" style="display:none">
         <option value="">Todos</option>
         <option value="Entregado">✅ Entregado</option>
+        <option value="Parcial">🔶 Parcialmente entregado</option>
         <option value="Pendiente">⏳ Pendiente</option>
       </select>
 
@@ -921,11 +922,23 @@ function getRows(){
   if(currentMarca) rows=rows.filter(function(r){ return r.marca===currentMarca; });
   if(selectedGrados.length>0) rows=rows.filter(function(r){ return selectedGrados.indexOf(r.grado)!==-1; });
   if(currentEstado && Object.keys(ALL_RETIROS_MAP).length>0){
-    rows=rows.filter(function(r){
-      var est=ALL_RETIROS_MAP[String(r.pedido)];
-      if(currentEstado==='Entregado') return est==='Entregado';
-      else return est!=='Entregado';
-    });
+    if(currentEstado==='Parcial'){
+      var _famPedMap={};
+      rows.forEach(function(r){
+        if(!_famPedMap[r.familia]) _famPedMap[r.familia]={entr:false,pend:false};
+        if(ALL_RETIROS_MAP[String(r.pedido)]==='Entregado') _famPedMap[r.familia].entr=true;
+        else _famPedMap[r.familia].pend=true;
+      });
+      var _parcialFam={};
+      Object.keys(_famPedMap).forEach(function(f){ if(_famPedMap[f].entr&&_famPedMap[f].pend) _parcialFam[f]=true; });
+      rows=rows.filter(function(r){ return _parcialFam[r.familia]; });
+    } else {
+      rows=rows.filter(function(r){
+        var est=ALL_RETIROS_MAP[String(r.pedido)];
+        if(currentEstado==='Entregado') return est==='Entregado';
+        else return est!=='Entregado';
+      });
+    }
   }
   return rows;
 }
@@ -1092,12 +1105,21 @@ function renderFamilias(rows){
       if(ALL_RETIROS_MAP[String(it.pedido)]==='Entregado') _fUEntr+=(it.cantidad||0);
       else _fUPend+=(it.cantidad||0);
     });
-    var _retBadge=_hasRet?
-      '<div style="font-size:11px;margin-top:3px">'+
-        (_fUEntr?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(_fUEntr)+' u.</span>':'')+
-        (_fUEntr&&_fUPend?' · ':'')+
-        (_fUPend?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(_fUPend)+' u.</span>':'')+
-      '</div>':'';
+    var _retBadge='';
+    if(_hasRet){
+      if(_fUEntr>0&&_fUPend>0){
+        _retBadge='<div style="font-size:11px;margin-top:3px">'+
+          '<span style="color:#b45309;font-weight:700">🔶 Parcialmente entregado</span> · '+
+          '<span style="color:#15803d">'+Math.round(_fUEntr)+' u. entregadas</span> · '+
+          '<span style="color:#92400e">'+Math.round(_fUPend)+' u. pendientes</span>'+
+        '</div>';
+      } else {
+        _retBadge='<div style="font-size:11px;margin-top:3px">'+
+          (_fUEntr?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(_fUEntr)+' u. entregadas</span>':'')+
+          (_fUPend?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(_fUPend)+' u. pendientes</span>':'')+
+        '</div>';
+      }
+    }
     var _pedKeys = Object.keys(fam._ped);
     var _lastPed = _pedKeys.length > 0 ? _pedKeys[_pedKeys.length - 1] : '';
     var _waMsgFam = '\uD83C\uDF3C Hola, te escribo de la Tienda Diente de León por tu pedido' + (_lastPed ? ' #' + _lastPed : '') + '.';
@@ -1241,9 +1263,11 @@ function renderProductos(rows){
           '<div class="prod-name">'+esc(prod.nombre)+'</div>'+
           (prod.proveedor?'<div class="prod-marca">'+esc(prod.proveedor)+'</div>':'')+
           (_hasRet?'<div style="font-size:11px;margin-top:3px">'+
-            (prod.u_entr>0?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(prod.u_entr)+' u.</span>':'')+
-            (prod.u_entr>0&&prod.u_pend>0?' · ':'')+
-            (prod.u_pend>0?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(prod.u_pend)+' u.</span>':'')+
+            (prod.u_entr>0&&prod.u_pend>0?
+              '<span style="color:#b45309;font-weight:700">🔶 Parcialmente entregado</span> · <span style="color:#15803d">'+Math.round(prod.u_entr)+' u.</span> · <span style="color:#92400e">'+Math.round(prod.u_pend)+' u.</span>':
+              (prod.u_entr>0?'<span style="color:#15803d;font-weight:700">✅ '+Math.round(prod.u_entr)+' u.</span>':'')+
+              (prod.u_pend>0?'<span style="color:#92400e;font-weight:700">⏳ '+Math.round(prod.u_pend)+' u.</span>':'')
+            )+
           '</div>':'')+
         '</div>'+
       '</div>'+
