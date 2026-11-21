@@ -550,53 +550,6 @@ function contactBtns(email, phone, msg, pedido, ccEmail) {
   var btns = (email ? emailLink(email, msg, pedido, ccEmail) : '') + (phone ? waLink(phone, msg) : '');
   return btns ? '<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle">' + btns + '</span>' : '';
 }
-var _merOrderId = '';
-function abrirModalEstado(orderId, orderNumber) {
-  _merOrderId = orderId;
-  var est = ALL_RETIROS_MAP[String(orderId)] || 'Pendiente';
-  document.getElementById('mer-pedido-label').textContent = 'Pedido #' + orderNumber;
-  document.getElementById('mer-estado').value = est;
-  document.getElementById('mer-feedback').style.display = 'none';
-  var btn = document.getElementById('mer-btn-guardar');
-  btn.disabled = false; btn.textContent = 'Guardar';
-  document.getElementById('modal-estado-retiro').style.display = 'flex';
-}
-function cerrarModalEstado() {
-  document.getElementById('modal-estado-retiro').style.display = 'none';
-}
-function guardarEstadoRetiro() {
-  var nuevoEstado = document.getElementById('mer-estado').value;
-  var fb  = document.getElementById('mer-feedback');
-  var btn = document.getElementById('mer-btn-guardar');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  fb.style.display = 'none';
-  var authEmail = leerSesionGoogle() || '';
-  fetch(APPS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    redirect: 'follow',
-    body: JSON.stringify({ action: 'actualizarEstadoRetiro', email: authEmail, orderId: _merOrderId, nuevoEstado: nuevoEstado })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if (d.ok) {
-      if (nuevoEstado === 'Pendiente') delete ALL_RETIROS_MAP[String(_merOrderId)];
-      else ALL_RETIROS_MAP[String(_merOrderId)] = nuevoEstado;
-      cerrarModalEstado();
-      render();
-    } else {
-      fb.textContent = 'Error: ' + (d.error || 'intentá de nuevo');
-      fb.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Guardar';
-    }
-  })
-  .catch(function(){
-    fb.textContent = 'Error de red.';
-    fb.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Guardar';
-  });
-}
-
 var _mcEmailRef = '';
 var _mcCcRef    = '';
 function abrirModalContactoRef(email, asunto, msg, ccEmail) {
@@ -1211,11 +1164,9 @@ function renderFamilias(rows){
       var _bg=_entr?'#f0fdf4':(_parc?'#fffbeb':'#fef9c3');
       var _label=_entr?'Entregado':(_parc?'Parcialmente entregado':'Pendiente de entrega');
       var _fechaHora=grupo[0].fechaHora||grupo[0].fecha||'';
-      var _editBtn=(_userRole==='ADMIN'&&_hasRet)?
-        ' <button onclick="event.stopPropagation();abrirModalEstado(\''+esc(String(ped))+'\',\''+esc(String(ped))+'\')" title="Editar estado" style="background:none;border:1px solid '+_color+';border-radius:5px;padding:1px 6px;font-size:10px;color:'+_color+';cursor:pointer;vertical-align:middle;margin-left:6px">✏ editar</button>':'';
       rowHtml+='<tr style="background:'+_bg+';border-top:1px solid #e5e7eb">'+
         '<td colspan="5" style="padding:5px 12px;font-size:11px;font-weight:700;color:'+_color+'">'+
-          _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+_label+_editBtn+
+          _icon+' Pedido #'+esc(String(ped))+(_fechaHora?' — <span style="font-weight:400">'+esc(_fechaHora)+'</span>':'')+' — '+_label+
         '</td>'+
       '</tr>';
       grupo.forEach(function(p){
@@ -1508,23 +1459,6 @@ function exportarPDF(){
   window.print();
 }
 </script>
-<div id="modal-estado-retiro" onclick="cerrarModalEstado()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px">
-  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-    <h3 style="font-size:16px;font-weight:800;margin:0 0 16px;color:#1a1a1a">Editar estado de entrega</h3>
-    <div id="mer-pedido-label" style="font-size:13px;color:#6b7280;margin-bottom:16px"></div>
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:6px">Estado</div>
-    <select id="mer-estado" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:16px;box-sizing:border-box">
-      <option value="Entregado">✅ Entregado</option>
-      <option value="Parcial">🔶 Parcialmente entregado</option>
-      <option value="Pendiente">⏳ Pendiente</option>
-    </select>
-    <div id="mer-feedback" style="font-size:12px;color:#dc2626;display:none;margin-bottom:8px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <button onclick="cerrarModalEstado()" style="padding:11px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#6b7280">Cancelar</button>
-      <button id="mer-btn-guardar" onclick="guardarEstadoRetiro()" style="padding:11px;background:#1a1a6e;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Guardar</button>
-    </div>
-  </div>
-</div>
 <div id="modal-contacto-ref" onclick="cerrarModalContactoRef()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px">
   <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:580px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <h3 style="font-size:16px;font-weight:800;margin:0 0 16px;color:#1a1a1a">✉ Enviar mail</h3>

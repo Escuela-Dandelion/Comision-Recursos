@@ -1,4 +1,4 @@
-// v2026-11-21a — actualizarEstadoRetiro: editar estado de retiro desde dashboard; fix retirosMap Parcial
+// v2026-11-21a — fix retirosMap: ENTREGA PARCIAL ahora se muestra como Parcialmente entregado en dashboard
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -148,14 +148,6 @@ function doPost(e) {
       try {
         var resultado = generarEtiquetaEnvia(body);
         return ContentService.createTextOutput(JSON.stringify(resultado)).setMimeType(ContentService.MimeType.JSON);
-      } catch(err) {
-        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-    if (action === 'actualizarEstadoRetiro') {
-      try {
-        var res = apiActualizarEstadoRetiro(body.email || '', body.orderId || '', body.nuevoEstado || '');
-        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
       } catch(err) {
         return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
       }
@@ -1320,36 +1312,6 @@ function marcarEntregado(orderId, staffName, notas, parcial) {
     }
   }
 
-}
-
-function apiActualizarEstadoRetiro(email, orderId, nuevoEstado) {
-  var emailNorm = (email || '').toLowerCase().trim();
-  var user = AUTH_EMAILS[emailNorm];
-  if (!user || user.role !== 'ADMIN') return { ok: false, error: 'No autorizado' };
-  if (!orderId) return { ok: false, error: 'orderId requerido' };
-
-  var ss = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
-  var rSheet = ss.getSheetByName('Retiros');
-  if (!rSheet) return { ok: false, error: 'Hoja Retiros no encontrada' };
-
-  var data = rSheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(orderId)) {
-      var estadoAnterior = String(data[i][7] || '');
-      var estadoNuevo = '';
-      if (nuevoEstado === 'Entregado') {
-        estadoNuevo = 'ENTREGADO ✓ — ' + new Date().toLocaleString('es-AR');
-      } else if (nuevoEstado === 'Parcial') {
-        estadoNuevo = 'ENTREGA PARCIAL — ' + new Date().toLocaleString('es-AR');
-      }
-      rSheet.getRange(i + 1, 8).setValue(estadoNuevo);
-      rSheet.getRange(i + 1, 9).setValue(emailNorm);
-      var norden = String(data[i][1] || orderId);
-      registrarAuditLog(emailNorm, 'EstadoRetiro', norden, 'estado', estadoAnterior || 'Pendiente', estadoNuevo || 'Pendiente');
-      return { ok: true, orderId: orderId, nuevoEstado: nuevoEstado };
-    }
-  }
-  return { ok: false, error: 'Pedido no encontrado en Retiros: ' + orderId };
 }
 
 // ──────────────────────────────────────────────────────────
