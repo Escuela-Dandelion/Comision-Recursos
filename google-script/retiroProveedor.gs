@@ -995,36 +995,57 @@ function actualizarEstadoPagoManual(data) {
 }
 
 // Revisa todos los pedidos con comprobantes que tienen monto (url::monto)
-// y actualiza estadoPago según si la suma cubre el total del pedido.
-// Correr desde el editor de GAS.
-function reprocessComprobantes() {
-  const sheet = getPedidosSheet();
-  const data  = sheet.getDataRange().getValues();
-  const cambios = [];
+// y calcula qué estadoPago correspondería a cada uno.
+// dryRun=true → solo reporta, no escribe nada.
+function reprocessComprobantes(dryRun) {
+  const sheet   = getPedidosSheet();
+  const data    = sheet.getDataRange().getValues();
+  const cambios = [], errores = [], sinCambio = [];
+
   for (let i = 1; i < data.length; i++) {
-    const norden   = String(data[i][COL.NORDEN] || '');
-    const compStr  = String(data[i][COL.COMPROBANTE] || '');
-    if (!norden || !compStr) continue;
-    let totalPagado = 0;
-    let tieneMonto  = false;
-    compStr.split('|').filter(Boolean).forEach(function(raw) {
-      if (raw.startsWith('REMITO:')) return;
-      const parts = raw.split('::');
-      if (parts.length > 1) { totalPagado += parseFloat(parts[1]) || 0; tieneMonto = true; }
-    });
-    if (!tieneMonto) continue;
-    const totalStr  = String(data[i][COL.TOTAL] || '0').replace(/[^\d.,]/g,'').replace('.','').replace(',','.');
-    const totalPed  = parseFloat(totalStr) || 0;
-    const estadoAct = String(data[i][COL.ESTADO_PAGO] || 'No pagado');
-    const estadoNvo = (totalPed > 0 && totalPagado >= totalPed * 0.99) ? 'Pagado' : 'Parcialmente pagado';
-    if (estadoAct !== estadoNvo) {
-      sheet.getRange(i + 1, COL.ESTADO_PAGO + 1).setValue(estadoNvo);
-      cambios.push({ norden: norden, antes: estadoAct, despues: estadoNvo, pagado: totalPagado, total: totalPed });
+    try {
+      const norden  = String(data[i][COL.NORDEN] || '');
+      const compStr = String(data[i][COL.COMPROBANTE] || '');
+      if (!norden || !compStr) continue;
+
+      let totalPagado = 0, tieneMonto = false;
+      compStr.split('|').filter(Boolean).forEach(function(raw) {
+        if (raw.startsWith('REMITO:')) return;
+        const parts = raw.split('::');
+        if (parts.length > 1) { totalPagado += parseFloat(parts[1]) || 0; tieneMonto = true; }
+      });
+      if (!tieneMonto) continue;
+
+      const totalStr = String(data[i][COL.TOTAL] || '0').replace(/[^\d.,]/g,'').replace('.','').replace(',','.');
+      const totalPed = parseFloat(totalStr) || 0;
+      const estadoAct = String(data[i][COL.ESTADO_PAGO] || 'No pagado');
+      const estadoNvo = (totalPed > 0 && totalPagado >= totalPed * 0.99) ? 'Pagado' : 'Parcialmente pagado';
+
+      if (estadoAct !== estadoNvo) {
+        if (!dryRun) sheet.getRange(i + 1, COL.ESTADO_PAGO + 1).setValue(estadoNvo);
+        cambios.push({ norden: norden, antes: estadoAct, despues: estadoNvo, pagado: totalPagado, total: totalPed });
+      } else {
+        sinCambio.push({ norden: norden, estado: estadoAct, pagado: totalPagado, total: totalPed });
+      }
+    } catch(e) {
+      errores.push({ fila: i + 1, error: String(e) });
+      Logger.log('reprocessComprobantes fila ' + (i+1) + ': ' + e);
     }
   }
-  Logger.log('reprocessComprobantes: ' + cambios.length + ' cambios\n' + JSON.stringify(cambios, null, 2));
-  return cambios;
+
+  const resumen = {
+    dryRun:    !!dryRun,
+    cambios:   cambios,
+    sinCambio: sinCambio,
+    errores:   errores
+  };
+  Logger.log('reprocessComprobantes' + (dryRun ? ' [DRY RUN]' : '') + ': '
+    + cambios.length + ' cambios, ' + errores.length + ' errores\n'
+    + JSON.stringify(resumen, null, 2));
+  return resumen;
 }
+
+function reprocessComprobanteDryRun() { return reprocessComprobantes(true); }
 
 // data: { norden, remito } — remito es el valor crudo 'REMITO:url'
 function eliminarRemitoDeSheet(data) {
