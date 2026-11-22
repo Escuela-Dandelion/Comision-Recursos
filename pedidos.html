@@ -2933,10 +2933,8 @@ async function confirmarEstadoPago() {
   const btnGuardar = document.querySelector('#d-estado-pago-edit button');
   if (btnGuardar) { btnGuardar.textContent = '…'; btnGuardar.disabled = true; }
   try {
-    const resp = await fetch(SCRIPT_URL, {
-      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'actualizarEstadoPago', norden: pedidoActual.norden, estadoPago: nuevoEstado })
-    });
+    const url = SCRIPT_URL + '?action=actualizarEstadoPago&norden=' + encodeURIComponent(pedidoActual.norden) + '&estadoPago=' + encodeURIComponent(nuevoEstado);
+    const resp = await fetch(url, { redirect: 'follow' });
     const data = await resp.json();
     if (data.ok) {
       _auditLog(pedidoActual.norden, 'estadoPago', pedidoActual.estadoPago || 'No pagado', nuevoEstado);
