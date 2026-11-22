@@ -461,7 +461,43 @@
           <span class="det-norden" id="d-norden"></span>
           <span class="det-fecha" id="d-fecha"></span>
         </div>
-        <span id="d-estadoBadge"></span>
+        <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-top:8px;">
+          <!-- Estado logístico -->
+          <div>
+            <div id="d-estado-log-view" style="display:flex;align-items:center;gap:5px;">
+              <span id="d-estadoBadge"></span>
+              <button id="btn-edit-estado-log" onclick="toggleEstadoLogEdit(true)"
+                style="display:none;font-size:12px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0;line-height:1;" title="Cambiar estado">✏</button>
+            </div>
+            <div id="d-estado-log-edit" style="display:none;align-items:center;gap:5px;margin-top:4px;">
+              <select id="d-estado-log-select" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;"></select>
+              <button onclick="confirmarEstadoLog()" style="font-size:12px;padding:3px 10px;background:#2d5a27;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Confirmar</button>
+              <button onclick="toggleEstadoLogEdit(false)" style="font-size:12px;padding:3px 10px;background:none;color:#6b7280;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">Cancelar</button>
+            </div>
+          </div>
+          <!-- Separador -->
+          <div style="width:1px;height:28px;background:#e5e7eb;margin-top:2px;"></div>
+          <!-- Estado de pago -->
+          <div>
+            <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px;">Pago</div>
+            <div id="d-estado-pago-view" style="display:flex;align-items:center;gap:5px;">
+              <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
+              <button onclick="toggleEstadoPagoEdit(true)" id="btn-toggle-estado-pago"
+                style="display:none;font-size:12px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0;line-height:1;" title="Editar">✏</button>
+            </div>
+            <div id="d-estado-pago-edit" style="display:none;align-items:center;gap:5px;margin-top:4px;">
+              <select id="d-estado-pago-select" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
+                <option value="Pagado">Pagado</option>
+                <option value="Parcialmente pagado">Parcialmente pagado</option>
+                <option value="No pagado">No pagado</option>
+              </select>
+              <button onclick="confirmarEstadoPago()" style="font-size:12px;padding:3px 10px;background:#15803d;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Guardar</button>
+              <button onclick="toggleEstadoPagoEdit(false)" style="font-size:12px;padding:3px 10px;background:none;color:#6b7280;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">Cancelar</button>
+            </div>
+            <div id="d-saldo-pago" style="font-size:11px;margin-top:3px;"></div>
+          </div>
+        </div>
+        <div class="det-estado-fecha" id="d-fechaEstado" style="margin-top:5px;"></div>
       </div>
 
       <!-- Card productos -->
@@ -582,29 +618,12 @@
       <div class="det-card">
         <div class="det-card-header"><span class="det-card-title">Gestión</span></div>
         <div class="det-card-body">
-          <div class="det-info-row">
-            <div class="det-info-item">
-              <div class="det-info-label">FGP Responsable</div>
-              <div id="d-fgp"></div>
-            </div>
-<div id="d-quien-wrap" style="display:none"><div id="d-quien"></div></div>
-            <div class="det-info-item">
-              <div class="det-info-label">Estado de pago</div>
-              <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
-              <div id="d-saldo-pago" style="font-size:11px;margin-top:3px;"></div>
-              <select id="d-estado-pago-select" onchange="cambiarEstadoPagoManual(this.value)"
-                style="display:none;margin-top:6px;font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
-                <option value="Pagado">✅ Pagado</option>
-                <option value="Parcialmente pagado">🔶 Parcialmente pagado</option>
-                <option value="No pagado">❌ No pagado</option>
-              </select>
-              <button onclick="toggleEstadoPagoEdit()" id="btn-toggle-estado-pago"
-                style="display:none;margin-top:4px;font-size:11px;color:#6b7280;background:none;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;cursor:pointer;">
-                ✏ cambiar
-              </button>
-            </div>
+          <div class="det-info-item" style="margin-bottom:10px;">
+            <div class="det-info-label">FGP Responsable</div>
+            <div id="d-fgp"></div>
           </div>
-          <div style="margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+          <div id="d-quien-wrap" style="display:none"><div id="d-quien"></div></div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
             <div id="d-comprobantes-wrap" style="display:none;">
               <div id="d-comprobantes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
             </div>
@@ -691,14 +710,6 @@
         </div>
       </div>
 
-      <!-- Card estado -->
-      <div class="det-card">
-        <div class="det-card-header"><span class="det-card-title">Estado</span></div>
-        <div class="det-card-body">
-          <div class="det-estado-badge-wrap" id="d-estadoBadge2"></div>
-          <div class="det-estado-fecha" id="d-fechaEstado"></div>
-        </div>
-      </div>
 
     </div>
   </div>
@@ -2487,7 +2498,10 @@ function renderDetalle(p) {
 
   const badgeHtml = `<span class="badge-estado ${claseEstado(p.estado)}" style="font-size:14px;padding:5px 12px">${EMOJI_ESTADO[p.estado]||''} ${p.estado}</span>`;
   document.getElementById('d-estadoBadge').innerHTML  = badgeHtml;
-  document.getElementById('d-estadoBadge2').innerHTML = badgeHtml;
+  // Mostrar ✏ estado logístico solo si hay siguientes estados posibles
+  var btnEditLog = document.getElementById('btn-edit-estado-log');
+  if (btnEditLog) btnEditLog.style.display = (SIGUIENTE_ESTADO[p.estado] || []).length > 0 ? '' : 'none';
+  toggleEstadoLogEdit(false);
   // Retiro
   document.getElementById('d-retiro-edit').style.display = 'none';
   document.getElementById('d-retiro-view').style.display = 'block';
@@ -2850,7 +2864,10 @@ function _actualizarDetallePago(p) {
   var ep = p.estadoPago || 'No pagado';
   pagoEl.textContent = ep;
   pagoEl.style.color = ep === 'Pagado' ? '#15803d' : (ep === 'Parcialmente pagado' ? '#b45309' : '#dc2626');
-  if (selEl) { selEl.value = ep; selEl.style.display = 'none'; }
+  var viewEl = document.getElementById('d-estado-pago-view');
+  var editEl = document.getElementById('d-estado-pago-edit');
+  if (viewEl) viewEl.style.display = 'flex';
+  if (editEl) editEl.style.display = 'none';
   if (btnEdit && p.estado !== 'Cancelado') btnEdit.style.display = '';
 
   // Saldo
@@ -2879,12 +2896,44 @@ function _actualizarDetallePago(p) {
     }
   }
 }
-function toggleEstadoPagoEdit() {
-  var sel = document.getElementById('d-estado-pago-select');
-  sel.style.display = sel.style.display === 'none' ? '' : 'none';
+function toggleEstadoLogEdit(abrir) {
+  var viewEl = document.getElementById('d-estado-log-view');
+  var editEl = document.getElementById('d-estado-log-edit');
+  if (!viewEl || !editEl) return;
+  if (abrir) {
+    var sig = pedidoActual ? (SIGUIENTE_ESTADO[pedidoActual.estado] || []) : [];
+    document.getElementById('d-estado-log-select').innerHTML = sig.map(function(e) {
+      return '<option value="' + e + '">' + (EMOJI_ESTADO[e] || '') + ' ' + (LABEL_ACCION[e] || e) + '</option>';
+    }).join('');
+    viewEl.style.display = 'none';
+    editEl.style.display = 'flex';
+  } else {
+    viewEl.style.display = 'flex';
+    editEl.style.display = 'none';
+  }
 }
-async function cambiarEstadoPagoManual(nuevoEstado) {
+function confirmarEstadoLog() {
   if (!pedidoActual) return;
+  var nuevoEstado = document.getElementById('d-estado-log-select').value;
+  toggleEstadoLogEdit(false);
+  confirmarAccion(pedidoActual.norden, nuevoEstado);
+}
+function toggleEstadoPagoEdit(abrir) {
+  var viewEl = document.getElementById('d-estado-pago-view');
+  var editEl = document.getElementById('d-estado-pago-edit');
+  if (abrir) {
+    var sel = document.getElementById('d-estado-pago-select');
+    sel.value = (pedidoActual && pedidoActual.estadoPago) || 'No pagado';
+    viewEl.style.display = 'none';
+    editEl.style.display = 'flex';
+  } else {
+    viewEl.style.display = 'flex';
+    editEl.style.display = 'none';
+  }
+}
+async function confirmarEstadoPago() {
+  if (!pedidoActual) return;
+  const nuevoEstado = document.getElementById('d-estado-pago-select').value;
   try {
     const resp = await fetch(SCRIPT_URL, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2896,11 +2945,11 @@ async function cambiarEstadoPagoManual(nuevoEstado) {
       pedidoActual.estadoPago = nuevoEstado;
       const idx = todosLosPedidos.findIndex(p => p.norden === pedidoActual.norden);
       if (idx !== -1) todosLosPedidos[idx].estadoPago = nuevoEstado;
+      toggleEstadoPagoEdit(false);
       _actualizarDetallePago(pedidoActual);
-      document.getElementById('d-estado-pago-select').style.display = 'none';
       aplicarFiltros();
     }
-  } catch(e) { console.error('cambiarEstadoPago:', e); }
+  } catch(e) { console.error('confirmarEstadoPago:', e); }
 }
 function onTipoPagoChange() {
   const tipo = document.getElementById('upload-tipo-pago').value;

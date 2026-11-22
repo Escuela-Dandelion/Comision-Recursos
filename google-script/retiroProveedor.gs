@@ -1,4 +1,4 @@
-// v2026-11-21b — subirComprobante parcial: escribe 'Parcialmente pagado' en estadoPago
+// v2026-11-21c — auditarConGemini: extrae montos de comprobantes MP via Gemini Vision
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -1046,6 +1046,299 @@ function reprocessComprobantes(dryRun) {
 }
 
 function reprocessComprobanteDryRun() { return reprocessComprobantes(true); }
+
+// Audita todos los pedidos con comprobante, tengan o no monto registrado.
+// Correr desde el editor de GAS y leer el log.
+function auditarComprobantes() {
+  const sheet = getPedidosSheet();
+  const data  = sheet.getDataRange().getValues();
+
+  const conMonto      = []; // comprobantes con ::monto — se puede calcular saldo
+  const sinMonto      = []; // comprobantes sin monto — no se puede auditar automático
+  const sinComprobante = []; // marcados Pagado/Parcial pero sin URL de comprobante
+  const inconsistentes = []; // estado no coincide con lo calculado
+
+  for (let i = 1; i < data.length; i++) {
+    try {
+      const norden    = String(data[i][COL.NORDEN] || '');
+      const compStr   = String(data[i][COL.COMPROBANTE] || '');
+      const estadoPago = String(data[i][COL.ESTADO_PAGO] || 'No pagado');
+      const totalStr  = String(data[i][COL.TOTAL] || '0').replace(/[^\d.,]/g,'').replace('.','').replace(',','.');
+      const totalPed  = parseFloat(totalStr) || 0;
+      if (!norden) continue;
+
+      // Marcado como pagado pero sin comprobante
+      if ((estadoPago === 'Pagado' || estadoPago === 'Parcialmente pagado') && !compStr) {
+        sinComprobante.push({ norden, estadoPago, total: totalPed });
+        continue;
+      }
+      if (!compStr) continue;
+
+      // Separar entradas con y sin monto
+      let totalPagado = 0, tieneMonto = false, cantComp = 0;
+      compStr.split('|').filter(Boolean).forEach(function(raw) {
+        if (raw.startsWith('REMITO:')) return;
+        cantComp++;
+        const parts = raw.split('::');
+        if (parts.length > 1) { totalPagado += parseFloat(parts[1]) || 0; tieneMonto = true; }
+      });
+
+      if (!tieneMonto) {
+        sinMonto.push({ norden, estadoPago, total: totalPed, comprobantes: cantComp });
+      } else {
+        const saldo = totalPed - totalPagado;
+        const estadoEsperado = (totalPed > 0 && totalPagado >= totalPed * 0.99) ? 'Pagado' : 'Parcialmente pagado';
+        const ok = estadoPago === estadoEsperado;
+        conMonto.push({ norden, estadoPago, estadoEsperado, total: totalPed, pagado: totalPagado, saldo, ok });
+        if (!ok) inconsistentes.push({ norden, estadoPago, estadoEsperado, total: totalPed, pagado: totalPagado, saldo });
+      }
+    } catch(e) {
+      Logger.log('auditarComprobantes fila ' + (i+1) + ': ' + e);
+    }
+  }
+
+  Logger.log(
+    '=== AUDITORÍA DE COMPROBANTES ===\n' +
+    'Con monto registrado: ' + conMonto.length + '\n' +
+    'Sin monto (solo URL): ' + sinMonto.length + ' ← estos necesitan atención\n' +
+    'Pagado/Parcial sin comprobante: ' + sinComprobante.length + '\n' +
+    'Inconsistentes (estado ≠ calculado): ' + inconsistentes.length + '\n\n' +
+    '--- SIN MONTO (necesitan monto manual) ---\n' + JSON.stringify(sinMonto, null, 2) + '\n\n' +
+    '--- INCONSISTENTES ---\n' + JSON.stringify(inconsistentes, null, 2) + '\n\n' +
+    '--- CON MONTO (todos) ---\n' + JSON.stringify(conMonto, null, 2) + '\n\n' +
+    '--- SIN COMPROBANTE ---\n' + JSON.stringify(sinComprobante, null, 2)
+  );
+  return { conMonto, sinMonto, sinComprobante, inconsistentes };
+}
+
+// ── GEMINI VISION: extracción automática de montos de comprobantes ─────────
+
+function listarModelosGemini() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, { muteHttpExceptions: true });
+  const data = JSON.parse(resp.getContentText());
+  const vision = (data.models || []).filter(function(m) {
+    return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1;
+  }).map(function(m) { return m.name; });
+  Logger.log('Modelos disponibles con generateContent:\n' + vision.join('\n'));
+}
+
+// Correr esta función primero para diagnosticar: muestra URL y error exacto del primer comprobante sin monto.
+function testUnComprobante() {
+  const sheet = getPedidosSheet();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const norden  = String(data[i][COL.NORDEN] || '');
+    const compStr = String(data[i][COL.COMPROBANTE] || '');
+    if (!norden || !compStr) continue;
+    const partes = compStr.split('|').filter(Boolean);
+    for (let j = 0; j < partes.length; j++) {
+      const raw = partes[j];
+      if (raw.startsWith('REMITO:') || raw.indexOf('::') !== -1) continue;
+      // Encontramos el primer comprobante sin monto
+      Logger.log('Pedido: ' + norden);
+      Logger.log('URL raw: ' + raw);
+      Logger.log('Drive ID extraído: ' + _extraerDriveId(raw));
+      try {
+        const fileId = _extraerDriveId(raw);
+        if (!fileId) { Logger.log('ERROR: no se pudo extraer Drive ID'); return; }
+        const file = DriveApp.getFileById(fileId);
+        Logger.log('Archivo encontrado: ' + file.getName() + ' tipo: ' + file.getMimeType());
+        const blob = file.getBlob();
+        Logger.log('Tamaño: ' + Math.round(blob.getBytes().length / 1024) + ' KB');
+        const montoTexto = _extraerMontoDePdfTexto(blob);
+        Logger.log('Monto por texto PDF: ' + montoTexto);
+        if (!montoTexto) {
+          Logger.log('Texto no encontrado — intentando Gemini...');
+          const monto = _leerComprobanteConGemini(raw);
+          Logger.log('Monto por Gemini: ' + monto);
+        }
+      } catch(e) {
+        Logger.log('ERROR completo: ' + e.toString());
+        Logger.log('Stack: ' + e.stack);
+      }
+      return;
+    }
+  }
+  Logger.log('No se encontraron comprobantes sin monto');
+}
+
+function _extraerDriveId(url) {
+  if (!url) return null;
+  const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  return null;
+}
+
+// Intenta extraer monto del texto embebido en el PDF (rápido, sin API externa).
+// Funciona para PDFs de MercadoPago generados digitalmente.
+function _extraerMontoDePdfTexto(blob) {
+  try {
+    const bytes = blob.getBytes();
+    // Convertir bytes a string (solo ASCII imprimible)
+    const chunks = [];
+    for (let i = 0; i < bytes.length; i += 4000) {
+      chunks.push(String.fromCharCode.apply(null,
+        bytes.slice(i, i + 4000).map(function(b) { return b < 0 ? b + 256 : b; })
+      ));
+    }
+    const pdfStr = chunks.join('');
+
+    // Extraer strings del PDF (formato: (texto))
+    const tokens = [];
+    const re = /\(([^()\\]{1,200})\)/g;
+    let m;
+    while ((m = re.exec(pdfStr)) !== null) tokens.push(m[1]);
+    const texto = tokens.join(' ');
+
+    // Patrones de monto en comprobantes argentinos
+    const patrones = [
+      /pagaste\s*\$?\s*([\d]{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/i,
+      /recib[ií]ste?\s*\$?\s*([\d]{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/i,
+      /total\s*\$?\s*([\d]{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/i,
+      /monto\s*\$?\s*([\d]{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/i,
+      /\$\s*([\d]{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/,
+    ];
+    for (let pi = 0; pi < patrones.length; pi++) {
+      const hit = texto.match(patrones[pi]);
+      if (hit) {
+        const raw = hit[1];
+        // Formato argentino: 87.000 o 87.000,00
+        const val = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(val) && val > 0) return val;
+      }
+    }
+  } catch(e) { /* silencioso — cae a Gemini */ }
+  return null;
+}
+
+function _leerComprobanteConGemini(url) {
+  const fileId = _extraerDriveId(url);
+  if (!fileId) throw new Error('URL no es de Drive: ' + url.substring(0, 80));
+
+  const file     = DriveApp.getFileById(fileId);
+  const blob     = file.getBlob();
+
+  // Intentar primero extracción de texto del PDF (rápido, sin red)
+  const montoTexto = _extraerMontoDePdfTexto(blob);
+  if (montoTexto) return montoTexto;
+
+  // Fallback: Gemini Vision
+  const mimeType = blob.getContentType() || 'image/jpeg';
+  const base64   = Utilities.base64Encode(blob.getBytes());
+
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY no está en Script Properties');
+
+  const apiUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-3.8-flash:generateContent?key=' + apiKey;
+  const reqBody = JSON.stringify({
+    contents: [{
+      parts: [
+        { text: 'Sos un extractor de datos de comprobantes de pago argentinos (MercadoPago). Extraé el monto total de la transacción. Respondé ÚNICAMENTE con el número, sin el símbolo $, sin puntos de miles, sin ningún texto adicional. Usá punto como separador decimal si hay centavos. Ejemplos de respuesta válida: 1500 ó 1500.50 ó 23750' },
+        { inline_data: { mime_type: mimeType, data: base64 } }
+      ]
+    }]
+  });
+
+  let result, lastBody;
+  for (let intento = 1; intento <= 3; intento++) {
+    const resp = UrlFetchApp.fetch(apiUrl, {
+      method: 'post', contentType: 'application/json',
+      muteHttpExceptions: true, payload: reqBody
+    });
+    lastBody = resp.getContentText();
+    result = JSON.parse(lastBody);
+    if (result.candidates && result.candidates[0]) break;
+    const code = (result.error || {}).code;
+    if (code === 503 || code === 429) {
+      Utilities.sleep(intento * 2000);
+    } else {
+      break;
+    }
+  }
+
+  if (!result.candidates || !result.candidates[0]) {
+    throw new Error('Gemini sin respuesta: ' + lastBody.substring(0, 200));
+  }
+  const texto = result.candidates[0].content.parts[0].text.trim();
+  const monto = parseFloat(texto.replace(/\./g, '').replace(',', '.'));
+  if (isNaN(monto) || monto <= 0) throw new Error('Monto inválido extraído: "' + texto + '"');
+  return monto;
+}
+
+// Extrae montos de comprobantes via Gemini, corrige estadoPago, y en modo live escribe en la hoja.
+// REQUIERE: GEMINI_API_KEY en Script Properties.
+// Correr auditarConGeminiDryRun() primero para revisar los resultados.
+function auditarConGemini(dryRun) {
+  const sheet = getPedidosSheet();
+  const data  = sheet.getDataRange().getValues();
+
+  const procesados = [];
+  const errores    = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const norden    = String(data[i][COL.NORDEN] || '');
+    const compStr   = String(data[i][COL.COMPROBANTE] || '');
+    const totalStr  = String(data[i][COL.TOTAL] || '0').replace(/[^\d.,]/g,'').replace(/\./g,'').replace(',','.');
+    const totalPed  = parseFloat(totalStr) || 0;
+    if (!norden || !compStr) continue;
+
+    const partes = compStr.split('|').filter(Boolean);
+    const necesitaMonto = partes.some(function(raw) { return !raw.startsWith('REMITO:') && raw.indexOf('::') === -1; });
+    if (!necesitaMonto) continue;
+
+    const nuevasPartes = [];
+    let totalExtraido = 0;
+    let cambio = false;
+    let huboError = false;
+
+    for (let j = 0; j < partes.length; j++) {
+      const raw = partes[j];
+      if (raw.startsWith('REMITO:')) { nuevasPartes.push(raw); continue; }
+      if (raw.indexOf('::') !== -1) {
+        nuevasPartes.push(raw);
+        totalExtraido += parseFloat(raw.split('::')[1]) || 0;
+        continue;
+      }
+      // entrada sin monto — llamar Gemini
+      try {
+        Utilities.sleep(600);
+        const monto = _leerComprobanteConGemini(raw);
+        nuevasPartes.push(raw + '::' + monto);
+        totalExtraido += monto;
+        cambio = true;
+      } catch(e) {
+        nuevasPartes.push(raw);
+        errores.push({ norden, url: raw.substring(0, 80), error: String(e) });
+        huboError = true;
+      }
+    }
+
+    const estadoEsperado = (totalPed > 0 && totalExtraido >= totalPed * 0.99) ? 'Pagado' : 'Parcialmente pagado';
+    procesados.push({
+      norden, total: totalPed, pagado: totalExtraido,
+      saldo: totalPed - totalExtraido, estadoEsperado,
+      estadoActual: String(data[i][COL.ESTADO_PAGO] || 'No pagado'),
+      estadoCorrecto: !huboError && String(data[i][COL.ESTADO_PAGO] || '') === estadoEsperado,
+      error: huboError
+    });
+
+    if (!dryRun && cambio && !huboError) {
+      const fila = i + 1;
+      sheet.getRange(fila, COL.COMPROBANTE + 1).setValue(nuevasPartes.join('|'));
+      sheet.getRange(fila, COL.ESTADO_PAGO   + 1).setValue(estadoEsperado);
+    }
+  }
+
+  Logger.log('auditarConGemini' + (dryRun ? ' [DRY RUN]' : '') +
+    ': ' + procesados.length + ' procesados, ' + errores.length + ' errores\n' +
+    JSON.stringify({ procesados, errores }, null, 2));
+  return { dryRun, procesados, errores };
+}
+
+function auditarConGeminiDryRun() { return auditarConGemini(true); }
 
 // data: { norden, remito } — remito es el valor crudo 'REMITO:url'
 function eliminarRemitoDeSheet(data) {
