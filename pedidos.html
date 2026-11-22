@@ -442,7 +442,6 @@
     <button class="back-btn" id="backBtn" onclick="volverALista()" style="margin:0;flex-shrink:0;">← Volver a Pedidos</button>
     <div class="detalle-topbar-info">
       <span id="d-norden-top" style="font-size:12px;font-weight:700;color:#6b7280;"></span>
-      <span id="d-estadoBadge-top"></span>
     </div>
     <div class="detalle-topbar-actions" id="d-acciones-top"></div>
   </div>
@@ -467,7 +466,7 @@
             <div id="d-estado-log-view" style="display:flex;align-items:center;gap:5px;">
               <span id="d-estadoBadge"></span>
               <button id="btn-edit-estado-log" onclick="toggleEstadoLogEdit(true)"
-                style="display:none;font-size:12px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0;line-height:1;" title="Cambiar estado">✏</button>
+                class="btn-edit-small" style="display:none;" title="Cambiar estado">✏️ Editar</button>
             </div>
             <div id="d-estado-log-edit" style="display:none;align-items:center;gap:5px;margin-top:4px;">
               <select id="d-estado-log-select" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;"></select>
@@ -483,7 +482,7 @@
             <div id="d-estado-pago-view" style="display:flex;align-items:center;gap:5px;">
               <div id="d-estado-pago" style="font-size:13px;font-weight:700;"></div>
               <button onclick="toggleEstadoPagoEdit(true)" id="btn-toggle-estado-pago"
-                style="display:none;font-size:12px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0;line-height:1;" title="Editar">✏</button>
+                class="btn-edit-small" style="display:none;" title="Editar">✏️ Editar</button>
             </div>
             <div id="d-estado-pago-edit" style="display:none;align-items:center;gap:5px;margin-top:4px;">
               <select id="d-estado-pago-select" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">
@@ -2507,7 +2506,6 @@ function renderDetalle(p) {
   document.getElementById('d-retiro-view').style.display = 'block';
   document.getElementById('btn-toggle-retiro').textContent = '✏️ Editar';
   actualizarRetiroView();
-  document.getElementById('d-estadoBadge-top').innerHTML = `<span class="badge-estado ${claseEstado(p.estado)}">${EMOJI_ESTADO[p.estado]||''} ${p.estado}</span>`;
   document.getElementById('d-fechaEstado').textContent = p.fechaEstado ? 'Actualizado: ' + p.fechaEstado : '';
 
   const sig = SIGUIENTE_ESTADO[p.estado] || [];
