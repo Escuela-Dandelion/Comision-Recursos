@@ -341,8 +341,19 @@
       <div style="font-size:15px;font-weight:800;color:#2d5a27;">Órdenes de Pedido</div>
       <div style="font-size:11px;color:#6b7280;margin-top:2px;line-height:1.4;">Aquí verás solo los pedidos de los proveedores que vos gestionás.</div>
     </div>
+    <select id="select-simular-fgp" onchange="simularFGP(this.value)" style="display:none;font-size:12px;padding:5px 8px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;cursor:pointer;" title="Ver como FGP">
+      <option value="">👁 Ver como…</option>
+      <option value="dominguez.dolo@gmail.com">Dolo — Sol de Oro</option>
+      <option value="lmdestefano@gmail.com">Lucas — Yemari · CN · Sol de Oro</option>
+      <option value="tiendalimon.natural@gmail.com">Nati — Tienda Limón</option>
+      <option value="martinimaria39@gmail.com">María — Paraisa · Groen · otros</option>
+    </select>
     <button class="btn-accion-top btn-nueva-orden" onclick="abrirNuevaOrden()">📋 Nueva Orden</button>
     <a href="https://calendar.google.com/calendar/embed?src=d464a84a472a8802d4b6cd6641f19b2c71d71f257b5409e975d0cc4ee66bf0ad%40group.calendar.google.com&ctz=America%2FArgentina%2FCordoba&hl=es" target="_blank" class="btn-accion-top btn-pool" style="text-decoration:none">📅 Calendario de Retiros</a>
+  </div>
+  <div id="banner-simulacion" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#92400e;align-items:center;gap:10px;">
+    <span>Estás viendo como FGP simulado.</span>
+    <button onclick="document.getElementById('select-simular-fgp').value='';simularFGP('')" style="background:none;border:none;cursor:pointer;font-size:12px;color:#92400e;font-weight:700;text-decoration:underline;padding:0;">Volver a mi vista</button>
   </div>
 
   <div class="flash" id="flash"></div>
@@ -1091,12 +1102,21 @@ function leerTelLocal(proveedor) {
 
 // ── CARGA DE DATOS ────────────────────────────────────────────
 var _incluyeCerrados = false;
+var _emailSimulado = '';
+
+function simularFGP(email) {
+  _emailSimulado = email;
+  var banner = document.getElementById('banner-simulacion');
+  if (banner) banner.style.display = email ? 'flex' : 'none';
+  cargarLista();
+}
 
 async function cargarLista(incluyeCerrados) {
   if (incluyeCerrados !== undefined) _incluyeCerrados = incluyeCerrados;
   try {
     var _adminEmail = (function(){ try { var s=JSON.parse(localStorage.getItem('dl_admin_session')||'null'); return s&&s.email?s.email:''; } catch(e){ return ''; } })();
-    var gasUrl = SCRIPT_URL + '?action=getPedidos' + (_incluyeCerrados ? '&incluirCerrados=1' : '') + (_adminEmail ? '&email=' + encodeURIComponent(_adminEmail) : '');
+    var emailEfectivo = _emailSimulado || _adminEmail;
+    var gasUrl = SCRIPT_URL + '?action=getPedidos' + (_incluyeCerrados ? '&incluirCerrados=1' : '') + (emailEfectivo ? '&email=' + encodeURIComponent(emailEfectivo) : '');
     const [respPedidos, respTel] = await Promise.all([
       fetch(gasUrl, { redirect: 'follow' }).then(r => r.json()).catch(() => ({ ok: false, _usarCSV: true })),
       fetch(SCRIPT_URL + '?action=getTelProveedores').then(r => r.json()).catch(() => ({ ok: false }))
@@ -1142,6 +1162,11 @@ async function cargarLista(incluyeCerrados) {
     ocultarPageLoading();
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('listaContent').style.display  = '';
+    // Mostrar selector de impersonación solo para admin
+    var _sesion = (function(){ try { return JSON.parse(localStorage.getItem('dl_admin_session')||'null'); } catch(e){ return null; } })();
+    if (_sesion && _sesion.email === 'robertson.ine@gmail.com') {
+      document.getElementById('select-simular-fgp').style.display = '';
+    }
     generarMesesRapidos();
     poblarFiltroProveedor();
     aplicarFiltros();
