@@ -2951,7 +2951,7 @@ async function confirmarEstadoPago() {
       if (btnGuardar) { btnGuardar.textContent = 'Guardar'; btnGuardar.disabled = false; }
     }
   } catch(e) {
-    mostrarFlashDetalle('Error de conexión al guardar estado de pago', 'error');
+    mostrarFlashDetalle('Error: ' + (e.message || e), 'error');
     if (btnGuardar) { btnGuardar.textContent = 'Guardar'; btnGuardar.disabled = false; }
     console.error('confirmarEstadoPago:', e);
   }
