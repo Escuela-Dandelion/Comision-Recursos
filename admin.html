@@ -321,6 +321,7 @@
         <option value="lourdelcastillo@gmail.com|Luli|FGP|LA YAYA,ODDIS">Luli — La Yaya / Oddis</option>
         <option value="francoalini@gmail.com|Franco|FGP|NAZARENO">Franco — Nazareno</option>
         <option value="tiendalimon.natural@gmail.com|Natalia|FGP|TIENDA LIMÓN">Natalia — Tienda Limón</option>
+        <option value="dominguez.dolo@gmail.com|Dolo|FGP|SOL DE PAPEL">Dolo — Sol de Oro</option>
       </select>
     </div>
     <div class="header-user">
@@ -360,7 +361,7 @@
       <button class="nav-item" data-view="qr" data-roles="admin,staff,referente" onclick="showView('qr', this)">
         <span class="nav-icon">📷</span> Registrar Entrega
       </button>
-      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,referente" onclick="showView('ventas', this)">
+      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,referente,despachante" onclick="showView('ventas', this)">
         <span class="nav-icon">🛒</span> Ventas
       </button>
       <button class="nav-item" data-view="ventas-sin-stock" data-roles="admin,staff,fgp" onclick="showView('ventas-sin-stock', this)">
@@ -609,7 +610,7 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCk
 var CONFIG_STAFF_TOKEN = 'test';
 
 // Roles: admin, staff, fgp, referente
-var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente' };
+var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente', despachante: 'Despachante', DESPACHANTE: 'Despachante' };
 
 var SESSION_KEY = 'dl_admin_session';
 var currentUser = null;
@@ -870,13 +871,19 @@ function aplicarPermisos(role) {
     var roles = btn.getAttribute('data-roles').split(',');
     btn.style.display = roles.indexOf(roleLower) !== -1 ? 'flex' : 'none';
   });
-  // Ventas a Pedido necesita check adicional por marcas, independientemente del rol
   var marcasActuales = _currentImpersonation ? _currentImpersonation.marcas : null;
   _actualizarNavVentasPedido(marcasActuales);
-  // Si la vista activa quedó oculta, ir al Inicio
   var activeBtn = document.querySelector('.nav-item.active');
   if (activeBtn && activeBtn.style.display === 'none') {
     showView('inicio', document.querySelector('[data-view="inicio"]'));
+  }
+  if (roleLower === 'despachante') {
+    setTimeout(function() {
+      var vBtn = document.querySelector('[data-view="ventas"]');
+      showView('ventas', vBtn);
+      var filtEnvio = document.getElementById('vfilt-envio');
+      if (filtEnvio) { filtEnvio.value = 'Envio a Domicilio'; aplicarFiltrosVentas(); }
+    }, 200);
   }
 }
 
@@ -887,7 +894,7 @@ function renderWelcomeCards(role) {
     { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital'],                     url:null },
     { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
-    { view:'ventas',               icon:'🛒', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente'],     url:null },
+    { view:'ventas',               icon:'🛒', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente','despachante'], url:null },
     { view:'dashboard-general',    icon:'📊', name:'Dashboard General',                         desc:'Ventas y métricas globales',            roles:['admin','staff','fgp'],                 url:'dashboard-general.html?appv='+APP_V },
     { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',                                desc:'Dashboard de tu grado',                 roles:['admin','staff','fgp','referente'],     url:'dashboard-referentes.html?appv='+APP_V },
   ];
@@ -1096,6 +1103,69 @@ function ocultarMensajes() {
 var _ventas = [];
 var _ventasFiltroEstado = 'Pendiente';
 var _ventasFiltradasActuales = [];  // filas actualmente renderizadas (todos los filtros aplicados)
+
+// ── ENVIA ETIQUETAS ──────────────────────────────────────────
+var _etiquetaOrderIndex = -1;
+
+function abrirModalEtiqueta(i) {
+  _etiquetaOrderIndex = i;
+  var v = _ventasFiltradasActuales[i];
+  document.getElementById('et-info-nombre').textContent = v.nombre || '';
+  document.getElementById('et-info-email').textContent  = v.email  || '';
+  document.getElementById('et-contenido').value = '';
+  document.getElementById('et-peso').value      = '0.5';
+  document.getElementById('et-largo').value     = '20';
+  document.getElementById('et-ancho').value     = '15';
+  document.getElementById('et-alto').value      = '10';
+  document.getElementById('et-resultado').style.display = 'none';
+  document.getElementById('et-btn-generar').disabled    = false;
+  document.getElementById('et-btn-generar').textContent = 'Generar etiqueta';
+  document.getElementById('v-modal-etiqueta').classList.add('open');
+}
+
+function generarEtiqueta() {
+  var v = _ventasFiltradasActuales[_etiquetaOrderIndex];
+  var btn = document.getElementById('et-btn-generar');
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  fetch(GAS_URL, {
+    method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      action:    'generarEtiquetaEnvia',
+      orderId:   v.id,
+      contenido: document.getElementById('et-contenido').value.trim() || 'Productos agroecologicos',
+      peso:      document.getElementById('et-peso').value  || '0.5',
+      largo:     document.getElementById('et-largo').value || '20',
+      ancho:     document.getElementById('et-ancho').value || '15',
+      alto:      document.getElementById('et-alto').value  || '10'
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false;
+    btn.textContent = 'Generar etiqueta';
+    var res = document.getElementById('et-resultado');
+    if (d.ok) {
+      res.innerHTML =
+        '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-top:12px">' +
+          '<div style="font-weight:700;color:#166534;margin-bottom:4px">Etiqueta generada</div>' +
+          '<div style="font-size:12px;color:#374151">Carrier: <strong>' + (d.carrierLabel || d.carrier || '') + '</strong>' +
+            (d.totalPrice ? '  —  $' + parseFloat(d.totalPrice).toFixed(2) : '') + '</div>' +
+          '<div style="font-size:12px;color:#374151;margin-top:2px">Tracking: <strong>' + (d.trackingNumber || '') + '</strong></div>' +
+        '</div>' +
+        '<a href="' + d.label + '" target="_blank" style="display:block;text-align:center;margin-top:10px;padding:11px;background:#2d5a27;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Imprimir etiqueta</a>';
+    } else {
+      res.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px;color:#991b1b">Error: ' + (d.error || 'No se pudo generar') + '</div>';
+    }
+    res.style.display = 'block';
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Generar etiqueta';
+    alert('Error de conexion');
+  });
+}
 
 // ── VENTAS DOTS MENU ─────────────────────────────────────────
 var _vRowActual = null;
@@ -1639,6 +1709,7 @@ function renderVentas(rows) {
             '<div class="v-dots-menu" id="vmenu-' + i + '">' +
               (v.estado === 'Pendiente' || v.estado === 'Parcial' || v.parcial ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
               '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
+              (v.envio === 'Envio a Domicilio' && currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DESPACHANTE') ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEtiqueta(' + i + ')">📦 Generar etiqueta</button>' : '') +
             '</div>' +
           '</div>' +
         '</td>' +
@@ -2066,6 +2137,40 @@ function reiniciarQR() {
     <div class="v-modal-btns">
       <button class="v-modal-cancel" onclick="cerrarModalContacto()">Cancelar</button>
       <button class="v-modal-confirm" id="mc-btn-enviar" onclick="enviarMailContacto()">Enviar</button>
+    </div>
+  </div>
+</div>
+<!-- Modal: Generar Etiqueta Envia.com -->
+<div class="v-modal-overlay" id="v-modal-etiqueta" onclick="if(event.target===this)cerrarVModal('etiqueta')">
+  <div class="v-modal" style="max-width:420px">
+    <h3>📦 Generar etiqueta de envio</h3>
+    <div style="background:#f9fafb;border-radius:8px;padding:10px 12px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:14px" id="et-info-nombre"></div>
+      <div style="font-size:12px;color:#6b7280" id="et-info-email"></div>
+    </div>
+    <label>Contenido del paquete</label>
+    <input id="et-contenido" placeholder="Ej: Productos agroecologicos, conservas">
+    <label>Peso (kg)</label>
+    <input id="et-peso" type="number" step="0.1" min="0.1" value="0.5">
+    <label>Dimensiones (cm)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:4px">Largo</div>
+        <input id="et-largo" type="number" min="1" value="20" style="margin-bottom:0">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:4px">Ancho</div>
+        <input id="et-ancho" type="number" min="1" value="15" style="margin-bottom:0">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:4px">Alto</div>
+        <input id="et-alto" type="number" min="1" value="10" style="margin-bottom:0">
+      </div>
+    </div>
+    <div id="et-resultado" style="display:none"></div>
+    <div class="v-modal-btns" style="margin-top:14px">
+      <button class="v-modal-cancel" onclick="cerrarVModal('etiqueta')">Cerrar</button>
+      <button class="v-modal-confirm" id="et-btn-generar" onclick="generarEtiqueta()">Generar etiqueta</button>
     </div>
   </div>
 </div>
