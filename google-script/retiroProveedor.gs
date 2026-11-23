@@ -1,4 +1,4 @@
-// v2026-11-22a — actualizarEstadoPago via GET para evitar CORS redirect issue en POST
+// v2026-11-22b — mapping persistente Ventas→Pedido via col AA (norden_proveedor)
 // ============================================================
 // DIENTE DE LEÓN — Agendamiento de Retiro de Mercadería
 // ============================================================
@@ -321,51 +321,21 @@ function doGet(e) {
       const desde    = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
       const hasta    = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
 
-      // Leer pedidos: por proveedor, ordenados por fecha (más viejos primero)
-      // Matching FIFO por cantidad: cada venta se asigna al pedido más viejo con qty disponible del SKU
+      // Mapa norden → estado desde Pedidos (para enriquecer el pill)
       const ESTADOS_OCULTAR = ['Entregado en Escuela', 'Cerrado'];
-      const pedidosPorProv  = {}; // normProv → [{norden, estado, fecha, skuQty: {sku → qty restante}}]
+      const nordenToEstado  = {};
       try {
-        const sPed  = getPedidosSheet();
-        const dPed  = sPed.getDataRange().getValues();
+        const sPed = getPedidosSheet();
+        const dPed = sPed.getDataRange().getValues();
         for (let i = 1; i < dPed.length; i++) {
-          const fila   = dPed[i];
-          const prov   = normProv(fila[COL.PROVEEDOR]);
-          const est    = String(fila[COL.ESTADO]    || '').trim();
-          const prods  = String(fila[COL.PRODUCTOS]  || '');
-          const norden = String(fila[COL.NORDEN]     || '').trim();
-          if (!prov || est === 'Cancelado') continue;
-          // Parsear qty por SKU: cada línea tiene formato "Nombre xN Unidad ($precio) [SKU]"
-          // El precio y la unidad son opcionales; SKU siempre está entre [ ]
-          const skuQty = {};
-          prods.split('\n').forEach(function(line) {
-            const skuMatch = line.match(/\[([^\]]+)\]/);
-            if (!skuMatch) return;
-            const sku = skuMatch[1].trim();
-            const qtyMatch = line.match(/x(\d+)/);
-            const qty = qtyMatch ? (parseInt(qtyMatch[1]) || 1) : 1;
-            skuQty[sku] = (skuQty[sku] || 0) + qty;
-          });
-          if (Object.keys(skuQty).length === 0) continue;
-          const fechaRaw = fila[COL.FECHA];
-          let fechaPed;
-          if (fechaRaw instanceof Date) {
-            fechaPed = fechaRaw;
-          } else {
-            const pp = String(fechaRaw).match(/^(\d+)\/(\d+)\/(\d+)/);
-            fechaPed = pp ? new Date(parseInt(pp[3]), parseInt(pp[2]) - 1, parseInt(pp[1])) : new Date(fechaRaw);
-          }
-          if (!pedidosPorProv[prov]) pedidosPorProv[prov] = [];
-          pedidosPorProv[prov].push({ norden, estado: est, fecha: fechaPed, skuQty });
+          const nd = String(dPed[i][COL.NORDEN] || '').trim();
+          const es = String(dPed[i][COL.ESTADO]  || '').trim();
+          if (nd) nordenToEstado[nd] = es;
         }
-        // Ordenar pedidos de cada proveedor más viejo primero (FIFO)
-        Object.keys(pedidosPorProv).forEach(function(p) {
-          pedidosPorProv[p].sort(function(a, b) { return a.fecha - b.fecha; });
-        });
-      } catch(pe) { Logger.log('Error leyendo pedidos: ' + pe.message); }
+      } catch(pe) { Logger.log('Error leyendo estados de pedidos: ' + pe.message); }
 
-      // Recolectar ventas en el rango sin asignar todavía
-      const rawLineas = [];
+      // Leer ventas: col AA (índice 26) = norden_proveedor persistido
+      const lineas = [];
       for (let i = 1; i < data.length; i++) {
         const fila     = data[i];
         const rawFecha = fila[0];
@@ -380,10 +350,9 @@ function doGet(e) {
             : new Date(rawFecha);
         }
         if (isNaN(fecha.getTime())) continue;
-        if (hasta && fecha > hasta) continue; // hasta siempre estricto
-        // desde: se aplica después del FIFO para ventas sin pedido (ver abajo)
+        if (hasta && fecha > hasta) continue;
 
-        const sku      = String(fila[6] || '').trim();
+        const sku      = String(fila[6]  || '').trim();
         const cantidad = parseInt(fila[7]) || 0;
         if (!sku || cantidad <= 0 || !skusInf[sku]) continue;
 
@@ -391,52 +360,31 @@ function doGet(e) {
         const costo     = parseFloat(costoStr.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
         const proveedor = String(fila[12] || '').trim();
 
-        // Filtrar por proveedores permitidos del FGP
         if (provsPermitidos !== null && provsPermitidos.indexOf(normProv(proveedor)) === -1) continue;
 
+        const nordenProv   = String(fila[26] || '').trim();  // col AA
+        const estadoPedido = nordenProv ? (nordenToEstado[nordenProv] || 'Solicitado') : null;
+
+        if (estadoPedido !== null && ESTADOS_OCULTAR.indexOf(estadoPedido) !== -1) continue;
+        if (desde && fecha < desde && estadoPedido === null) continue;
+
         const emailComp = String(fila[4] || '').toLowerCase().trim();
-        rawLineas.push({ fechaObj: fecha, pedido: String(fila[1] || ''), comprador: String(fila[3] || ''),
-          email: emailComp, phone: phoneMapVSS[emailComp] || '',
-          producto: String(fila[5] || ''), sku, cantidad, precio: String(fila[8] || ''), proveedor, costo });
-      }
-
-      // Ordenar ventas de más vieja a más nueva para asignación FIFO
-      rawLineas.sort(function(a, b) { return a.fechaObj - b.fechaObj; });
-
-      // Asignar cada venta al pedido más viejo con qty disponible del SKU
-      const lineas = [];
-      rawLineas.forEach(function(l) {
-        const pedsProv = pedidosPorProv[normProv(l.proveedor)] || [];
-        let estadoPedido = null;
-        let norden = null;
-        for (let pi = 0; pi < pedsProv.length; pi++) {
-          const ped = pedsProv[pi];
-          if (!ped.skuQty[l.sku] || ped.skuQty[l.sku] <= 0) continue;
-          ped.skuQty[l.sku] -= l.cantidad;
-          norden = ped.norden;
-          estadoPedido = ped.estado; // 'Solicitado', 'Confirmado', 'En Camino', etc.
-          break;
-        }
-        if (estadoPedido !== null && ESTADOS_OCULTAR.indexOf(estadoPedido) !== -1) return; // ocultar ventas ya entregadas
-        // Ventas anteriores al rango solo se muestran si tienen pedido asignado
-        if (desde && l.fechaObj < desde && estadoPedido === null) return;
-
         lineas.push({
-          fecha:        Utilities.formatDate(l.fechaObj, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
-          pedido:       l.pedido,
-          comprador:    l.comprador,
-          email:        l.email,
-          phone:        l.phone,
-          producto:     l.producto,
-          sku:          l.sku,
-          cantidad:     l.cantidad,
-          precio:       l.precio,
-          proveedor:    l.proveedor,
-          costo:        l.costo,
-          estadoPedido: estadoPedido, // null | 'vigente'
-          norden:       norden,       // norden del pedido que cubre esta venta, o null
+          fecha:        Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+          pedido:       String(fila[1] || ''),
+          comprador:    String(fila[3] || ''),
+          email:        emailComp,
+          phone:        phoneMapVSS[emailComp] || '',
+          producto:     String(fila[5] || ''),
+          sku,
+          cantidad,
+          precio:       String(fila[8] || ''),
+          proveedor,
+          costo,
+          estadoPedido, // null = sin pedido asignado
+          norden:       nordenProv || null,
         });
-      });
+      }
 
       const grupos = {};
       lineas.forEach(function(l) {
@@ -674,6 +622,135 @@ function getPedidosSheet() {
   return ss.getSheets()[0]; // fallback
 }
 
+// Escribe norden en col AA de las ventas que cubre este pedido (FIFO por SKU, más viejas primero).
+// Solo procesa ventas desde nov-2026 (inicio de pedidos a demanda).
+// skuQtyMap: { SKU: qty } — se muta; pasar copia si se necesita preservar.
+function _linkearVentasAPedido(norden, proveedor, skuQtyMap) {
+  const INICIO_STOCK_INF = new Date('2026-11-01T00:00:00');
+  const ss    = SpreadsheetApp.openById(INV_VENTAS_ID);
+  const sheet = ss.getSheetByName('Ventas');
+  const data  = sheet.getDataRange().getValues();
+  const skusInf = obtenerSkusStockInfinito();
+  const normP   = normProv(proveedor);
+  const qtyDisp = Object.assign({}, skuQtyMap);
+
+  // Recolectar candidatas: sin col AA, proveedor coincide, SKU en este pedido, desde nov-2026
+  const candidatas = [];
+  for (let i = 1; i < data.length; i++) {
+    const fila     = data[i];
+    const sku      = String(fila[6]  || '').trim();
+    const provFila = normProv(String(fila[12] || ''));
+    const nordenAA = String(fila[26] || '').trim();
+    if (!sku || !skusInf[sku]) continue;
+    if (provFila !== normP) continue;
+    if (nordenAA) continue;
+    if (!qtyDisp[sku]) continue;
+    const rawFecha = fila[0];
+    if (!rawFecha) continue;
+    let fecha = rawFecha instanceof Date ? rawFecha
+      : (function() {
+          const pp = String(rawFecha).match(/^(\d+)\/(\d+)\/(\d+)/);
+          return pp ? new Date(parseInt(pp[3]), parseInt(pp[2]) - 1, parseInt(pp[1])) : new Date(rawFecha);
+        })();
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha < INICIO_STOCK_INF) continue;
+    candidatas.push({ rowIdx: i, fecha, sku, cantidad: parseInt(fila[7]) || 0 });
+  }
+
+  // FIFO: más antiguas primero
+  candidatas.sort(function(a, b) { return a.fecha - b.fecha; });
+
+  let count = 0;
+  candidatas.forEach(function(c) {
+    if (!qtyDisp[c.sku] || qtyDisp[c.sku] <= 0) return;
+    qtyDisp[c.sku] -= c.cantidad;
+    sheet.getRange(c.rowIdx + 1, 27).setValue(norden);
+    count++;
+  });
+
+  Logger.log('_linkearVentasAPedido: ' + norden + ' → ' + count + ' ventas linkeadas');
+  return count;
+}
+
+// Backfill histórico: pobla col AA para ventas de stock infinito sin asignar desde nov-2026.
+// La funcionalidad de pedidos a demanda se lanzó en noviembre 2026 — ventas anteriores
+// corresponden a stock físico y NO deben linkearse a pedidos a proveedor.
+// Ejecutar UNA sola vez desde el editor de GAS.
+function backfillNordenProveedor() {
+  const INICIO_STOCK_INF = new Date('2026-11-01T00:00:00');
+  const ss    = SpreadsheetApp.openById(INV_VENTAS_ID);
+  const sheet = ss.getSheetByName('Ventas');
+  const data  = sheet.getDataRange().getValues();
+  const skusInf = obtenerSkusStockInfinito();
+
+  // Leer pedidos → pedidosPorProv (FIFO)
+  const pedidosPorProv = {};
+  const dPed = getPedidosSheet().getDataRange().getValues();
+  for (let i = 1; i < dPed.length; i++) {
+    const prov   = normProv(dPed[i][COL.PROVEEDOR]);
+    const est    = String(dPed[i][COL.ESTADO]    || '').trim();
+    const prods  = String(dPed[i][COL.PRODUCTOS] || '');
+    const norden = String(dPed[i][COL.NORDEN]    || '').trim();
+    if (!prov || !norden || est === 'Cancelado') continue;
+    const skuQty = {};
+    prods.split('\n').forEach(function(line) {
+      const sm = line.match(/\[([^\]]+)\]/);
+      if (!sm) return;
+      const sku = sm[1].trim();
+      const qm  = line.match(/x(\d+)/);
+      skuQty[sku] = (skuQty[sku] || 0) + (qm ? (parseInt(qm[1]) || 1) : 1);
+    });
+    if (!Object.keys(skuQty).length) continue;
+    const fechaRaw = dPed[i][COL.FECHA];
+    const fechaPed = fechaRaw instanceof Date ? fechaRaw
+      : (function() {
+          const pp = String(fechaRaw).match(/^(\d+)\/(\d+)\/(\d+)/);
+          return pp ? new Date(parseInt(pp[3]), parseInt(pp[2]) - 1, parseInt(pp[1])) : new Date(fechaRaw);
+        })();
+    if (!pedidosPorProv[prov]) pedidosPorProv[prov] = [];
+    pedidosPorProv[prov].push({ norden, estado: est, fecha: fechaPed, skuQty });
+  }
+  Object.keys(pedidosPorProv).forEach(function(p) {
+    pedidosPorProv[p].sort(function(a, b) { return a.fecha - b.fecha; });
+  });
+
+  // Recolectar ventas sin col AA desde nov-2026 en adelante
+  const candidatas = [];
+  for (let i = 1; i < data.length; i++) {
+    const fila   = data[i];
+    const sku    = String(fila[6]  || '').trim();
+    const nordenAA = String(fila[26] || '').trim();
+    if (!sku || !skusInf[sku] || nordenAA) continue;
+    const rawFecha = fila[0];
+    if (!rawFecha) continue;
+    let fecha = rawFecha instanceof Date ? rawFecha
+      : (function() {
+          const pp = String(rawFecha).match(/^(\d+)\/(\d+)\/(\d+)/);
+          return pp ? new Date(parseInt(pp[3]), parseInt(pp[2]) - 1, parseInt(pp[1])) : new Date(rawFecha);
+        })();
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha < INICIO_STOCK_INF) continue; // ignorar ventas previas al lanzamiento de pedidos a demanda
+    candidatas.push({ rowIdx: i, fecha, sku, cantidad: parseInt(fila[7]) || 0, proveedor: String(fila[12] || '').trim() });
+  }
+  candidatas.sort(function(a, b) { return a.fecha - b.fecha; });
+
+  let count = 0;
+  candidatas.forEach(function(c) {
+    const pedsProv = pedidosPorProv[normProv(c.proveedor)] || [];
+    for (let pi = 0; pi < pedsProv.length; pi++) {
+      const ped = pedsProv[pi];
+      if (!ped.skuQty[c.sku] || ped.skuQty[c.sku] <= 0) continue;
+      ped.skuQty[c.sku] -= c.cantidad;
+      sheet.getRange(c.rowIdx + 1, 27).setValue(ped.norden);
+      count++;
+      break;
+    }
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log('backfillNordenProveedor: ' + count + ' ventas linkeadas de ' + candidatas.length + ' candidatas');
+}
+
 function fmtCelFecha(val) {
   if (!val) return '';
   if (val instanceof Date) return Utilities.formatDate(val, 'America/Argentina/Cordoba', 'dd/MM/yyyy');
@@ -785,6 +862,23 @@ function registrarPedidoEnSheet(data) {
   fila[COL.ESTADO_PAGO] = 'No pagado';
 
   sheet.appendRow(fila);
+
+  // Linkear ventas al pedido recién creado (escribe col AA en Ventas)
+  try {
+    const skuQty = {};
+    (productos || '').split('\n').forEach(function(line) {
+      const sm = line.match(/\[([^\]]+)\]/);
+      if (!sm) return;
+      const sku = sm[1].trim();
+      const qm  = line.match(/x(\d+)/);
+      skuQty[sku] = (skuQty[sku] || 0) + (qm ? (parseInt(qm[1]) || 1) : 1);
+    });
+    if (Object.keys(skuQty).length > 0) {
+      _linkearVentasAPedido(norden, proveedor, skuQty);
+    }
+  } catch(linkErr) {
+    Logger.log('Error al linkear ventas: ' + linkErr.message);
+  }
 
   // Guardar tel del proveedor para reutilizar en futuras alertas
   if (data.tel && proveedor) guardarTelProveedor(proveedor, data.tel);

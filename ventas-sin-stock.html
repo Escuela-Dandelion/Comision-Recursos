@@ -124,6 +124,7 @@
     <label>Desde <input type="date" id="f-desde"></label>
     <label>Hasta <input type="date" id="f-hasta"></label>
     <button class="btn-buscar" onclick="cargar()">Buscar</button>
+    <label style="margin-left:8px">Orden <input type="text" id="f-norden" placeholder="ORD-2026-…" oninput="filtrarPorNorden()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--text);background:#fff;width:140px"></label>
     <span class="loading-msg" id="loading-msg" style="display:none">Cargando…</span>
   </div>
 
@@ -256,7 +257,7 @@
               '<th class="col-num">Subtotal</th>' +
             '</tr></thead>' +
             '<tbody>' + lineas.map(function(l, idx) {
-              return '<tr data-prov="' + esc(prov) + '">' +
+              return '<tr data-prov="' + esc(prov) + '" data-norden="' + esc(l.norden || '') + '">' +
                 '<td class="col-check">' +
                   '<input type="checkbox" class="item-check"' +
                   ' data-prov="' + esc(prov) + '"' +
@@ -428,6 +429,22 @@
     }
 
     bar.classList.add('visible');
+  }
+
+  // ── Filtrar por norden ─────────────────────────────────────────────────────
+  function filtrarPorNorden() {
+    var q = document.getElementById('f-norden').value.trim().toUpperCase();
+    document.querySelectorAll('tbody tr').forEach(function(tr) {
+      if (!q) { tr.style.display = ''; return; }
+      var nd = (tr.dataset.norden || '').toUpperCase();
+      tr.style.display = nd.indexOf(q) !== -1 ? '' : 'none';
+    });
+    document.querySelectorAll('.grupo').forEach(function(g) {
+      var hayVisibles = Array.from(g.querySelectorAll('tbody tr')).some(function(tr) {
+        return tr.style.display !== 'none';
+      });
+      g.style.display = hayVisibles ? '' : 'none';
+    });
   }
 
   // ── Generar pedido ─────────────────────────────────────────────────────────
