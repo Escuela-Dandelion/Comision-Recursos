@@ -1,4 +1,4 @@
-// v2026-11-21a — fix retirosMap: ENTREGA PARCIAL ahora se muestra como Parcialmente entregado en dashboard
+// v2026-11-24a — rate tarjeta 0.0345 (plan 17/11) + reprocesarVentasTarjetaDesde para backfill
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -25,9 +25,9 @@ var CONFIG = {
   // Actualizar aquí cuando cambien las tarifas
   GATEWAY_FEES: {
     'wire_transfer': 0.01815,  // Transferencia bancaria Pago Nube: 1.5% + IVA
-    'credit_card':   0.035937, // Tarjeta crédito/débito/MODO Pago Nube 30d: 2.97% + IVA
-    'debit_card':    0.035937, // mismo costo que crédito (plan 30d)
-    'modo':          0.035937, // mismo costo que crédito (plan 30d)
+    'credit_card':   0.0345, // Tarjeta crédito/débito/MODO — plan actualizado 17/11/2026
+    'debit_card':    0.0345,
+    'modo':          0.0345,
   },
 
   // Datos de pago por proveedor (alias/CBU para transferencia)
@@ -1207,6 +1207,74 @@ function registrarEnVentas(order) {
 // DryRun: solo loguea, no escribe.
 function reprocesarVentasTarjetaDryRun() { reprocesarVentasTarjeta(true); }
 
+// Reprocesa TODAS las ventas con tarjeta/modo desde una fecha (incluye las que ya tienen fee).
+// Usar cuando cambia el rate del plan (ej. 17/11/2026 → 0.0345).
+// Recalcula fee (col Q), neto (col P) y aporte escuela (col W).
+function reprocesarVentasTarjetaDesdeDryRun() { reprocesarVentasTarjetaDesde('2026-11-17', true); }
+function reprocesarVentasTarjetaDesdeEjecutar() { reprocesarVentasTarjetaDesde('2026-11-17', false); }
+
+function reprocesarVentasTarjetaDesde(desdeStr, dryRun) {
+  var METODOS_TARJETA = { 'credit_card': true, 'debit_card': true, 'modo': true };
+  var desde  = new Date(desdeStr + 'T00:00:00');
+  var sheet  = getVentasSheet();
+  var data   = sheet.getDataRange().getValues();
+  var config = leerConfigProductos();
+  var filas  = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    var metodo = String(row[17] || '').trim().toLowerCase();
+    if (!METODOS_TARJETA[metodo]) continue;
+
+    var rawFecha = row[0];
+    var fecha    = rawFecha instanceof Date ? rawFecha : new Date(rawFecha);
+    if (isNaN(fecha.getTime()) || fecha < desde) continue;
+
+    var FEE              = CONFIG.GATEWAY_FEES[metodo];
+    var sku              = String(row[6]  || '').trim().toUpperCase();
+    var marca            = String(row[24] || row[12] || '').trim().toUpperCase();
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    var costoUnitario    = parseFloat(row[13]) || 0;
+    var qty              = parseFloat(row[7])  || 1;
+    var costoTotal       = costoUnitario * qty;
+    var aporteGrado      = parseFloat(row[20]) || 0;
+    var aporteEscActual  = parseFloat(row[22]) || 0;
+
+    var fee  = Math.round(totalPagadoLinea * FEE * 100) / 100;
+    var neto = totalPagadoLinea - fee;
+
+    var regla = buscarRegla(config, sku, fecha)
+             || buscarRegla(config, 'MARCA:' + marca, fecha)
+             || buscarRegla(config, 'DEFAULT', fecha)
+             || null;
+
+    var aporteEscNuevo;
+    if (regla && regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+      aporteEscNuevo = aporteEscActual; // pctEscuela fijo: no cambia con el neto
+    } else {
+      aporteEscNuevo = Math.max(0, Math.round(neto - costoTotal - aporteGrado));
+    }
+
+    filas++;
+    Logger.log(
+      '[' + (dryRun ? 'DRY' : 'WRITE') + '] fila ' + (i + 1) +
+      ' pedido#' + row[1] + ' ' + metodo +
+      ' totalPagado=' + Math.round(totalPagadoLinea) +
+      ' fee ' + (parseFloat(row[16]) || 0).toFixed(0) + '→' + fee +
+      ' neto ' + (parseFloat(row[15]) || 0).toFixed(0) + '→' + Math.round(neto) +
+      ' aporteEsc ' + aporteEscActual + '→' + aporteEscNuevo
+    );
+
+    if (!dryRun) {
+      sheet.getRange(i + 1, 16).setValue(neto);
+      sheet.getRange(i + 1, 17).setValue(fee);
+      sheet.getRange(i + 1, 23).setValue(aporteEscNuevo);
+    }
+  }
+
+  Logger.log('reprocesarVentasTarjetaDesde(' + desdeStr + '): ' + filas + ' fila(s) ' + (dryRun ? '(dry run)' : 'actualizadas'));
+}
+
 function reprocesarVentasTarjeta(dryRun) {
   var METODOS_TARJETA = { 'credit_card': true, 'debit_card': true, 'modo': true };
   var sheet  = getVentasSheet();
@@ -1268,6 +1336,56 @@ function reprocesarVentasTarjeta(dryRun) {
   }
 
   Logger.log('reprocesarVentasTarjeta: ' + filas + ' fila(s) ' + (dryRun ? '(dry run, no se escribió nada)' : 'actualizadas'));
+}
+
+// ── Reprocesar aporte escuela Nazareno ───────────────────────────────────────
+// Corrige col W (aporte_escuela) en ventas de NAZARENO donde se usó un %
+// incorrecto. La regla correcta es pctEscuela=0.05 (5% del totalPagadoLinea).
+// Correr primero reprocesarAporteNazarenoDryRun() para ver qué filas cambian.
+function reprocesarAporteNazarenoDryRun()  { reprocesarAporteNazareno(true);  }
+function reprocesarAporteNazarenoApply()   { reprocesarAporteNazareno(false); }
+
+function reprocesarAporteNazareno(dryRun) {
+  var PCT_ESCUELA_CORRECTO = 0.05;
+  var sheet  = getVentasSheet();
+  var data   = sheet.getDataRange().getValues();
+  var filas  = 0;
+  var totalDif = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row   = data[i];
+    var marca = String(row[24] || row[12] || '').trim().toUpperCase();
+    if (marca !== 'NAZARENO') continue;
+
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    var aporteEscActual  = parseFloat(row[22]) || 0;
+    var aporteEscNuevo   = Math.round(totalPagadoLinea * PCT_ESCUELA_CORRECTO);
+
+    if (Math.abs(aporteEscNuevo - aporteEscActual) < 1) continue; // ya correcto
+
+    filas++;
+    totalDif += (aporteEscNuevo - aporteEscActual);
+    Logger.log(
+      '[' + (dryRun ? 'DRY' : 'WRITE') + '] fila ' + (i + 1) +
+      ' pedido#' + row[1] +
+      ' fecha=' + (row[0] instanceof Date ? Utilities.formatDate(row[0], 'America/Argentina/Cordoba', 'dd/MM/yyyy') : row[0]) +
+      ' comprador=' + (row[3] || '') +
+      ' producto=' + (row[5] || '') +
+      ' totalPagado=' + Math.round(totalPagadoLinea) +
+      ' aporteEsc ' + aporteEscActual + ' → ' + aporteEscNuevo +
+      ' (dif=' + (aporteEscNuevo - aporteEscActual) + ')'
+    );
+
+    if (!dryRun) {
+      sheet.getRange(i + 1, 23).setValue(aporteEscNuevo);
+    }
+  }
+
+  Logger.log(
+    'reprocesarAporteNazareno: ' + filas + ' fila(s) con diferencia' +
+    ' | dif total acumulada=$' + Math.round(totalDif) +
+    (dryRun ? ' (dry run, no se escribió nada)' : ' — filas actualizadas')
+  );
 }
 
 function yaFueEnviado(orderId) {
