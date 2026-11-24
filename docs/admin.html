@@ -205,6 +205,7 @@
   .filtro-btn:hover { border-color:#2d5a27; color:#2d5a27; }
   .filtro-btn.active { background:#2d5a27; color:#fff; border-color:#2d5a27; }
   #vfilt-Pendiente.active { background:#fef9c3; color:#854d0e; border-color:#fde68a; }
+  #vfilt-Parcial.active   { background:#fff7ed; color:#9a3412; border-color:#fdba74; }
   #vfilt-Entregado.active { background:#f0fdf4; color:#15803d; border-color:#4ade80; }
   .v-dots-wrap { position:relative; display:inline-block; }
   .v-dots-btn { background:none; border:1px solid transparent; border-radius:6px; cursor:pointer; padding:4px 8px; font-size:18px; color:#6b7280; line-height:1; }
@@ -452,13 +453,17 @@
       <!-- Filtros estado -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
         <button onclick="setFiltroEstado('Pendiente')" class="filtro-btn active" id="vfilt-Pendiente">⏳ Pendiente</button>
+        <button onclick="setFiltroEstado('Parcial')" class="filtro-btn" id="vfilt-Parcial">📦 Parcial</button>
         <button onclick="setFiltroEstado('Entregado')" class="filtro-btn" id="vfilt-Entregado">✅ Entregado</button>
         <button onclick="setFiltroEstado('Todos')" class="filtro-btn" id="vfilt-Todos">Todos</button>
         <button onclick="cargarVentas()" style="margin-left:auto;padding:6px 12px;background:#f3f4f6;border:none;border-radius:8px;font-size:12px;color:#6b7280;cursor:pointer;font-weight:600">↺ Actualizar</button>
       </div>
 
       <!-- Meses rápidos -->
-      <div id="v-meses" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div id="v-meses" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <button id="v-btn-historial" onclick="cargarHistorialCompleto()" style="padding:4px 10px;background:none;border:1px dashed #d1d5db;border-radius:12px;font-size:11px;color:#9ca3af;cursor:pointer;white-space:nowrap">↓ Ver historial completo</button>
+      </div>
 
       <!-- Filtros adicionales -->
       <div class="v-filtros">
@@ -895,6 +900,7 @@ function ocultarMensajes() {
 // ══════════════════════════════════════
 var _ventas = [];
 var _ventasFiltroEstado = 'Pendiente';
+var _ventasHistorialCompleto = false;
 var _ventasFiltradasActuales = [];  // filas actualmente renderizadas (todos los filtros aplicados)
 
 // ── VENTAS DOTS MENU ─────────────────────────────────────────
@@ -1040,13 +1046,16 @@ var _ventasCargadoEstado = {};
 
 function cargarVentas(forzar) {
   var estado = _ventasFiltroEstado;
-  if (!forzar && _ventasCargadoEstado[estado]) { aplicarFiltrosVentas(); return; }
+  // Parcial es subconjunto de Pendiente: reusar su fetch
+  var estadoGAS = (estado === 'Parcial') ? 'Pendiente' : estado;
+  if (!forzar && _ventasCargadoEstado[estadoGAS]) { aplicarFiltrosVentas(); return; }
   document.getElementById('ventas-loading').style.display = 'block';
   document.getElementById('ventas-tabla').style.display = 'none';
-  // Entregados: solo últimos 60 días para no sobrecargar
-  var url = GAS_URL + '?action=getRetiros&estado=' + encodeURIComponent(estado);
-  if (estado === 'Entregado') url += '&dias=60';
-  if (estado === 'Todos')     url  = GAS_URL + '?action=getRetiros&dias=30';
+  var url = GAS_URL + '?action=getRetiros&estado=' + encodeURIComponent(estadoGAS);
+  if (!_ventasHistorialCompleto) {
+    if (estadoGAS === 'Entregado') url += '&dias=90';
+    if (estadoGAS === 'Todos')     url  = GAS_URL + '?action=getRetiros&dias=90';
+  }
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -1062,8 +1071,9 @@ function cargarVentas(forzar) {
         v.grado = normalizarGrado(v.grado);
         return v;
       });
-      _ventas = _ventas.filter(function(v){ return v.estado !== estado && estado !== 'Todos'; });
+      _ventas = _ventas.filter(function(v){ return estadoGAS !== 'Todos' && v.estado !== estadoGAS && !(estadoGAS === 'Pendiente' && v.estado === 'Parcial'); });
       _ventas = _ventas.concat(retiros);
+      _ventasCargadoEstado[estadoGAS] = true;
       _ventasCargadoEstado[estado] = true;
       poblarFiltrosVentas();
       aplicarFiltrosVentas();
@@ -1185,9 +1195,19 @@ function poblarFiltrosVentas() {
 
 function setFiltroEstado(estado) {
   _ventasFiltroEstado = estado;
-  document.querySelectorAll('[id^="vfilt-Todos"],[id^="vfilt-Pendiente"],[id^="vfilt-Entregado"]').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('[id^="vfilt-Todos"],[id^="vfilt-Pendiente"],[id^="vfilt-Entregado"],[id^="vfilt-Parcial"]').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('vfilt-' + estado).classList.add('active');
   cargarVentas(); // carga lazy si no estaba cacheado
+}
+
+function cargarHistorialCompleto() {
+  _ventasHistorialCompleto = true;
+  var estadoGAS = (_ventasFiltroEstado === 'Parcial') ? 'Pendiente' : _ventasFiltroEstado;
+  _ventasCargadoEstado[estadoGAS] = false;
+  _ventasCargadoEstado[_ventasFiltroEstado] = false;
+  var btn = document.getElementById('v-btn-historial');
+  if (btn) btn.style.display = 'none';
+  cargarVentas(true);
 }
 
 function aplicarFiltrosVentas() {
@@ -1195,6 +1215,7 @@ function aplicarFiltrosVentas() {
   if (document.getElementById('vfilt-Todos')) {
     document.getElementById('vfilt-Todos').classList.toggle('active', _ventasFiltroEstado === 'Todos');
     document.getElementById('vfilt-Pendiente').classList.toggle('active', _ventasFiltroEstado === 'Pendiente');
+    document.getElementById('vfilt-Parcial').classList.toggle('active', _ventasFiltroEstado === 'Parcial');
     document.getElementById('vfilt-Entregado').classList.toggle('active', _ventasFiltroEstado === 'Entregado');
   }
   var grado      = document.getElementById('vfilt-grado') ? document.getElementById('vfilt-grado').value : '';
@@ -1229,6 +1250,26 @@ function aplicarFiltrosVentas() {
     }
     return true;
   });
+
+  // Deduplicar por número de orden: conservar estado más avanzado (Entregado > Parcial > Pendiente)
+  var PRIO_ESTADO = { 'Entregado': 3, 'Parcial': 2, 'Pendiente': 1 };
+  var porOrden = {};
+  rows = rows.reduce(function(acc, v) {
+    var k = String(v.numero);
+    if (!porOrden.hasOwnProperty(k)) {
+      porOrden[k] = acc.length;
+      acc.push(v);
+    } else {
+      var idx = porOrden[k];
+      var actual = acc[idx];
+      var pActual = PRIO_ESTADO[actual.estado] || 0;
+      var pNuevo  = PRIO_ESTADO[v.estado] || 0;
+      if (pNuevo > pActual || (pNuevo === pActual && (v.notas || '').length > (actual.notas || '').length)) {
+        acc[idx] = v;
+      }
+    }
+    return acc;
+  }, []);
 
   var contador = document.getElementById('ventas-contador');
   if (contador) contador.textContent = rows.length + ' resultado' + (rows.length !== 1 ? 's' : '');
