@@ -1355,6 +1355,12 @@ function cargarVentas(forzar) {
   if (!forzar && _ventasCargadoEstado[estadoGAS]) { aplicarFiltrosVentas(); return; }
   document.getElementById('ventas-loading').style.display = 'block';
   document.getElementById('ventas-tabla').style.display = 'none';
+  // Spinner en la pill activa
+  var _pillBtn = document.getElementById('vfilt-' + estado);
+  var _pillTxt = _pillBtn ? _pillBtn.innerHTML : '';
+  var _spinner = '<span style="display:inline-block;width:10px;height:10px;border:2px solid rgba(0,0,0,0.15);border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px"></span>';
+  if (_pillBtn) { _pillBtn.innerHTML = _spinner + _pillTxt; _pillBtn.style.pointerEvents = 'none'; }
+  function _pillReset() { if (_pillBtn) { _pillBtn.innerHTML = _pillTxt; _pillBtn.style.pointerEvents = ''; } }
   var url = GAS_URL + '?action=getRetiros&estado=' + encodeURIComponent(estadoGAS);
   if (!_ventasHistorialCompleto) {
     if (estadoGAS === 'Entregado') url += '&dias=90';
@@ -1364,6 +1370,7 @@ function cargarVentas(forzar) {
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(d){
+      _pillReset();
       document.getElementById('ventas-loading').style.display = 'none';
       if (!d.ok) { document.getElementById('ventas-loading').textContent = 'Error al cargar.'; return; }
       // Mergear en _ventas eliminando los del mismo estado
@@ -1388,6 +1395,7 @@ function cargarVentas(forzar) {
       aplicarFiltrosVentas();
     })
     .catch(function(){
+      _pillReset();
       document.getElementById('ventas-loading').style.display = 'none';
       document.getElementById('ventas-loading').textContent = 'Error al cargar. Intentá de nuevo.';
     });
