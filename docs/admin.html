@@ -210,7 +210,7 @@
   .v-dots-wrap { position:relative; display:inline-block; }
   .v-dots-btn { background:none; border:1px solid transparent; border-radius:6px; cursor:pointer; padding:4px 8px; font-size:18px; color:#6b7280; line-height:1; }
   .v-dots-btn:hover { background:#f3f4f6; border-color:#e5e7eb; }
-  .v-dots-menu { display:none; position:absolute; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.1); z-index:50; min-width:180px; padding:4px 0; }
+  .v-dots-menu { display:none; position:absolute; left:0; top:calc(100% + 4px); background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.1); z-index:50; min-width:180px; padding:4px 0; }
   .v-dots-menu.open { display:block; }
   .v-dots-item { display:flex; align-items:center; gap:8px; width:100%; padding:9px 14px; background:none; border:none; cursor:pointer; font-size:13px; font-family:inherit; color:#111827; text-align:left; transition:background .1s; white-space:nowrap; }
   .v-dots-item:hover { background:#f9fafb; }
@@ -1293,16 +1293,28 @@ function renderVentas(rows) {
     cont.style.display = 'block'; return;
   }
   cont.innerHTML = '<div class="v-table-wrap"><div style="overflow-x:auto"><table class="v-table">' +
-    '<thead><tr><th>Pedido</th><th>Comprador</th><th>Productos</th><th>Total</th><th>Estado</th><th>Grado</th><th>Quién entregó</th><th>Notas</th><th style="width:40px"></th></tr></thead><tbody>' +
+    '<thead><tr><th style="width:40px"></th><th>Pedido</th><th>Comprador</th><th>Productos</th><th>Total</th><th>Estado</th><th>Grado</th><th>Quién entregó</th><th>Notas</th></tr></thead><tbody>' +
     rows.map(function(v, i) {
       var entregado = v.estado === 'Entregado';
+      var parcial   = v.estado === 'Parcial';
       var pill = entregado
         ? '<span style="background:#f0fdf4;color:#15803d;border:1px solid #4ade80;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">✅ Entregado</span>'
-        : '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">⏳ Pendiente</span>';
+        : parcial
+          ? '<span style="background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">📦 Parcial</span>'
+          : '<span style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:100px;font-size:10px;font-weight:700;padding:2px 10px;white-space:nowrap">⏳ Pendiente</span>';
       var prods = v.productos.split(' | ');
       var resumen = prods.length + ' prod. <span id="vchev-' + i + '">↓</span>';
       var detalle = prods.map(function(p){ return '<div style="padding:2px 0;font-size:12px;color:#374151">• ' + p + '</div>'; }).join('');
       return '<tr style="cursor:pointer" onclick="toggleVRow(' + i + ')">' +
+        '<td style="padding:6px 8px" onclick="event.stopPropagation()">' +
+          '<div class="v-dots-wrap">' +
+            '<button class="v-dots-btn" onclick="toggleVMenu(event,' + i + ')">⋯</button>' +
+            '<div class="v-dots-menu" id="vmenu-' + i + '">' +
+              ((v.estado === 'Pendiente' || parcial) ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
+              '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
+            '</div>' +
+          '</div>' +
+        '</td>' +
         '<td><strong style="color:#2d5a27">#' + v.numero + '</strong><div style="font-size:10px;color:#9ca3af;margin-top:2px">' + v.fecha + '</div></td>' +
         '<td>' + v.nombre + '</td>' +
         '<td><button style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#2d5a27;padding:0">' + resumen + '</button></td>' +
@@ -1311,18 +1323,9 @@ function renderVentas(rows) {
         '<td style="font-size:12px;color:#6b7280">' + (v.grado || '—') + '</td>' +
         '<td>' + (v.staff || '—') + '</td>' +
         '<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280;font-size:12px" title="' + (v.notas||'') + '">' + (v.notas ? v.notas : '—') + '</td>' +
-        '<td style="text-align:right;padding:6px 8px">' +
-          '<div class="v-dots-wrap">' +
-            '<button class="v-dots-btn" onclick="toggleVMenu(event,' + i + ')">⋯</button>' +
-            '<div class="v-dots-menu" id="vmenu-' + i + '">' +
-              (v.estado === 'Pendiente' ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
-              '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
-            '</div>' +
-          '</div>' +
-        '</td>' +
       '</tr>' +
       '<tr id="vrow-' + i + '" style="display:none;background:#f9fafb">' +
-        '<td colspan="7" style="padding:8px 16px 12px">' + detalle +
+        '<td colspan="9" style="padding:8px 16px 12px">' + detalle +
           (v.discount > 0 ? '<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;background:#ffeef0;border-radius:10px;padding:3px 10px;font-size:11px;color:#e63946;font-weight:600">' +
             '🏷 ' + (v.discount_type || 'Descuento') + ': –' + fmtPesosAR(v.discount) +
           '</div>' : '') +
