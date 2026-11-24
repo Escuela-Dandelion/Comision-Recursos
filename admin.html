@@ -349,23 +349,23 @@
       </button>
 
       <div class="nav-section-label">Gestión</div>
-      <button class="nav-item" data-view="gestion-productos" data-roles="admin,fgp,digital" onclick="showView('gestion-productos', this)">
+      <button class="nav-item" data-view="gestion-productos" data-roles="admin,fgp,fgp_ext,fgp_dig" onclick="showView('gestion-productos', this)">
         <span class="nav-icon">🏷️</span> Gestión de Productos
       </button>
-      <button class="nav-item" data-view="digitales" data-roles="admin,digital" onclick="showView('digitales', this)">
+      <button class="nav-item" data-view="digitales" data-roles="admin,fgp_dig" onclick="showView('digitales', this)">
         <span class="nav-icon">🎟</span> Productos Digitales
       </button>
-      <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
+      <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp,fgp_ext" onclick="showView('pedidos', this)">
         <span class="nav-icon">📋</span> Pedidos Proveedor
       </button>
 
       <button class="nav-item" data-view="qr" data-roles="admin,staff,referente" onclick="showView('qr', this)">
         <span class="nav-icon">📷</span> Registrar Entrega
       </button>
-      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,referente,despachante" onclick="showView('ventas', this)">
+      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,fgp_ext,referente,despachante" onclick="showView('ventas', this)">
         <span class="nav-icon">🛒</span> Ventas
       </button>
-      <button class="nav-item" data-view="ventas-sin-stock" data-roles="admin,staff,fgp" onclick="showView('ventas-sin-stock', this)">
+      <button class="nav-item" data-view="ventas-sin-stock" data-roles="admin,staff,fgp,fgp_ext" onclick="showView('ventas-sin-stock', this)">
         <span class="nav-icon">📦</span> Ventas a Pedido
       </button>
 
@@ -376,7 +376,7 @@
       <a class="nav-item" href="dashboard-referentes.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
-      <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/informe-aportes.html" target="_blank" data-roles="admin,staff" style="text-decoration:none">
+      <a class="nav-item" href="https://escuela-dandelion.github.io/Comision-Recursos/informe-aportes.html" target="_blank" data-roles="admin,staff,fgp" style="text-decoration:none">
         <span class="nav-icon">💰</span> Informe de Aportes ↗
       </a>
       <div class="nav-section-label">Recursos</div>
@@ -615,7 +615,7 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCk
 var CONFIG_STAFF_TOKEN = 'test';
 
 // Roles: admin, staff, fgp, referente
-var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente', despachante: 'Despachante', DESPACHANTE: 'Despachante' };
+var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', FGP_EXT: 'FGP Externo', fgp_ext: 'FGP Externo', FGP_DIG: 'FGP Digital', fgp_dig: 'FGP Digital', referente: 'Referente', despachante: 'Despachante', DESPACHANTE: 'Despachante' };
 
 var SESSION_KEY = 'dl_admin_session';
 var currentUser = null;
@@ -895,11 +895,11 @@ function aplicarPermisos(role) {
 function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
-    { view:'gestion-productos',    icon:'🏷️', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','digital'],               url:null },
-    { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','digital'],                     url:null },
-    { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp'],                 url:null },
+    { view:'gestion-productos',    icon:'🏷️', name:'Gestión de Productos',                      desc:'Editar precios, stock y descripciones', roles:['admin','fgp','fgp_ext','fgp_dig'],     url:null },
+    { view:'digitales',            icon:'🎟', name:'Productos Digitales',                       desc:'Ventas y entregas digitales',           roles:['admin','fgp_dig'],                     url:null },
+    { view:'pedidos',              icon:'📋', name:'Pedidos Proveedor',                         desc:'Ver y gestionar pedidos',               roles:['admin','staff','fgp','fgp_ext'],       url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega',                         desc:'Confirmar entregas con QR',             roles:['admin','staff','referente'],           url:null },
-    { view:'ventas',               icon:'🛒', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','referente','despachante'], url:null },
+    { view:'ventas',               icon:'🛒', name:'Ventas',                                   desc:'Historial de ventas',                   roles:['admin','staff','fgp','fgp_ext','referente','despachante'], url:null },
     { view:'dashboard-general',    icon:'📊', name:'Dashboard General',                         desc:'Ventas y métricas globales',            roles:['admin','staff','fgp'],                 url:'dashboard-general.html?appv='+APP_V },
     { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',                                desc:'Dashboard de tu grado',                 roles:['admin','staff','fgp','referente'],     url:'dashboard-referentes.html?appv='+APP_V },
   ];
@@ -1664,7 +1664,7 @@ function contactBtnsAdm(email, phone, numero) {
   if (email) {
     btns += '<button onclick="event.stopPropagation();abrirModalContacto(\'' + email.replace(/'/g,"\\'") + '\',\'' + subj.replace(/'/g,"\\'") + '\',\'' + msg.replace(/'/g,"\\'") + '\')" title="' + email + '" class="contact-btn-adm" style="border:none;padding:0">' + _EMAIL_ICON_ADM + '</button>';
   }
-  if (phone) {
+  if (phone && !(currentUser && currentUser.role === 'FGP_EXT')) {
     var waNum = waUrlAdm(phone);
     if (waNum) btns += '<a href="https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg) + '" target="_blank" onclick="event.stopPropagation()" title="Escribir por WhatsApp" class="contact-btn-adm">' + _WA_ICON_ADM + '</a>';
   }
@@ -1747,7 +1747,7 @@ function renderVentas(rows) {
           '<div class="v-dots-wrap">' +
             '<button class="v-dots-btn" onclick="toggleVMenu(event,' + i + ')">⋯</button>' +
             '<div class="v-dots-menu" id="vmenu-' + i + '">' +
-              (v.estado === 'Pendiente' || v.estado === 'Parcial' || v.parcial ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
+              ((v.estado === 'Pendiente' || v.estado === 'Parcial' || v.parcial) && !(currentUser && currentUser.role === 'FGP_EXT') ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
               '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
               (v.envio === 'Envio a Domicilio' && currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DESPACHANTE') ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEtiqueta(' + i + ')">📦 Generar etiqueta</button>' : '') +
             '</div>' +

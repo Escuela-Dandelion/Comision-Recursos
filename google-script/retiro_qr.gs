@@ -1,4 +1,4 @@
-// v2026-11-24g — encuesta tarjeta: landing page + GAS handler + mail envío 27/11
+// v2026-11-24h — roles FGP_EXT (externos sin acceso a precios/dashboards/WA) y FGP_DIG (digitales)
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -348,7 +348,7 @@ function doGetInterno(e) {
     var retiros = getRetirosData(estadoFiltro, diasFiltro);
     if (emailFiltro) {
       var userFGP = AUTH_EMAILS[emailFiltro];
-      if (userFGP && userFGP.role === 'FGP' && Array.isArray(userFGP.proveedores) && userFGP.proveedores.length > 0) {
+      if (userFGP && (userFGP.role === 'FGP' || userFGP.role === 'FGP_EXT') && Array.isArray(userFGP.proveedores) && userFGP.proveedores.length > 0) {
         var proveedoresFGP = userFGP.proveedores.map(function(p){ return p.toLowerCase(); });
         retiros = retiros.filter(function(r) {
           return (r.proveedores || []).some(function(p) {
@@ -2864,7 +2864,7 @@ function apiDashboard(email) {
     var emailsFGP = Object.keys(AUTH_EMAILS);
     for (var fi = 0; fi < emailsFGP.length; fi++) {
       var u = AUTH_EMAILS[emailsFGP[fi]];
-      if (u.role === 'FGP' && u.proveedores && u.proveedores.length > 0) {
+      if ((u.role === 'FGP' || u.role === 'FGP_EXT') && u.proveedores && u.proveedores.length > 0) {
         // Deduplicar por nombre (varios emails del mismo FGP)
         var yaExiste = fgpList.some(function(x) { return x.name === u.name; });
         if (!yaExiste) fgpList.push({ name: u.name, proveedores: u.proveedores, email: emailsFGP[fi] });
@@ -2980,9 +2980,9 @@ var AUTH_EMAILS = {
   'dolo.dominguez@dandelion.edu.ar': { role: 'referente', name: 'Dolo' },
   'francoalini@gmail.com':           { role: 'FGP',   name: 'Franco', proveedores: ['Nazareno'] },
   'maximiliano.contreras@dandelion.edu.ar': { role: 'DESPACHANTE', name: 'Maximiliano' },
-  'leilaremedi1@gmail.com':                 { role: 'digital',   name: 'Leila' },
-  'tiendalimon.natural@gmail.com':          { role: 'FGP',       name: 'Natalia', proveedores: ['Tienda Limón'] },
-  'dominguez.dolo@gmail.com':               { role: 'FGP',       name: 'Dolo',    proveedores: ['Sol de Oro'] }
+  'leilaremedi1@gmail.com':                 { role: 'FGP_DIG',   name: 'Leila' },
+  'tiendalimon.natural@gmail.com':          { role: 'FGP_EXT',   name: 'Natalia', proveedores: ['Tienda Limón'] },
+  'dominguez.dolo@gmail.com':               { role: 'FGP_EXT',   name: 'Dolo',    proveedores: ['Sol de Oro'] }
   // DESPACHANTE: accede a Ventas → Envio a Domicilio y puede generar etiquetas Envia.com
   // Agregar aqui: 'email@ejemplo.com': { role: 'DESPACHANTE', name: 'Nombre' }
 };
@@ -3402,7 +3402,7 @@ function apiDigitales(email) {
   if (!email) return { ok: false, error: 'Email requerido.' };
   var user = AUTH_EMAILS[email.toLowerCase().trim()];
   if (!user) return { ok: false, error: 'Email no autorizado.' };
-  if (user.role !== 'ADMIN' && user.role !== 'digital') return { ok: false, error: 'Sin permiso para ver ventas digitales.' };
+  if (user.role !== 'ADMIN' && user.role !== 'FGP_DIG') return { ok: false, error: 'Sin permiso para ver ventas digitales.' };
 
   try {
     var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
@@ -3683,7 +3683,7 @@ function _authGestion(email) {
   if (!user.marcas && user.proveedores) {
     user.marcas = _marcasDeProveedores(user);
   }
-  var puedeGestionar = user.role === 'ADMIN' || user.role === 'digital' || (user.marcas && user.marcas.length > 0);
+  var puedeGestionar = user.role === 'ADMIN' || user.role === 'FGP_DIG' || (user.marcas && user.marcas.length > 0);
   return puedeGestionar ? user : null;
 }
 
@@ -3722,7 +3722,7 @@ function apiProductos(email) {
     if (resp.getResponseCode() !== 200) return { ok: false, error: 'Error al cargar productos de TiendaNube.' };
     var productos = JSON.parse(resp.getContentText());
 
-    if (user.role === 'digital') {
+    if (user.role === 'FGP_DIG') {
       productos = productos.filter(function(p) {
         return CONFIG.DIGITAL_PRODUCT_IDS.indexOf(String(p.id)) !== -1;
       });
@@ -3883,6 +3883,11 @@ function apiUpdateVariante(email, productoId, varianteId, precio, precioPromo, c
     var marca = fetchMarcaDeProducto(productoId);
     if (!_puedeGestionarMarca(user, marca)) return { ok: false, error: 'Sin permiso para editar este producto.' };
   }
+  if (user.role === 'FGP_EXT' && (
+    (precio     !== undefined && precio     !== null && precio     !== '') ||
+    (precioPromo !== undefined && precioPromo !== null && precioPromo !== '') ||
+    (costo      !== undefined && costo      !== null && costo      !== '')
+  )) return { ok: false, error: 'FGP Externos no pueden modificar precios ni costos.' };
   var body = {};
   if (precio      !== undefined && precio      !== null && precio      !== '') body.price             = parseFloat(precio);
   if (precioPromo !== undefined && precioPromo !== null && precioPromo !== '') body.promotional_price = parseFloat(precioPromo) > 0 ? parseFloat(precioPromo) : null;

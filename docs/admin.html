@@ -313,19 +313,19 @@
       </button>
 
       <div class="nav-section-label">Gestión</div>
-      <button class="nav-item" data-view="gestion" data-roles="admin,fgp" onclick="showView('gestion', this)">
+      <button class="nav-item" data-view="gestion" data-roles="admin,fgp,fgp_ext" onclick="showView('gestion', this)">
         <span class="nav-icon">📦</span> Gestión de Productos
       </button>
-      <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp" onclick="showView('pedidos', this)">
+      <button class="nav-item" data-view="pedidos" data-roles="admin,staff,fgp,fgp_ext" onclick="showView('pedidos', this)">
         <span class="nav-icon">📦</span> Pedidos
       </button>
-      <button class="nav-item" data-view="inventario" data-roles="admin,staff,fgp" onclick="showView('inventario', this)">
+      <button class="nav-item" data-view="inventario" data-roles="admin,staff,fgp,fgp_ext" onclick="showView('inventario', this)">
         <span class="nav-icon">🟢</span> Estado Inventario
       </button>
       <button class="nav-item" data-view="qr" data-roles="admin,staff,referente" onclick="showView('qr', this)">
         <span class="nav-icon">📷</span> Registrar Entrega
       </button>
-      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,referente" onclick="showView('ventas', this)">
+      <button class="nav-item" data-view="ventas" data-roles="admin,staff,fgp,fgp_ext,referente" onclick="showView('ventas', this)">
         <span class="nav-icon">🛍️</span> Ventas
       </button>
 
@@ -336,7 +336,7 @@
       <a class="nav-item" href="dashboard-referentes.html?appv=20260814" target="_blank" data-roles="admin,staff,fgp,referente" style="text-decoration:none">
         <span class="nav-icon">📈</span> Dashboard Referentes ↗
       </a>
-      <a class="nav-item" href="ventas-digitales.html" target="_blank" data-roles="admin,digital" style="text-decoration:none">
+      <a class="nav-item" href="ventas-digitales.html" target="_blank" data-roles="admin,fgp_dig" style="text-decoration:none">
         <span class="nav-icon">🎟</span> Ventas Productos Digitales ↗
       </a>
       <div class="nav-section-label">Recursos</div>
@@ -540,8 +540,8 @@ var GOOGLE_CLIENT_ID = '308208183848-mcirv9g7cttetoa4eb1k6gt9p8chcr16.apps.googl
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
 var CONFIG_STAFF_TOKEN = 'test';
 
-// Roles: admin, staff, fgp, referente
-var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', referente: 'Referente' };
+// Roles: admin, staff, fgp, fgp_ext, fgp_dig, referente
+var ROLE_LABELS = { admin: 'Administrador', ADMIN: 'Administrador', staff: 'Staff', fgp: 'FGP', FGP_EXT: 'FGP Externo', fgp_ext: 'FGP Externo', FGP_DIG: 'FGP Digital', fgp_dig: 'FGP Digital', referente: 'Referente' };
 
 var SESSION_KEY = 'dl_admin_session';
 var currentUser = null;
@@ -723,9 +723,9 @@ function aplicarPermisos(role) {
 function renderWelcomeCards(role) {
   var APP_V = '20260814';
   var cards = [
-    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp'],                      url:null },
+    { view:'pedidos',              icon:'📦', name:'Órdenes de Pedido Proveedores',             desc:'Ver y gestionar pedidos',       roles:['admin','staff','fgp','fgp_ext'],            url:null },
     { view:'qr',                   icon:'📷', name:'Registrar Entrega', desc:'Confirmar entregas con QR',     roles:['admin','staff','referente'],                url:null },
-    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','referente'],           url:null },
+    { view:'ventas',               icon:'🛍️', name:'Ventas',              desc:'Historial de ventas',            roles:['admin','staff','fgp','fgp_ext','referente'], url:null },
     { view:'dashboard-general',    icon:'📊', name:'Dashboard General',   desc:'Ventas y métricas globales',    roles:['admin','staff','fgp'],                      url:'dashboard-general.html?appv='+APP_V },
     { view:'dashboard-referentes', icon:'📈', name:'Mis ventas',          desc:'Dashboard de tu grado',        roles:['admin','staff','fgp','referente'],           url:'dashboard-referentes.html?appv='+APP_V },
   ];
@@ -1310,7 +1310,7 @@ function renderVentas(rows) {
           '<div class="v-dots-wrap">' +
             '<button class="v-dots-btn" onclick="toggleVMenu(event,' + i + ')">⋯</button>' +
             '<div class="v-dots-menu" id="vmenu-' + i + '">' +
-              ((v.estado === 'Pendiente' || parcial) ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
+              ((v.estado === 'Pendiente' || parcial) && !(currentUser && currentUser.role === 'FGP_EXT') ? '<button class="v-dots-item" onclick="closeVMenus();abrirModalEntregar(' + i + ')">✅ Marcar como entregado</button>' : '') +
               '<button class="v-dots-item" onclick="closeVMenus();abrirModalNotas(' + i + ')">📝 Agregar / editar notas</button>' +
             '</div>' +
           '</div>' +

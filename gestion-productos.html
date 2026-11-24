@@ -608,6 +608,9 @@ function mostrarApp() {
   if (currentUser.role === 'ADMIN') {
     document.getElementById('btn-auditoria').style.display = '';
   }
+  if (currentUser.role === 'FGP_EXT') {
+    document.getElementById('btn-guardar-precios').style.display = 'none';
+  }
   cargarProductos();
 }
 
@@ -1030,7 +1033,9 @@ function calcularMargen(precio, costo) {
 }
 
 function actualizarMargen(varianteId) {
-  var precio   = document.getElementById('precio-' + varianteId).value;
+  var precioEl = document.getElementById('precio-' + varianteId);
+  if (!precioEl) return;
+  var precio   = precioEl.value;
   var costoEl  = document.getElementById('costo-'  + varianteId);
   var costo    = costoEl ? costoEl.value : '0';
   document.getElementById('margen-' + varianteId).textContent = calcularMargen(precio, costo);
@@ -1043,11 +1048,15 @@ function renderEditPrecios(variantes) {
       '<div class="variante-nombre">' + esc(v.nombre || v.sku || 'Variante ' + (i+1)) + '</div>' +
       '<div class="field-row">' +
         '<div><label class="field-label">Precio de venta</label>' +
-          '<div class="input-precio"><span>$</span>' +
-          '<input class="field" id="precio-' + v.id + '" type="number" step="1" value="' + v.precio + '" oninput="actualizarMargen(\'' + v.id + '\')"></div></div>' +
+          (currentUser.role === 'FGP_EXT'
+            ? '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151">' + (v.precio > 0 ? pesos(v.precio) : '—') + '</div>'
+            : '<div class="input-precio"><span>$</span>' +
+              '<input class="field" id="precio-' + v.id + '" type="number" step="1" value="' + v.precio + '" oninput="actualizarMargen(\'' + v.id + '\')"></div>') + '</div>' +
         '<div><label class="field-label">Precio promocional</label>' +
-          '<div class="input-precio"><span>$</span>' +
-          '<input class="field" id="promo-' + v.id + '" type="number" step="1" value="' + (v.precio_promo > 0 ? v.precio_promo : '') + '" placeholder="0"></div></div>' +
+          (currentUser.role === 'FGP_EXT'
+            ? '<div style="padding:9px 12px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;font-size:13px;color:#374151">' + (v.precio_promo > 0 ? pesos(v.precio_promo) : '—') + '</div>'
+            : '<div class="input-precio"><span>$</span>' +
+              '<input class="field" id="promo-' + v.id + '" type="number" step="1" value="' + (v.precio_promo > 0 ? v.precio_promo : '') + '" placeholder="0"></div>') + '</div>' +
       '</div>' +
       '<div class="field-row">' +
         '<div><label class="field-label">Costo</label>' +
@@ -1265,6 +1274,7 @@ function guardarInfo() {
 
 function guardarPrecios() {
   if (!_productoActual) return;
+  if (currentUser.role === 'FGP_EXT') return;
   var btn = document.getElementById('btn-guardar-precios');
   btn.disabled = true; setSt('precios', 'Guardando...');
   var _preciosAntes = {};
