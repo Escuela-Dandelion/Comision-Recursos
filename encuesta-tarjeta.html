@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encuesta — Tienda Diente de León</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f6f9; min-height: 100vh;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      background: #fff; border-radius: 20px; padding: 36px 28px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo img { max-width: 160px; }
+    .intro { font-size: 14px; color: #555; line-height: 1.7; margin-bottom: 28px; }
+
+    .bloque { margin-bottom: 28px; }
+    .label {
+      font-size: 14px; font-weight: 700; color: #1a1a1a;
+      margin-bottom: 12px; display: block; line-height: 1.5;
+    }
+    .sublabel { font-weight: 400; color: #666; font-size: 13px; }
+
+    /* SI / NO */
+    .sino-wrap { display: flex; gap: 10px; }
+    .sino-btn {
+      flex: 1; padding: 14px; border-radius: 12px;
+      border: 2px solid #d1d5db; background: #fff;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      color: #374151; transition: all .15s;
+    }
+    .sino-btn:hover { border-color: #3a7d44; color: #3a7d44; }
+    .sino-btn.activo { background: #f0f7e6; border-color: #3a7d44; color: #1a5c2a; }
+
+    /* NPS */
+    .nps-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+    .nps-btn {
+      width: 40px; height: 40px; border-radius: 10px;
+      border: 2px solid #d1d5db; background: #fff;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      color: #374151; transition: all .15s; flex-shrink: 0;
+    }
+    .nps-btn:hover { border-color: #3a7d44; color: #3a7d44; }
+    .nps-btn.activo { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+    .nps-labels { display: flex; justify-content: space-between; margin-top: 6px; }
+    .nps-labels span { font-size: 11px; color: #9ca3af; }
+
+    /* Comentario */
+    textarea {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 2px solid #d1d5db; font-size: 14px; color: #333;
+      font-family: inherit; resize: vertical; min-height: 90px;
+      transition: border-color .15s; outline: none;
+    }
+    textarea:focus { border-color: #3a7d44; }
+    textarea::placeholder { color: #9ca3af; }
+
+    .btn-enviar {
+      width: 100%; padding: 16px; background: #2e7d32; color: #fff;
+      border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: background .15s; margin-top: 4px;
+    }
+    .btn-enviar:hover { background: #1a5c2a; }
+    .btn-enviar:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* Estados */
+    #estado-ok, #estado-error { text-align: center; }
+    .estado-icon { font-size: 52px; margin-bottom: 16px; }
+    .estado-titulo { font-size: 20px; font-weight: 800; color: #1a5c2a; margin-bottom: 8px; }
+    .estado-sub { font-size: 14px; color: #6b7280; line-height: 1.6; }
+    .error-titulo { color: #b91c1c; }
+
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid #e0e0e0;
+      border-top-color: #2e7d32; border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #cargando { text-align: center; padding: 24px 0; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <img src="https://escuela-dandelion.github.io/Comision-Recursos/Logo_Diente_de_Leon.png" alt="Tienda Diente de León">
+  </div>
+
+  <div id="formulario">
+    <p class="intro">
+      Estamos evaluando si seguir ofreciendo pago con tarjeta en la tienda para el año que viene.
+      Tu opinión nos ayuda a tomar esa decisión.
+    </p>
+
+    <div class="bloque">
+      <span class="label">¿Hubieses comprado igual si solo ofrecíamos transferencia bancaria?</span>
+      <div class="sino-wrap">
+        <button class="sino-btn" data-val="SI" onclick="seleccionarSino(this)">Sí, igual compraba</button>
+        <button class="sino-btn" data-val="NO" onclick="seleccionarSino(this)">No, necesitaba tarjeta</button>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <span class="label">
+        ¿Cuánto recomendarías comprar en la Tienda Diente de León?
+        <br><span class="sublabel">1 = poco probable &nbsp;·&nbsp; 10 = muy probable</span>
+      </span>
+      <div class="nps-wrap" id="nps-wrap"></div>
+      <div class="nps-labels"><span>1</span><span>10</span></div>
+    </div>
+
+    <div class="bloque">
+      <span class="label">¿Querés dejarnos algún comentario? <span class="sublabel">(opcional)</span></span>
+      <textarea id="comentario" placeholder="Contanos lo que quieras…"></textarea>
+    </div>
+
+    <button class="btn-enviar" id="btn-enviar" onclick="enviar()">Enviar respuesta</button>
+  </div>
+
+  <div id="cargando" style="display:none">
+    <div class="spinner"></div>
+    <p style="color:#6b7280;font-size:14px">Enviando…</p>
+  </div>
+
+  <div id="estado-ok" style="display:none">
+    <div class="estado-icon">🌻</div>
+    <div class="estado-titulo">¡Gracias por tu respuesta!</div>
+    <p class="estado-sub">Tu opinión nos ayuda a tomar mejores decisiones para la comunidad Diente de León.</p>
+  </div>
+
+  <div id="estado-error" style="display:none">
+    <div class="estado-icon">❌</div>
+    <div class="estado-titulo error-titulo">Algo salió mal</div>
+    <p class="estado-sub">No pudimos guardar tu respuesta. Podés escribirnos directamente respondiendo el mail.</p>
+  </div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+
+var params   = new URLSearchParams(window.location.search);
+var emailEnc = params.get('e') || '';
+var nombre   = decodeURIComponent(params.get('n') || 'comprador');
+
+var sinoSel = null;
+var npsSel  = null;
+
+// Generar botones NPS
+var npsWrap = document.getElementById('nps-wrap');
+for (var i = 1; i <= 10; i++) {
+  var btn = document.createElement('button');
+  btn.className = 'nps-btn';
+  btn.textContent = i;
+  btn.dataset.val = i;
+  btn.onclick = (function(b) { return function() { seleccionarNps(b); }; })(btn);
+  npsWrap.appendChild(btn);
+}
+
+function seleccionarSino(btn) {
+  document.querySelectorAll('.sino-btn').forEach(function(b) { b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  sinoSel = btn.dataset.val;
+}
+
+function seleccionarNps(btn) {
+  document.querySelectorAll('.nps-btn').forEach(function(b) { b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  npsSel = btn.dataset.val;
+}
+
+function enviar() {
+  if (!sinoSel) { alert('Por favor indicá si hubieses comprado sin tarjeta.'); return; }
+  if (!npsSel)  { alert('Por favor elegí un número del 1 al 10.'); return; }
+
+  document.getElementById('formulario').style.display = 'none';
+  document.getElementById('cargando').style.display   = 'block';
+
+  var comentario = document.getElementById('comentario').value.trim();
+  var url = GAS_URL
+    + '?action=encuestaTarjeta'
+    + '&e='   + encodeURIComponent(emailEnc)
+    + '&n='   + encodeURIComponent(nombre)
+    + '&sino=' + encodeURIComponent(sinoSel)
+    + '&nps='  + encodeURIComponent(npsSel)
+    + '&com='  + encodeURIComponent(comentario);
+
+  fetch(url, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      document.getElementById('cargando').style.display = 'none';
+      if (d.ok) {
+        document.getElementById('estado-ok').style.display = 'block';
+      } else {
+        document.getElementById('estado-error').style.display = 'block';
+      }
+    })
+    .catch(function() {
+      document.getElementById('cargando').style.display  = 'none';
+      document.getElementById('estado-error').style.display = 'block';
+    });
+}
+</script>
+</body>
+</html>

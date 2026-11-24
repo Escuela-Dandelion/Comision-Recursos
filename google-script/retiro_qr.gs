@@ -1,4 +1,4 @@
-// v2026-11-24a — rate tarjeta 0.0345 (plan 17/11) + reprocesarVentasTarjetaDesde para backfill
+// v2026-11-24g — encuesta tarjeta: landing page + GAS handler + mail envío 27/11
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -24,10 +24,10 @@ var CONFIG = {
   // Tasas de costo de procesamiento por método de pago (TiendaNube no las expone en la API)
   // Actualizar aquí cuando cambien las tarifas
   GATEWAY_FEES: {
-    'wire_transfer': 0.01815,  // Transferencia bancaria Pago Nube: 1.5% + IVA
-    'credit_card':   0.0345, // Tarjeta crédito/débito/MODO — plan actualizado 17/11/2026
-    'debit_card':    0.0345,
-    'modo':          0.0345,
+    'wire_transfer': 0.011979,  // Transferencia bancaria Pago Nube: 0.99% + IVA 21% — Essential Plan desde 17/11/2026
+    'credit_card':   0.034485,  // Tarjeta crédito/débito/MODO: 2.85% + IVA 21% — Essential Plan desde 17/11/2026
+    'debit_card':    0.034485,
+    'modo':          0.034485,
   },
 
   // Datos de pago por proveedor (alias/CBU para transferencia)
@@ -520,6 +520,17 @@ function doGetInterno(e) {
   }
   if (action === 'confirmar')  return paginaConfirmar(orderId, token);
 
+  if (action === 'encuestaTarjeta') {
+    var res = _guardarEncuestaTarjeta(
+      e.parameter.e   || '',
+      e.parameter.n   || '',
+      e.parameter.sino || '',
+      e.parameter.nps  || '',
+      e.parameter.com  || ''
+    );
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   return HtmlService.createHtmlOutput('<p>URL inválida.</p>');
 }
 
@@ -634,7 +645,13 @@ function calcularAporteGrado(order) {
   var fechaOrden = order.created_at ? new Date(order.created_at) : new Date();
   var montoGrado   = 0;
   var montoEscuela = 0;
-  var nombresEscuelaFija = []; // productos cuyo 100% siempre va a escuela por config
+  var nombresEscuelaFija = [];
+
+  // Misma lógica de distribución proporcional del descuento que registrarEnVentas
+  var subtotalBruto = (order.products || []).reduce(function(sum, p) {
+    return sum + parseFloat(p.price || 0) * (parseInt(p.quantity || 1));
+  }, 0);
+  var orderTotal = parseFloat(order.total || 0);
 
   (order.products || []).forEach(function(p) {
     var precio = parseFloat(p.price || 0);
@@ -651,20 +668,21 @@ function calcularAporteGrado(order) {
              || null;
 
     if (!regla) return;
-    var subtotal = precio * qty;
+    // totalPagadoLinea: monto proporcional realmente cobrado (descuento DxC/cupón ya distribuido)
+    var proporcion       = subtotalBruto > 0 ? (precio * qty) / subtotalBruto : 1 / (order.products.length || 1);
+    var totalPagadoLinea = proporcion * orderTotal;
 
     if (regla.pctEscuela === 1) {
-      // Producto cuyo 100% va a escuela por definición — no aplica aporte a grado
       nombresEscuelaFija.push(nombre);
-      montoEscuela += subtotal;
+      montoEscuela += totalPagadoLinea;
     } else {
       if (gradoValido) {
-        montoGrado += subtotal * regla.pctGrado;
+        montoGrado += totalPagadoLinea * regla.pctGrado;
       }
       if (regla.pctEscuela !== null) {
-        montoEscuela += subtotal * regla.pctEscuela;
+        montoEscuela += totalPagadoLinea * regla.pctEscuela;
       } else {
-        montoEscuela += subtotal - (costo * qty) - (gradoValido ? subtotal * regla.pctGrado : 0);
+        montoEscuela += totalPagadoLinea - (costo * qty) - (gradoValido ? totalPagadoLinea * regla.pctGrado : 0);
       }
     }
   });
@@ -1221,6 +1239,8 @@ function reprocesarVentasTarjetaDesde(desdeStr, dryRun) {
   var config = leerConfigProductos();
   var filas  = 0;
 
+  var pedidoTotales = {};
+
   for (var i = 1; i < data.length; i++) {
     var row    = data[i];
     var metodo = String(row[17] || '').trim().toLowerCase();
@@ -1230,6 +1250,7 @@ function reprocesarVentasTarjetaDesde(desdeStr, dryRun) {
     var fecha    = rawFecha instanceof Date ? rawFecha : new Date(rawFecha);
     if (isNaN(fecha.getTime()) || fecha < desde) continue;
 
+    var nroPedido        = String(row[1] || '').trim();
     var FEE              = CONFIG.GATEWAY_FEES[metodo];
     var sku              = String(row[6]  || '').trim().toUpperCase();
     var marca            = String(row[24] || row[12] || '').trim().toUpperCase();
@@ -1250,20 +1271,33 @@ function reprocesarVentasTarjetaDesde(desdeStr, dryRun) {
 
     var aporteEscNuevo;
     if (regla && regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
-      aporteEscNuevo = aporteEscActual; // pctEscuela fijo: no cambia con el neto
+      aporteEscNuevo = aporteEscActual;
     } else {
       aporteEscNuevo = Math.max(0, Math.round(neto - costoTotal - aporteGrado));
     }
 
-    filas++;
-    Logger.log(
-      '[' + (dryRun ? 'DRY' : 'WRITE') + '] fila ' + (i + 1) +
-      ' pedido#' + row[1] + ' ' + metodo +
-      ' totalPagado=' + Math.round(totalPagadoLinea) +
-      ' fee ' + (parseFloat(row[16]) || 0).toFixed(0) + '→' + fee +
-      ' neto ' + (parseFloat(row[15]) || 0).toFixed(0) + '→' + Math.round(neto) +
+    if (!pedidoTotales[nroPedido]) {
+      pedidoTotales[nroPedido] = {
+        fecha:       Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+        comprador:   String(row[3] || ''),
+        metodo:      metodo,
+        totalPagado: 0,
+        feeNuevo:    0,
+        netoNuevo:   0,
+        lineas:      []
+      };
+    }
+    pedidoTotales[nroPedido].totalPagado += totalPagadoLinea;
+    pedidoTotales[nroPedido].feeNuevo    += fee;
+    pedidoTotales[nroPedido].netoNuevo   += neto;
+    pedidoTotales[nroPedido].lineas.push(
+      '    · ' + (row[5] || sku) + ' x' + qty +
+      ' pagado=' + Math.round(totalPagadoLinea) +
+      ' fee→' + fee +
       ' aporteEsc ' + aporteEscActual + '→' + aporteEscNuevo
     );
+
+    filas++;
 
     if (!dryRun) {
       sheet.getRange(i + 1, 16).setValue(neto);
@@ -1272,7 +1306,35 @@ function reprocesarVentasTarjetaDesde(desdeStr, dryRun) {
     }
   }
 
-  Logger.log('reprocesarVentasTarjetaDesde(' + desdeStr + '): ' + filas + ' fila(s) ' + (dryRun ? '(dry run)' : 'actualizadas'));
+  var nrosPedido      = Object.keys(pedidoTotales);
+  var granTotalPagado = 0;
+  var granTotalFee    = 0;
+  var granTotalNeto   = 0;
+
+  nrosPedido.forEach(function(nro) {
+    var p = pedidoTotales[nro];
+    granTotalPagado += p.totalPagado;
+    granTotalFee    += p.feeNuevo;
+    granTotalNeto   += p.netoNuevo;
+    Logger.log(
+      '━━ pedido#' + nro + '  ' + p.fecha + '  ' + p.comprador + '  [' + p.metodo + ']\n' +
+      p.lineas.join('\n') + '\n' +
+      '  TOTAL pedido: pagado=$' + Math.round(p.totalPagado) +
+      '  fee=$' + (Math.round(p.feeNuevo * 100) / 100) +
+      '  neto=$' + Math.round(p.netoNuevo)
+    );
+  });
+
+  Logger.log(
+    '══════════════════════════════════════════\n' +
+    'GRAN TOTAL (' + nrosPedido.length + ' pedidos)\n' +
+    '  Total pagado : $' + Math.round(granTotalPagado) + '\n' +
+    '  Fee total    : $' + (Math.round(granTotalFee * 100) / 100) + '  ← comparar con TiendaNube\n' +
+    '  Neto total   : $' + Math.round(granTotalNeto) + '\n' +
+    '══════════════════════════════════════════'
+  );
+
+  Logger.log('reprocesarVentasTarjetaDesde(' + desdeStr + '): ' + nrosPedido.length + ' pedido(s), ' + filas + ' fila(s) ' + (dryRun ? '(dry run)' : 'actualizadas'));
 }
 
 function reprocesarVentasTarjeta(dryRun) {
@@ -1338,6 +1400,184 @@ function reprocesarVentasTarjeta(dryRun) {
   Logger.log('reprocesarVentasTarjeta: ' + filas + ' fila(s) ' + (dryRun ? '(dry run, no se escribió nada)' : 'actualizadas'));
 }
 
+// ── Backfill fees wire_transfer ──────────────────────────────────────────────
+// Essential Plan desde 17/11/2026: wire_transfer pasó de 0 a 0.0121.
+// DryRun: loguea todas las ventas wire_transfer desde 17/11 con fee actual vs nuevo.
+// Por pedido: aplicar una vez revisado cada caso individualmente.
+function reprocesarWireTransferDesdeDryRun()    { reprocesarWireTransferDesde('2026-11-17', true);  }
+function reprocesarWireTransferDesdeEjecutar()  { reprocesarWireTransferDesde('2026-11-17', false); }
+
+function reprocesarWireTransferDesde(desdeStr, dryRun) {
+  var FEE    = CONFIG.GATEWAY_FEES['wire_transfer'];
+  var desde  = new Date(desdeStr + 'T00:00:00');
+  var sheet  = getVentasSheet();
+  var data   = sheet.getDataRange().getValues();
+  var config = leerConfigProductos();
+  var filas  = 0;
+
+  // Acumuladores por pedido para el resumen de control
+  var pedidoTotales = {}; // nroPedido → { fecha, comprador, totalPagado, feeNuevo, lineas }
+
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    var metodo = String(row[17] || '').trim().toLowerCase();
+    if (metodo !== 'wire_transfer') continue;
+
+    var rawFecha = row[0];
+    var fecha    = rawFecha instanceof Date ? rawFecha : new Date(rawFecha);
+    if (isNaN(fecha.getTime()) || fecha < desde) continue;
+
+    var nroPedido        = String(row[1] || '').trim();
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    var costoUnitario    = parseFloat(row[13]) || 0;
+    var qty              = parseFloat(row[7])  || 1;
+    var costoTotal       = costoUnitario * qty;
+    var aporteGrado      = parseFloat(row[20]) || 0;
+    var aporteEscActual  = parseFloat(row[22]) || 0;
+    var sku              = String(row[6]  || '').trim().toUpperCase();
+    var marca            = String(row[24] || row[12] || '').trim().toUpperCase();
+
+    var fee  = Math.round(totalPagadoLinea * FEE * 100) / 100;
+    var neto = totalPagadoLinea - fee;
+
+    var regla = buscarRegla(config, sku, fecha)
+             || buscarRegla(config, 'MARCA:' + marca, fecha)
+             || buscarRegla(config, 'DEFAULT', fecha)
+             || null;
+
+    var aporteEscNuevo;
+    if (regla && regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+      aporteEscNuevo = aporteEscActual;
+    } else {
+      aporteEscNuevo = Math.max(0, Math.round(neto - costoTotal - aporteGrado));
+    }
+
+    // Acumular para el resumen por pedido
+    if (!pedidoTotales[nroPedido]) {
+      pedidoTotales[nroPedido] = {
+        fecha:        Utilities.formatDate(fecha, 'America/Argentina/Cordoba', 'dd/MM/yyyy'),
+        comprador:    String(row[3] || ''),
+        totalPagado:  0,
+        feeNuevo:     0,
+        netoNuevo:    0,
+        lineas:       []
+      };
+    }
+    pedidoTotales[nroPedido].totalPagado += totalPagadoLinea;
+    pedidoTotales[nroPedido].feeNuevo    += fee;
+    pedidoTotales[nroPedido].netoNuevo   += neto;
+    pedidoTotales[nroPedido].lineas.push(
+      '    · ' + (row[5] || sku) + ' x' + qty +
+      ' pagado=' + Math.round(totalPagadoLinea) +
+      ' fee→' + fee +
+      ' aporteEsc ' + aporteEscActual + '→' + aporteEscNuevo
+    );
+
+    filas++;
+
+    if (!dryRun) {
+      sheet.getRange(i + 1, 16).setValue(neto);
+      sheet.getRange(i + 1, 17).setValue(fee);
+      sheet.getRange(i + 1, 23).setValue(aporteEscNuevo);
+    }
+  }
+
+  // Log agrupado por pedido con totales para control contra TiendaNube
+  var nrosPedido      = Object.keys(pedidoTotales);
+  var granTotalPagado = 0;
+  var granTotalFee    = 0;
+  var granTotalNeto   = 0;
+
+  nrosPedido.forEach(function(nro) {
+    var p = pedidoTotales[nro];
+    granTotalPagado += p.totalPagado;
+    granTotalFee    += p.feeNuevo;
+    granTotalNeto   += p.netoNuevo;
+    Logger.log(
+      '━━ pedido#' + nro + '  ' + p.fecha + '  ' + p.comprador + '\n' +
+      p.lineas.join('\n') + '\n' +
+      '  TOTAL pedido: pagado=$' + Math.round(p.totalPagado) +
+      '  fee=$' + (Math.round(p.feeNuevo * 100) / 100) +
+      '  neto=$' + Math.round(p.netoNuevo)
+    );
+  });
+
+  Logger.log(
+    '══════════════════════════════════════════\n' +
+    'GRAN TOTAL (' + nrosPedido.length + ' pedidos)\n' +
+    '  Total pagado : $' + Math.round(granTotalPagado) + '\n' +
+    '  Fee total    : $' + (Math.round(granTotalFee * 100) / 100) + '  ← comparar con TiendaNube\n' +
+    '  Neto total   : $' + Math.round(granTotalNeto) + '\n' +
+    '══════════════════════════════════════════'
+  );
+
+  Logger.log(
+    'reprocesarWireTransferDesde: ' + nrosPedido.length + ' pedido(s), ' +
+    filas + ' fila(s) ' + (dryRun ? '(dry run)' : 'actualizadas')
+  );
+}
+
+// Aplica el fee wire_transfer a todas las líneas de un pedido específico.
+// Uso: reprocesarWireTransferPorPedido(869)
+function reprocesarWireTransferPorPedido(nroPedido) {
+  var FEE   = CONFIG.GATEWAY_FEES['wire_transfer'];
+  var sheet = getVentasSheet();
+  var data  = sheet.getDataRange().getValues();
+  var config = leerConfigProductos();
+  var filas  = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    if (String(row[1] || '').trim() !== String(nroPedido)) continue;
+
+    var metodo = String(row[17] || '').trim().toLowerCase();
+    if (metodo !== 'wire_transfer') {
+      Logger.log('Fila ' + (i + 1) + ' pedido#' + nroPedido + ' método=' + metodo + ' — no es wire_transfer, se omite');
+      continue;
+    }
+
+    var fecha            = row[0] instanceof Date ? row[0] : new Date(row[0]);
+    var totalPagadoLinea = parseFloat(row[14]) || 0;
+    var costoUnitario    = parseFloat(row[13]) || 0;
+    var qty              = parseFloat(row[7])  || 1;
+    var costoTotal       = costoUnitario * qty;
+    var aporteGrado      = parseFloat(row[20]) || 0;
+    var aporteEscActual  = parseFloat(row[22]) || 0;
+    var sku              = String(row[6]  || '').trim().toUpperCase();
+    var marca            = String(row[24] || row[12] || '').trim().toUpperCase();
+
+    var fee  = Math.round(totalPagadoLinea * FEE * 100) / 100;
+    var neto = totalPagadoLinea - fee;
+
+    var regla = buscarRegla(config, sku, fecha)
+             || buscarRegla(config, 'MARCA:' + marca, fecha)
+             || buscarRegla(config, 'DEFAULT', fecha)
+             || null;
+
+    var aporteEscNuevo;
+    if (regla && regla.pctEscuela !== null && regla.pctEscuela !== undefined) {
+      aporteEscNuevo = aporteEscActual;
+    } else {
+      aporteEscNuevo = Math.max(0, Math.round(neto - costoTotal - aporteGrado));
+    }
+
+    filas++;
+    Logger.log(
+      'pedido#' + nroPedido + ' fila ' + (i + 1) +
+      ' producto=' + (row[5] || '') +
+      ' totalPagado=' + Math.round(totalPagadoLinea) +
+      ' fee 0→' + fee + ' neto ' + Math.round(totalPagadoLinea) + '→' + Math.round(neto) +
+      ' aporteEsc ' + aporteEscActual + '→' + aporteEscNuevo
+    );
+
+    sheet.getRange(i + 1, 16).setValue(neto);
+    sheet.getRange(i + 1, 17).setValue(fee);
+    sheet.getRange(i + 1, 23).setValue(aporteEscNuevo);
+  }
+
+  Logger.log('reprocesarWireTransferPorPedido(' + nroPedido + '): ' + filas + ' fila(s) actualizadas');
+}
+
 // ── Reprocesar aporte escuela Nazareno ───────────────────────────────────────
 // Corrige col W (aporte_escuela) en ventas de NAZARENO donde se usó un %
 // incorrecto. La regla correcta es pctEscuela=0.05 (5% del totalPagadoLinea).
@@ -1386,6 +1626,99 @@ function reprocesarAporteNazareno(dryRun) {
     ' | dif total acumulada=$' + Math.round(totalDif) +
     (dryRun ? ' (dry run, no se escribió nada)' : ' — filas actualizadas')
   );
+}
+
+// ── Encuesta método de pago ───────────────────────────────────────────────────
+// Enviar el viernes 27/11/2026 a compradores con tarjeta desde 17/11.
+// 1. Correr enviarEncuestaMetodoPagoDryRun() para ver destinatarios
+// 2. Correr enviarEncuestaMetodoPagoEjecutar() para enviar
+function enviarEncuestaMetodoPagoDryRun()   { _encuestaMetodoPago(true);  }
+function enviarEncuestaMetodoPagoEjecutar() { _encuestaMetodoPago(false); }
+
+var ENCUESTA_PAGE_URL = 'https://escuela-dandelion.github.io/Comision-Recursos/encuesta-tarjeta.html';
+
+function _encuestaMetodoPago(dryRun) {
+  var sheet   = getVentasSheet();
+  var data    = sheet.getDataRange().getValues();
+  var METODOS = { 'credit_card': true, 'debit_card': true, 'modo': true };
+  var desde   = new Date('2026-11-17T00:00:00');
+
+  var compradores = {};
+  for (var i = 1; i < data.length; i++) {
+    var row    = data[i];
+    var metodo = String(row[17] || '').trim().toLowerCase();
+    if (!METODOS[metodo]) continue;
+    var fecha = row[0] instanceof Date ? row[0] : new Date(row[0]);
+    if (fecha < desde) continue;
+    var email  = String(row[4] || '').trim();
+    var nombre = String(row[3] || '').trim().split(' ')[0];
+    if (email && email.indexOf('@') !== -1 && !compradores[email]) {
+      compradores[email] = nombre || 'comprador';
+    }
+  }
+
+  var asunto   = 'Queremos escuchar tu opinion al usar Tarjeta';
+  var enviados = 0;
+
+  Object.keys(compradores).forEach(function(email) {
+    var nombre = compradores[email];
+    var link   = ENCUESTA_PAGE_URL
+      + '?e=' + encodeURIComponent(email)
+      + '&n=' + encodeURIComponent(nombre);
+    Logger.log((dryRun ? '[DRY] ' : '[SEND] ') + nombre + ' <' + email + '>  ' + link);
+    if (!dryRun) {
+      var html  = _htmlEncuestaEmail(nombre, link);
+      var plano = 'Hola ' + nombre + '! Te escribimos con una consulta corta. Entrá al link para responder: ' + link;
+      GmailApp.sendEmail(email, asunto, plano, {
+        htmlBody: _encodeEmojisHtml(html),
+        from:     'tiendavirtual.dientedeleon@gmail.com',
+        name:     'Tienda Diente de León'
+      });
+      enviados++;
+    }
+  });
+
+  Logger.log('_encuestaMetodoPago: ' + Object.keys(compradores).length + ' destinatarios' +
+    (dryRun ? ' (dry run)' : ' — ' + enviados + ' enviados'));
+}
+
+function _htmlEncuestaEmail(nombre, link) {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
+    '<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px 16px">' +
+    '<div style="text-align:center;padding:16px 0 28px 0">' +
+    '<img src="' + LOGO_B64 + '" style="max-width:220px;width:60%" alt="Tienda Diente de León">' +
+    '</div>' +
+    '<p style="color:#333;line-height:1.7;margin:0 0 14px 0">Hola, ' + nombre + '!</p>' +
+    '<p style="color:#333;line-height:1.7;margin:0 0 20px 0">Estamos evaluando si seguir ofreciendo débito y crédito en la tienda para el año que viene.</p>' +
+    '<p style="color:#1a5c2a;font-weight:700;line-height:1.7;margin:0 0 20px 0">Hubieses comprado igual si solo ofrecíamos transferencia, o perdíamos la venta?</p>' +
+    '<p style="color:#333;line-height:1.7;margin:0 0 28px 0">Son 3 preguntas, menos de 1 minuto.</p>' +
+    '<div style="text-align:center;margin:0 0 28px 0">' +
+    '<a href="' + link + '" style="display:inline-block;padding:16px 36px;background:#2e7d32;color:#fff;text-decoration:none;border-radius:12px;font-size:16px;font-weight:700">Responder encuesta</a>' +
+    '</div>' +
+    '<p style="color:#555;margin:0">El equipo de Diente de León (Comisión de Recursos)</p>' +
+    '<hr style="border:none;border-top:1px solid #eee;margin:28px 0">' +
+    '<p style="font-size:11px;color:#aaa;margin:0;text-align:center">Tienda Diente de León — Escuela Dandelion Waldorf, Córdoba</p>' +
+    '</div></body></html>';
+}
+
+function _guardarEncuestaTarjeta(emailEnc, nombre, sino, nps, comentario) {
+  try {
+    var email = decodeURIComponent(emailEnc);
+    if (!sino || !nps) return { ok: false, error: 'Faltan campos obligatorios' };
+    var ss    = SpreadsheetApp.openById(CONFIG.VENTAS_SHEET_ID);
+    var sheet = ss.getSheetByName('EncuestaTarjeta');
+    if (!sheet) {
+      sheet = ss.insertSheet('EncuestaTarjeta');
+      sheet.appendRow(['Fecha', 'Email', 'Nombre', 'Compra sin tarjeta', 'NPS', 'Comentario']);
+      sheet.setFrozenRows(1);
+      sheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    }
+    sheet.appendRow([new Date(), email, decodeURIComponent(nombre), sino, parseInt(nps) || '', decodeURIComponent(comentario)]);
+    return { ok: true };
+  } catch(e) {
+    Logger.log('_guardarEncuestaTarjeta error: ' + e.message);
+    return { ok: false, error: e.message };
+  }
 }
 
 function yaFueEnviado(orderId) {
