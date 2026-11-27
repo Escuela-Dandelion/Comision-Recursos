@@ -237,7 +237,12 @@ textarea.field { min-height: 90px; resize: vertical; }
 }
 
 @media (max-width: 700px) {
-  .panel { width: 100%; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 50; }
+  .panel { width: 100%; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 50;
+           overflow: hidden; display: none; flex-direction: column; }
+  .panel.visible { display: flex; }
+  .panel-header { flex-shrink: 0; position: relative; }
+  .panel-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                padding-bottom: env(safe-area-inset-bottom, 20px); }
   .variantes-tabla { display: none; }
 }
 </style>
@@ -294,6 +299,7 @@ textarea.field { min-height: 90px; resize: vertical; }
         <h2 id="panel-titulo">Editar producto</h2>
         <button class="btn-cerrar" onclick="cerrarPanel()" title="Cerrar">✕</button>
       </div>
+      <div class="panel-body">
 
       <!-- Nombre y descripción -->
       <div class="panel-section">
@@ -349,6 +355,7 @@ textarea.field { min-height: 90px; resize: vertical; }
         <button class="btn-guardar" id="btn-guardar-stock" onclick="guardarStock()">Guardar stock</button>
         <span class="save-status" id="st-stock"></span>
       </div>
+      </div><!-- /panel-body -->
     </div>
   </div>
 </div>
