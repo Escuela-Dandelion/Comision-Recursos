@@ -5005,11 +5005,8 @@ function _getSolDeOroProductos() {
     .filter(function(p) {
       var brand = typeof p.brand === 'string' ? p.brand.toLowerCase() : '';
       var nombre = typeof p.name === 'object' ? (p.name.es || '') : (p.name || '');
-      var hasSolDePapel = brand.indexOf('sol de papel') >= 0
+      return brand.indexOf('sol de papel') >= 0
         || (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('SOL_DE_PAPEL_') === 0; });
-      var esAgenda = nombre.toLowerCase().indexOf('agenda') >= 0
-        || (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('AGENDA') >= 0; });
-      return hasSolDePapel && esAgenda;
     })
     .map(function(p) {
       var nombre = typeof p.name === 'object' ? (p.name.es || Object.values(p.name)[0] || '') : (p.name || '');
