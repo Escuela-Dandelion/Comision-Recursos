@@ -54,7 +54,7 @@ var CONFIG = {
   DIGITAL_PRODUCT_IDS: ['371016918'],
 
   // Mercado Pago — ventas presenciales
-  MP_ACCESS_TOKEN: _P.getProperty('MP_ACCESS_TOKEN') || _P.getProperty('MP_ACCESS_TOKEN_TEST'),
+  MP_ACCESS_TOKEN: _P.getProperty('MP_ACCESS_TOKEN'),
   VENTA_PRESENCIAL_URL: 'https://escuela-dandelion.github.io/Comision-Recursos/venta-presencial.html',
 
   STAFF_NAMES: [
@@ -5025,8 +5025,8 @@ function _getSolDeOroProductos() {
 
 // Crea una preferencia de pago en MP para una variante específica.
 // Retorna { ok, init_point, nombre, precio } o { ok: false, error }.
-function _crearMPPreferencia(varianteId, productoId) {
-  var token = CONFIG.MP_ACCESS_TOKEN;
+function _crearMPPreferencia(varianteId, productoId, token) {
+  token = token || CONFIG.MP_ACCESS_TOKEN;
   if (!token) return { ok: false, error: 'MP_ACCESS_TOKEN no configurado en Script Properties' };
 
   var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
@@ -5152,12 +5152,23 @@ function _enviarMailPresencial(email, nombre, producto, precio) {
   } catch(err) { Logger.log('_enviarMailPresencial error: ' + err); }
 }
 
-// Test: imprime en log los productos Sol de Oro encontrados.
+// Test: lista productos Sol de Oro y crea una preferencia de prueba con MP_ACCESS_TOKEN_TEST.
 function testGetSolDeOroProductos() {
+  var tokenTest = _P.getProperty('MP_ACCESS_TOKEN_TEST');
   var prods = _getSolDeOroProductos();
-  Logger.log('Sol de Oro productos encontrados: ' + prods.length);
+  Logger.log('Sol de Oro — ' + prods.length + ' producto(s):');
   prods.forEach(function(p) {
-    Logger.log('  ' + p.id + ' — ' + p.nombre + ' (' + p.variantes.length + ' variantes)');
-    p.variantes.forEach(function(v) { Logger.log('    variante ' + v.id + ': ' + v.nombre + ' $' + v.precio + ' [' + v.sku + ']'); });
+    Logger.log('  PRODUCTO ' + p.id + ': ' + p.nombre);
+    p.variantes.forEach(function(v) {
+      Logger.log('    variante ' + v.id + ': ' + v.nombre + ' — $' + v.precio + ' [' + v.sku + ']');
+    });
   });
+  if (!tokenTest) { Logger.log('AVISO: no hay MP_ACCESS_TOKEN_TEST, no se prueba creación de preferencia.'); return; }
+  if (prods.length === 0 || prods[0].variantes.length === 0) { Logger.log('Sin variantes para probar.'); return; }
+  var primera = prods[0];
+  var variante = primera.variantes[0];
+  Logger.log('\nProbando preferencia MP (TEST) para: ' + variante.nombre + ' $' + variante.precio);
+  var res = _crearMPPreferencia(String(variante.id), String(primera.id), tokenTest);
+  Logger.log('Resultado: ' + JSON.stringify(res));
+  if (res.ok) Logger.log('Sandbox URL: ' + res.sandbox_init_point);
 }
