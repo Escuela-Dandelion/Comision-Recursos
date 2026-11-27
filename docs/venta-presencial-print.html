@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRs Venta Presencial — Sol de Oro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; padding: 24px; color: #1a1a1a; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .topbar h1 { font-size: 18px; font-weight: 800; }
+    .topbar p { font-size: 13px; color: #6b7280; margin-top: 2px; }
+    .btn-print { padding: 10px 22px; background: #2e7d32; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-print:hover { background: #1a5c2a; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+    .card {
+      background: #fff; border-radius: 16px; padding: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .card img.prod-img { width: 100%; border-radius: 10px; object-fit: cover; height: 160px; margin-bottom: 14px; }
+    .card-nombre { font-size: 15px; font-weight: 800; margin-bottom: 4px; color: #1a1a1a; }
+    .card-brand { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; margin-bottom: 12px; }
+    .variantes-lista { width: 100%; margin-bottom: 14px; }
+    .variante-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    .variante-row:last-child { border-bottom: none; }
+    .variante-row .vnombre { color: #374151; font-weight: 500; }
+    .variante-row .vprecio { color: #1a5c2a; font-weight: 700; }
+    .qr-wrap { margin-top: 8px; }
+    .qr-wrap img { width: 160px; height: 160px; border-radius: 8px; }
+    .qr-label { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+
+    #cargando { text-align: center; padding: 60px 0; font-size: 15px; color: #6b7280; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #e0e0e0; border-top-color: #2e7d32; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .topbar { display: none; }
+      .grid { gap: 12px; grid-template-columns: repeat(3, 1fr); }
+      .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; padding: 14px; }
+      .card img.prod-img { height: 120px; }
+      .qr-wrap img { width: 130px; height: 130px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Tienda Diente de León — Agendas Sol de Oro</h1>
+    <p>Hoja de venta presencial · Escuela Dandelion Waldorf, Córdoba</p>
+  </div>
+  <button class="btn-print" onclick="window.print()">Imprimir</button>
+</div>
+
+<div id="cargando">
+  <div class="spinner"></div>
+  <p>Cargando productos…</p>
+</div>
+
+<div class="grid" id="grid" style="display:none"></div>
+
+<script>
+var GAS_URL  = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var BASE_URL = 'https://escuela-dandelion.github.io/Comision-Recursos/venta-presencial.html';
+
+fetch(GAS_URL + '?action=getSolDeOroProductos', { redirect: 'follow' })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    document.getElementById('cargando').style.display = 'none';
+    if (!d.ok || !d.productos || d.productos.length === 0) {
+      document.getElementById('cargando').style.display = 'block';
+      document.getElementById('cargando').innerHTML = '<p style="color:#b91c1c">No se encontraron productos Sol de Oro publicados.</p>';
+      return;
+    }
+    var grid = document.getElementById('grid');
+    grid.style.display = 'grid';
+    d.productos.forEach(function(p) {
+      var url = BASE_URL + '?p=' + p.id;
+      var qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=' + encodeURIComponent(url);
+
+      var variantes = p.variantes.map(function(v) {
+        return '<div class="variante-row"><span class="vnombre">' + esc(v.nombre) + '</span><span class="vprecio">$' + Math.round(v.precio).toLocaleString('es-AR') + '</span></div>';
+      }).join('');
+
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML =
+        (p.imagen ? '<img class="prod-img" src="' + esc(p.imagen) + '" alt="' + esc(p.nombre) + '">' : '') +
+        '<div class="card-nombre">' + esc(p.nombre) + '</div>' +
+        '<div class="card-brand">Sol de Oro</div>' +
+        '<div class="variantes-lista">' + variantes + '</div>' +
+        '<div class="qr-wrap"><img src="' + qrSrc + '" alt="QR"><div class="qr-label">Escaneá para pagar</div></div>';
+      grid.appendChild(card);
+    });
+  })
+  .catch(function() {
+    document.getElementById('cargando').innerHTML = '<p style="color:#b91c1c">Error de conexión.</p>';
+  });
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

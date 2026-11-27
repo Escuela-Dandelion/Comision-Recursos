@@ -1,4 +1,4 @@
-// v2026-11-24h — roles FGP_EXT (externos sin acceso a precios/dashboards/WA) y FGP_DIG (digitales)
+// v2026-11-27a — ventas presenciales QR: MP webhook → orden TN → Ventas sheet
 // Script Properties requeridas (Proyecto 1 — retiro_qr + checkStock):
 //   TN_API_TOKEN     → token de TiendaNube
 //   TN_CLIENT_ID     → App ID de la app en partners.tiendanube.com
@@ -53,6 +53,10 @@ var CONFIG = {
   // Agregar acá cada nuevo producto digital creado en TiendaNube
   DIGITAL_PRODUCT_IDS: ['371016918'],
 
+  // Mercado Pago — ventas presenciales
+  MP_ACCESS_TOKEN: _P.getProperty('MP_ACCESS_TOKEN') || _P.getProperty('MP_ACCESS_TOKEN_TEST'),
+  VENTA_PRESENCIAL_URL: 'https://escuela-dandelion.github.io/Comision-Recursos/venta-presencial.html',
+
   STAFF_NAMES: [
     'Yuliana.Longhi',
     'Maria.Martini',
@@ -90,6 +94,12 @@ function doPost(e) {
   try {
     var body   = JSON.parse(e.postData.contents);
     var action = body.action || '';
+
+    // Webhook de Mercado Pago — no tiene campo action ni event
+    if (body.type === 'payment' && body.data && body.data.id) {
+      _handleMPWebhook(String(body.data.id));
+      return ContentService.createTextOutput('OK');
+    }
 
     if (action === 'update_producto') {
       var res = apiUpdateProducto(body.email || '', body.producto_id || '', body.nombre, body.descripcion);
@@ -528,6 +538,20 @@ function doGetInterno(e) {
       e.parameter.nps  || '',
       e.parameter.com  || ''
     );
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'getSolDeOroProductos') {
+    var prods = _getSolDeOroProductos();
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, productos: prods }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'crearPagoPresencial') {
+    var varId  = e.parameter.variante_id  || '';
+    var prodId = e.parameter.producto_id  || '';
+    if (!varId || !prodId) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Faltan parámetros' })).setMimeType(ContentService.MimeType.JSON);
+    var res = _crearMPPreferencia(varId, prodId);
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -4964,4 +4988,176 @@ function reprocesarPedidosPendientes() {
     Utilities.sleep(1000); // evitar rate limit
   });
   Logger.log('Reprocesamiento terminado.');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  VENTAS PRESENCIALES QR — Mercado Pago → TiendaNube
+// ═══════════════════════════════════════════════════════════
+
+// Devuelve todos los productos Sol de Oro publicados con sus variantes y precios.
+function _getSolDeOroProductos() {
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&published=true';
+  var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) { Logger.log('_getSolDeOroProductos error: ' + resp.getContentText()); return []; }
+  var products = JSON.parse(resp.getContentText());
+  return products
+    .filter(function(p) {
+      var brand = typeof p.brand === 'string' ? p.brand : '';
+      if (brand.toLowerCase().indexOf('sol de oro') >= 0) return true;
+      return (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('SOL_DE_ORO_') === 0; });
+    })
+    .map(function(p) {
+      var nombre = typeof p.name === 'object' ? (p.name.es || Object.values(p.name)[0] || '') : (p.name || '');
+      var imagen = (p.images && p.images.length > 0) ? p.images[0].src : '';
+      var variantes = (p.variants || [])
+        .filter(function(v) { return v.visible !== false; })
+        .map(function(v) {
+          var vNom = '';
+          if (v.values && v.values.length > 0) {
+            vNom = v.values.map(function(x) { return typeof x === 'object' ? (x.es || Object.values(x)[0]) : x; }).join(' / ');
+          }
+          return { id: v.id, sku: v.sku || '', nombre: vNom || nombre, precio: parseFloat(v.price || 0) };
+        });
+      return { id: p.id, nombre: nombre, imagen: imagen, variantes: variantes };
+    });
+}
+
+// Crea una preferencia de pago en MP para una variante específica.
+// Retorna { ok, init_point, nombre, precio } o { ok: false, error }.
+function _crearMPPreferencia(varianteId, productoId) {
+  var token = CONFIG.MP_ACCESS_TOKEN;
+  if (!token) return { ok: false, error: 'MP_ACCESS_TOKEN no configurado en Script Properties' };
+
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products/' + productoId;
+  var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) return { ok: false, error: 'Producto no encontrado en TN' };
+  var producto = JSON.parse(resp.getContentText());
+
+  var variante = null;
+  (producto.variants || []).forEach(function(v) { if (String(v.id) === String(varianteId)) variante = v; });
+  if (!variante) return { ok: false, error: 'Variante no encontrada' };
+
+  var prodNombre = typeof producto.name === 'object' ? (producto.name.es || Object.values(producto.name)[0] || '') : (producto.name || '');
+  var varNombre  = '';
+  if (variante.values && variante.values.length > 0) {
+    varNombre = variante.values.map(function(x) { return typeof x === 'object' ? (x.es || Object.values(x)[0]) : x; }).join(' / ');
+  }
+  var titulo = prodNombre + (varNombre ? ' (' + varNombre + ')' : '');
+  var precio  = parseFloat(variante.price || 0);
+
+  var pref = {
+    items: [{ title: titulo, quantity: 1, unit_price: precio, currency_id: 'ARS' }],
+    external_reference: varianteId + '|' + productoId,
+    notification_url: CONFIG.GAS_URL,
+    back_urls: {
+      success: CONFIG.VENTA_PRESENCIAL_URL + '?status=ok&prod=' + encodeURIComponent(titulo),
+      failure: CONFIG.VENTA_PRESENCIAL_URL + '?status=error',
+      pending: CONFIG.VENTA_PRESENCIAL_URL + '?status=pending'
+    },
+    auto_return: 'approved',
+    payment_methods: { installments: 1 }
+  };
+
+  var mpResp = UrlFetchApp.fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'post',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    payload: JSON.stringify(pref),
+    muteHttpExceptions: true
+  });
+  if (mpResp.getResponseCode() !== 201) {
+    Logger.log('_crearMPPreferencia error ' + mpResp.getResponseCode() + ': ' + mpResp.getContentText());
+    return { ok: false, error: 'Error MP ' + mpResp.getResponseCode() };
+  }
+  var prefData = JSON.parse(mpResp.getContentText());
+  return { ok: true, init_point: prefData.init_point, sandbox_init_point: prefData.sandbox_init_point, nombre: titulo, precio: precio };
+}
+
+// Recibe el ID de un pago de MP aprobado, crea la orden en TN y envía mail.
+function _handleMPWebhook(paymentId) {
+  var token = CONFIG.MP_ACCESS_TOKEN;
+  if (!token) { Logger.log('_handleMPWebhook: sin MP_ACCESS_TOKEN'); return; }
+
+  var resp = UrlFetchApp.fetch('https://api.mercadopago.com/v1/payments/' + paymentId, {
+    headers: { 'Authorization': 'Bearer ' + token },
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() !== 200) { Logger.log('_handleMPWebhook: error fetching payment ' + paymentId); return; }
+  var pago = JSON.parse(resp.getContentText());
+
+  if (pago.status !== 'approved') { Logger.log('_handleMPWebhook: pago ' + paymentId + ' estado=' + pago.status); return; }
+
+  var extRef   = String(pago.external_reference || '');
+  var parts    = extRef.split('|');
+  var varId    = parts[0];
+  var prodId   = parts[1] || '';
+  if (!varId) { Logger.log('_handleMPWebhook: sin external_reference'); return; }
+
+  var payer    = pago.payer || {};
+  var email    = payer.email || '';
+  var nombre   = ((payer.first_name || '') + ' ' + (payer.last_name || '')).trim() || email || 'Comprador presencial';
+  var precio   = parseFloat(pago.transaction_amount || 0);
+  var titulo   = '';
+  if (pago.additional_info && pago.additional_info.items && pago.additional_info.items[0]) {
+    titulo = pago.additional_info.items[0].title || '';
+  }
+
+  var res = _crearOrdenTNPresencial(varId, prodId, precio, titulo, nombre, email);
+  Logger.log('_handleMPWebhook: pago ' + paymentId + ' → TN orden ' + (res.ordenNumero || res.error || '?'));
+
+  if (email) _enviarMailPresencial(email, nombre.split(' ')[0] || nombre, titulo, precio);
+}
+
+// Crea una orden pagada en TiendaNube para una venta presencial.
+function _crearOrdenTNPresencial(varId, prodId, precio, titulo, nombre, email) {
+  var body = {
+    products: [{ variant_id: parseInt(varId), quantity: 1, price: String(precio), name: { es: titulo || 'Venta presencial' } }],
+    contact_name:  nombre || 'Comprador presencial',
+    contact_email: email  || 'ventas-presenciales@tiendadientedeleon',
+    payment_status: 'paid',
+    payment_details: { method: 'mercadopago' },
+    note: 'Venta presencial via QR — Mercado Pago'
+  };
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/orders';
+  var resp = UrlFetchApp.fetch(url, {
+    method: 'post', headers: _tnHeaders(),
+    payload: JSON.stringify(body), muteHttpExceptions: true
+  });
+  var code = resp.getResponseCode();
+  if (code !== 201 && code !== 200) {
+    Logger.log('_crearOrdenTNPresencial error ' + code + ': ' + resp.getContentText());
+    return { ok: false, error: 'TN API ' + code };
+  }
+  var orden = JSON.parse(resp.getContentText());
+  return { ok: true, ordenId: orden.id, ordenNumero: orden.number };
+}
+
+// Mail de agradecimiento al comprador presencial.
+function _enviarMailPresencial(email, nombre, producto, precio) {
+  try {
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:sans-serif;color:#333;max-width:520px;margin:auto;padding:24px 16px">'
+      + '<div style="text-align:center;margin-bottom:24px"><img src="' + LOGO_B64 + '" style="max-width:160px"></div>'
+      + '<p>Hola, ' + nombre + '!</p>'
+      + '<p>Gracias por tu compra de <strong>' + producto + '</strong>'
+      + (precio ? ' ($​' + Math.round(precio).toLocaleString('es-AR') + ')' : '') + '.</p>'
+      + '<p>Tu compra es un aporte directo a la comunidad educativa de la Escuela Dandelion Waldorf. Gracias por acompañarnos.</p>'
+      + '<p style="color:#555">El equipo de Diente de León (Comisión de Recursos)</p>'
+      + '<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
+      + '<p style="font-size:11px;color:#aaa;text-align:center">Tienda Diente de León — Escuela Dandelion Waldorf, Córdoba</p>'
+      + '</body></html>';
+    GmailApp.sendEmail(email, 'Gracias por tu compra en la Tienda Diente de León',
+      'Hola ' + nombre + '! Gracias por tu compra de ' + producto + ' en la Tienda Diente de León. Comisión de Recursos, Escuela Dandelion Waldorf.',
+      { htmlBody: html, name: 'El equipo de Diente de León (Comisión de Recursos)' }
+    );
+  } catch(err) { Logger.log('_enviarMailPresencial error: ' + err); }
+}
+
+// Test: imprime en log los productos Sol de Oro encontrados.
+function testGetSolDeOroProductos() {
+  var prods = _getSolDeOroProductos();
+  Logger.log('Sol de Oro productos encontrados: ' + prods.length);
+  prods.forEach(function(p) {
+    Logger.log('  ' + p.id + ' — ' + p.nombre + ' (' + p.variantes.length + ' variantes)');
+    p.variantes.forEach(function(v) { Logger.log('    variante ' + v.id + ': ' + v.nombre + ' $' + v.precio + ' [' + v.sku + ']'); });
+  });
 }

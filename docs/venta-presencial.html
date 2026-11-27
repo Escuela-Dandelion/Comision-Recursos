@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tienda Diente de León — Pago presencial</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f6f9; min-height: 100vh;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 28px 16px;
+    }
+    .card {
+      background: #fff; border-radius: 20px; padding: 32px 24px;
+      width: 100%; max-width: 440px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo img { max-width: 140px; }
+
+    /* ── Selector de producto ── */
+    .prod-titulo { font-size: 18px; font-weight: 800; color: #1a1a1a; margin-bottom: 20px; }
+    .prod-img { width: 100%; border-radius: 12px; margin-bottom: 20px; object-fit: cover; max-height: 200px; }
+    .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; display: block; margin-bottom: 10px; }
+
+    .variante-wrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 24px; }
+    .variante-btn {
+      padding: 10px 8px; border-radius: 10px; border: 2px solid #d1d5db;
+      background: #fff; cursor: pointer; text-align: center;
+      font-size: 13px; font-weight: 600; color: #374151; transition: all .15s;
+      line-height: 1.4;
+    }
+    .variante-btn:hover { border-color: #3a7d44; color: #3a7d44; }
+    .variante-btn.activo { background: #f0f7e6; border-color: #3a7d44; color: #1a5c2a; }
+    .variante-precio { font-size: 11px; font-weight: 400; color: #6b7280; display: block; margin-top: 2px; }
+
+    .precio-total { font-size: 28px; font-weight: 800; color: #1a5c2a; text-align: center; margin-bottom: 24px; min-height: 36px; }
+
+    .btn-pagar {
+      width: 100%; padding: 16px; background: #009ee3; color: #fff;
+      border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-pagar:hover { background: #0080c8; }
+    .btn-pagar:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-pagar svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .btn-pagar span { font-size: 11px; font-weight: 400; opacity: .85; }
+
+    /* ── Estados ── */
+    #cargando, #estado-ok, #estado-error, #estado-pending { text-align: center; padding: 32px 0; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #3a7d44; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .estado-icon { font-size: 52px; margin-bottom: 14px; }
+    .estado-titulo { font-size: 20px; font-weight: 800; color: #1a5c2a; margin-bottom: 8px; }
+    .estado-sub { font-size: 14px; color: #6b7280; line-height: 1.6; }
+    .error-titulo { color: #b91c1c; }
+    .pending-titulo { color: #d97706; }
+    .btn-volver { margin-top: 20px; padding: 10px 24px; border-radius: 10px; border: 2px solid #d1d5db; background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; color: #374151; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <img src="Logo_Diente_de_Leon.png" alt="Tienda Diente de León">
+  </div>
+
+  <div id="cargando">
+    <div class="spinner"></div>
+    <p style="color:#6b7280;font-size:14px">Cargando productos…</p>
+  </div>
+
+  <div id="formulario" style="display:none">
+    <img id="prod-img" class="prod-img" src="" alt="" style="display:none">
+    <div class="prod-titulo" id="prod-titulo"></div>
+    <span class="label">Elegí tu agenda</span>
+    <div class="variante-wrap" id="variante-wrap"></div>
+    <div class="precio-total" id="precio-total"></div>
+    <button class="btn-pagar" id="btn-pagar" disabled onclick="pagar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <div><div>Pagar con Mercado Pago</div><span>Débito · Crédito · Billetera</span></div>
+    </button>
+  </div>
+
+  <div id="estado-ok" style="display:none">
+    <div class="estado-icon">🌻</div>
+    <div class="estado-titulo">¡Gracias por tu compra!</div>
+    <p class="estado-sub">Tu pago fue acreditado. Te enviamos un mail de confirmación.</p>
+    <p class="estado-sub" id="ok-prod" style="margin-top:8px;font-weight:600;color:#1a5c2a"></p>
+  </div>
+
+  <div id="estado-pending" style="display:none">
+    <div class="estado-icon">⏳</div>
+    <div class="estado-titulo pending-titulo">Pago en proceso</div>
+    <p class="estado-sub">Tu pago está siendo procesado. Te avisamos cuando se confirme.</p>
+    <button class="btn-volver" onclick="volver()">Volver al inicio</button>
+  </div>
+
+  <div id="estado-error" style="display:none">
+    <div class="estado-icon">❌</div>
+    <div class="estado-titulo error-titulo">Algo salió mal</div>
+    <p class="estado-sub">No pudimos procesar el pago. Intentá de nuevo o avisale al vendedor.</p>
+    <button class="btn-volver" onclick="volver()">Intentar de nuevo</button>
+  </div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwt8mRYjjFZtsmFPw0JYcMpCkZcOt9J7ALFVkPByqQ8NM2NvCaYF1onagU_ag0a2ziksg/exec';
+var params = new URLSearchParams(window.location.search);
+
+var varianteSel = null;
+
+function show(id) {
+  ['cargando','formulario','estado-ok','estado-error','estado-pending'].forEach(function(x) {
+    document.getElementById(x).style.display = x === id ? '' : 'none';
+  });
+}
+
+// Verifica si venimos de redirección MP
+var status = params.get('status');
+if (status === 'ok') {
+  show('estado-ok');
+  var prod = params.get('prod');
+  if (prod) document.getElementById('ok-prod').textContent = decodeURIComponent(prod);
+} else if (status === 'error') {
+  show('estado-error');
+} else if (status === 'pending') {
+  show('estado-pending');
+} else {
+  cargarProducto();
+}
+
+function cargarProducto() {
+  var productId = params.get('p');
+  fetch(GAS_URL + '?action=getSolDeOroProductos', { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.productos || d.productos.length === 0) { show('estado-error'); return; }
+      var prod = productId
+        ? d.productos.find(function(p) { return String(p.id) === String(productId); }) || d.productos[0]
+        : d.productos[0];
+      renderProducto(prod);
+      show('formulario');
+    })
+    .catch(function() { show('estado-error'); });
+}
+
+function renderProducto(prod) {
+  document.getElementById('prod-titulo').textContent = prod.nombre;
+  if (prod.imagen) {
+    var img = document.getElementById('prod-img');
+    img.src = prod.imagen; img.style.display = 'block';
+  }
+  var wrap = document.getElementById('variante-wrap');
+  wrap.innerHTML = '';
+  prod.variantes.forEach(function(v) {
+    var btn = document.createElement('button');
+    btn.className = 'variante-btn';
+    btn.innerHTML = v.nombre + '<span class="variante-precio">$' + Math.round(v.precio).toLocaleString('es-AR') + '</span>';
+    btn.dataset.varianteId = v.id;
+    btn.dataset.productoId = prod.id;
+    btn.dataset.precio = v.precio;
+    btn.onclick = function() { seleccionar(btn, v); };
+    wrap.appendChild(btn);
+  });
+}
+
+function seleccionar(btn, v) {
+  document.querySelectorAll('.variante-btn').forEach(function(b) { b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  varianteSel = { id: v.id, productoId: btn.dataset.productoId, precio: v.precio, nombre: v.nombre };
+  document.getElementById('precio-total').textContent = '$' + Math.round(v.precio).toLocaleString('es-AR');
+  document.getElementById('btn-pagar').disabled = false;
+}
+
+function pagar() {
+  if (!varianteSel) return;
+  var btn = document.getElementById('btn-pagar');
+  btn.disabled = true;
+  btn.firstElementChild.nextElementSibling.firstElementChild.textContent = 'Generando pago…';
+
+  fetch(GAS_URL + '?action=crearPagoPresencial&variante_id=' + varianteSel.id + '&producto_id=' + varianteSel.productoId, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok && d.init_point) {
+        window.location.href = d.init_point;
+      } else {
+        btn.disabled = false;
+        alert('No se pudo generar el pago. Intentá de nuevo.');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      alert('Error de conexión. Intentá de nuevo.');
+    });
+}
+
+function volver() { window.location.href = window.location.pathname; }
+</script>
+</body>
+</html>
