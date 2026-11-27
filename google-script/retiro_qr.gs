@@ -5073,8 +5073,10 @@ function _crearMPPreferencia(varianteId, productoId, token) {
     Logger.log('_crearMPPreferencia error ' + mpResp.getResponseCode() + ': ' + mpResp.getContentText());
     return { ok: false, error: 'Error MP ' + mpResp.getResponseCode() };
   }
-  var prefData = JSON.parse(mpResp.getContentText());
-  return { ok: true, init_point: prefData.init_point, sandbox_init_point: prefData.sandbox_init_point, nombre: titulo, precio: precio };
+  var prefData  = JSON.parse(mpResp.getContentText());
+  var esTest    = String(token).indexOf('TEST-') === 0;
+  var urlPago   = esTest ? prefData.sandbox_init_point : prefData.init_point;
+  return { ok: true, init_point: urlPago, nombre: titulo, precio: precio };
 }
 
 // Recibe el ID de un pago de MP aprobado, crea la orden en TN y envía mail.
