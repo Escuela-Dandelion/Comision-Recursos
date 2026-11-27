@@ -505,6 +505,20 @@ function doGetInterno(e) {
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'getSolDeOroProductos') {
+    var prods = _getSolDeOroProductos();
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, productos: prods }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'crearPagoPresencial') {
+    var varId  = e.parameter.variante_id  || '';
+    var prodId = e.parameter.producto_id  || '';
+    if (!varId || !prodId) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Faltan parámetros' })).setMimeType(ContentService.MimeType.JSON);
+    var res = _crearMPPreferencia(varId, prodId);
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (!orderId || !verificarToken(orderId, token)) {
     return HtmlService.createHtmlOutput('<p style="font-family:sans-serif;padding:24px;color:red">QR inválido o expirado.</p>');
   }
@@ -538,20 +552,6 @@ function doGetInterno(e) {
       e.parameter.nps  || '',
       e.parameter.com  || ''
     );
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  if (action === 'getSolDeOroProductos') {
-    var prods = _getSolDeOroProductos();
-    return ContentService.createTextOutput(JSON.stringify({ ok: true, productos: prods }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  if (action === 'crearPagoPresencial') {
-    var varId  = e.parameter.variante_id  || '';
-    var prodId = e.parameter.producto_id  || '';
-    if (!varId || !prodId) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Faltan parámetros' })).setMimeType(ContentService.MimeType.JSON);
-    var res = _crearMPPreferencia(varId, prodId);
     return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
   }
 
