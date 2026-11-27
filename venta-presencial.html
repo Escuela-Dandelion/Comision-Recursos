@@ -172,6 +172,10 @@ function seleccionar(btn, v) {
   varianteSel = { id: v.id, productoId: btn.dataset.productoId, precio: v.precio, nombre: v.nombre };
   document.getElementById('precio-total').textContent = '$' + Math.round(v.precio).toLocaleString('es-AR');
   document.getElementById('btn-pagar').disabled = false;
+  if (v.imagen) {
+    var img = document.getElementById('prod-img');
+    img.src = v.imagen; img.style.display = 'block';
+  }
 }
 
 function pagar() {

@@ -5018,7 +5018,13 @@ function _getSolDeOroProductos() {
           if (v.values && v.values.length > 0) {
             vNom = v.values.map(function(x) { return typeof x === 'object' ? (x.es || Object.values(x)[0]) : x; }).join(' / ');
           }
-          return { id: v.id, sku: v.sku || '', nombre: vNom || nombre, precio: parseFloat(v.price || 0) };
+          var imgSrc = (v.image && v.image.src) ? v.image.src : '';
+          if (!imgSrc) {
+            (p.images || []).some(function(img) {
+              if (img.variant_ids && img.variant_ids.indexOf(v.id) >= 0) { imgSrc = img.src; return true; }
+            });
+          }
+          return { id: v.id, sku: v.sku || '', nombre: vNom || nombre, precio: parseFloat(v.price || 0), imagen: imgSrc };
         });
       return { id: p.id, nombre: nombre, imagen: imagen, variantes: variantes };
     });
