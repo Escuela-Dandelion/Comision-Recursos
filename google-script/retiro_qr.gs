@@ -5003,9 +5003,13 @@ function _getSolDeOroProductos() {
   var products = JSON.parse(resp.getContentText());
   return products
     .filter(function(p) {
-      var brand = typeof p.brand === 'string' ? p.brand : '';
-      if (brand.toLowerCase().indexOf('sol de oro') >= 0) return true;
-      return (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('SOL_DE_ORO_') === 0; });
+      var brand = typeof p.brand === 'string' ? p.brand.toLowerCase() : '';
+      var nombre = typeof p.name === 'object' ? (p.name.es || '') : (p.name || '');
+      var hasSolDePapel = brand.indexOf('sol de papel') >= 0
+        || (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('SOL_DE_PAPEL_') === 0; });
+      var esAgenda = nombre.toLowerCase().indexOf('agenda') >= 0
+        || (p.variants || []).some(function(v) { return String(v.sku || '').indexOf('AGENDA') >= 0; });
+      return hasSolDePapel && esAgenda;
     })
     .map(function(p) {
       var nombre = typeof p.name === 'object' ? (p.name.es || Object.values(p.name)[0] || '') : (p.name || '');
@@ -5150,6 +5154,19 @@ function _enviarMailPresencial(email, nombre, producto, precio) {
       { htmlBody: html, name: 'El equipo de Diente de León (Comisión de Recursos)' }
     );
   } catch(err) { Logger.log('_enviarMailPresencial error: ' + err); }
+}
+
+// Debug: loguea brand y primer SKU de cada producto publicado para identificar el filtro correcto.
+function debugProductosBrands() {
+  var url  = 'https://api.tiendanube.com/v1/' + CONFIG.STORE_ID + '/products?per_page=200&published=true';
+  var resp = UrlFetchApp.fetch(url, { headers: _tnHeaders(), muteHttpExceptions: true });
+  var prods = JSON.parse(resp.getContentText());
+  prods.forEach(function(p) {
+    var nombre = typeof p.name === 'object' ? (p.name.es || '') : (p.name || '');
+    var brand  = p.brand || '(sin brand)';
+    var sku    = (p.variants && p.variants[0]) ? (p.variants[0].sku || '(sin sku)') : '(sin variantes)';
+    Logger.log('brand="' + brand + '" | nombre="' + nombre + '" | sku0="' + sku + '"');
+  });
 }
 
 // Test: lista productos Sol de Oro y crea una preferencia de prueba con MP_ACCESS_TOKEN_TEST.
